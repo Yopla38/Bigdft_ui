@@ -1,0 +1,64 @@
+# =============================================================
+#  workshop_layer.ttl - the interface layer of a BigDFT pack
+#  UNINSTANTIATED. Self-contained, as the AOM format requires.
+#
+#  A pack-kit domain schema already says what should be done
+#  (Recipe, Prescription, Pitfall, Context, Quantity) and names
+#  the things of the domain (Tool, Parameter, ParameterValue,
+#  Unit). This layer adds only what the workshop needs on top:
+#  where a parameter lives in the input file, which block of
+#  the interface owns it, how deep it is shown, and the facts
+#  the code itself declares about it (default, bounds,
+#  activation condition, profiles).
+#
+#  Design, following the four rules of the pack template:
+#   - Parameter, Section, Block, Profile are things of the
+#     domain: instances, never edits to this file (R2).
+#   - Block and Tier are categorical, hence nodes; defaults and
+#     bounds are numbers or code literals, hence literals (R3).
+#   - No property here has a prescriptive pivot as its domain.
+#     Advice ("in this case, that value") stays a Prescription
+#     of the pack schema, learned from documentation and judged
+#     by a human. This layer is descriptive and exact.
+#
+#  The instances are NOT extracted by an LLM. They are generated
+#  from the BigDFT source by tools/build_parameter_instances.py
+#  and loaded with pack-kit's ttl_instances loader: a default of
+#  0.45 paraphrased into "about 0.45 bohr" would be a wrong fact
+#  the graph carries silently.
+#
+#  The prefix below is a placeholder. Point it at the namespace
+#  of the pack this layer is merged into.
+# =============================================================
+@prefix ws:   <https://example.org/onto/pack/bigdft#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/onto/pack/bigdft/workshop-layer> a owl:Ontology ;
+  owl:versionInfo "0.2" ;
+  rdfs:label "BigDFT pack - workshop layer"@en ;
+  rdfs:comment "Describes the input variables of BigDFT, PSolver and CheSS as the interface exposes them."@en .
+
+# --- Things of the domain (leaves and descriptive nodes) -----
+ws:Parameter a owl:Class ; rdfs:label "Parameter"@en ; rdfs:comment "An input variable declared in an input_variables_definition.yaml of the BigDFT suite. Same class as the pack schema's Parameter."@en .
+ws:Section a owl:Class ; rdfs:label "Input section"@en ; rdfs:comment "A group of variables of the YAML input file, e.g. dft, kpt, geopt, psolver.environment."@en .
+ws:Block a owl:Class ; rdfs:label "Block"@en ; rdfs:comment "One of the seven parts of a blueprint: Matter, Theory, Accuracy, Environment, Task, Observables, Machine."@en .
+ws:Tier a owl:Class ; rdfs:label "Exposure tier"@en ; rdfs:comment "How deep a parameter is shown: essential, advanced or expert."@en .
+ws:Profile a owl:Class ; rdfs:label "Profile"@en ; rdfs:comment "A named set of values shipped with BigDFT and called with the import keyword, e.g. linear or mixing."@en .
+
+# --- Descriptive properties of a parameter -------------------
+ws:inSection a owl:ObjectProperty ; rdfs:domain ws:Parameter ; rdfs:range ws:Section ; rdfs:label "in section"@en .
+ws:exposedIn a owl:ObjectProperty ; rdfs:domain ws:Parameter ; rdfs:range ws:Block ; rdfs:label "exposed in"@en .
+ws:hasTier a owl:ObjectProperty ; rdfs:domain ws:Parameter ; rdfs:range ws:Tier ; rdfs:label "has tier"@en .
+ws:dependsOn a owl:ObjectProperty ; rdfs:domain ws:Parameter ; rdfs:range ws:Parameter ; rdfs:label "only meaningful depending on"@en ; rdfs:comment "The activation condition declared in the source (CONDITION / MASTER_KEY)."@en .
+ws:inputPath a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:string ; rdfs:label "path in the input file"@en .
+ws:defaultValue a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:string ; rdfs:label "default value"@en ; rdfs:comment "Verbatim, as a JSON literal: a default may be a number, a list or a name."@en .
+ws:lowerBound a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:double ; rdfs:label "lower bound"@en .
+ws:upperBound a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:double ; rdfs:label "upper bound"@en .
+ws:allowedValues a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:string ; rdfs:label "allowed values"@en ; rdfs:comment "Verbatim JSON list of the exclusive values declared in the source."@en .
+ws:shortDescription a owl:DatatypeProperty ; rdfs:domain ws:Parameter ; rdfs:range xsd:string ; rdfs:label "short description"@en ; rdfs:comment "The COMMENT of the source: the line BigDFT itself prints in its logfile."@en .
+
+# --- Profiles ---------------------------------------------------
+ws:sets a owl:ObjectProperty ; rdfs:domain ws:Profile ; rdfs:range ws:Parameter ; rdfs:label "sets"@en .
+ws:profileValues a owl:DatatypeProperty ; rdfs:domain ws:Profile ; rdfs:range xsd:string ; rdfs:label "values set by the profile"@en ; rdfs:comment "Verbatim JSON of the overrides."@en .

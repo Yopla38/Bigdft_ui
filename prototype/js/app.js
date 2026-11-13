@@ -519,8 +519,8 @@
     $('#methods').textContent = t;
     $('#refs').replaceChildren(...refs.map((k) => h('li', {}, REF[k])));
     const eq = $('#pub-eq');
-    eq.replaceChildren(h('div', {}, EQ.theorie[1]), h('div', {}, EQ.precision[1].replace('\\qquad N_{\\mathrm{dof}}=N_c+7N_f', '')));
-    if (v.solvent !== 'none') eq.append(h('div', {}, EQ.milieu[1]));
+    eq.replaceChildren(h('div', {}, EQ.theory[1]), h('div', {}, EQ.accuracy[1].replace('\\qquad N_{\\mathrm{dof}}=N_c+7N_f', '')));
+    if (v.solvent !== 'none') eq.append(h('div', {}, EQ.environment[1]));
     if (v.algo === 'linear') eq.append(h('div', {}, '$$\\rho(\\mathbf r,\\mathbf r\')=\\sum_{\\alpha\\beta}\\phi_\\alpha(\\mathbf r)\\,K^{\\alpha\\beta}\\,\\phi_\\beta(\\mathbf r\')$$'));
     typeset(eq);
     const b = $('#fig-preset button[aria-pressed="true"]'), mm = +b.dataset.w, ratio = mm === 170 ? 0.5 : mm === 120 ? 1.25 : 0.75;

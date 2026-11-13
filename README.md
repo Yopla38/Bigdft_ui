@@ -1,35 +1,36 @@
 # Bigdft_ui
 
-Un atelier web pour BigDFT : construire une simulation autour d'une scène 3D, la lancer, l'analyser, la partager, la publier.
+A web workshop for BigDFT: build a simulation around a 3D scene, run it, analyse it, share it, publish it.
 
-Le dossier de proposition est dans [`docs/PROPOSITION.md`](docs/PROPOSITION.md). Nom de travail : Ondelette.
+The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelette.
 
-## Contenu
+## Contents
 
-| Chemin | Rôle |
+| Path | Role |
 |---|---|
-| `docs/PROPOSITION.md` | Vision, analyse des paramètres, architecture, ordre de construction, questions ouvertes |
-| `docs/courriers/` | Brouillons de courriers (OneAngstrom, L_Sim) |
-| `schema/bigdft-input.schema.json` | Les 313 variables d'entrée de BigDFT, PSolver et CheSS, extraites de la source |
-| `schema/ui-tiers.yaml` | Décision produit : brique et profondeur de chaque variable |
-| `ontology/atelier.ttl` | Ontologie non instanciée pour une mémoire AOM |
-| `ontology/corpus/` | Corpus généré pour `aom_ingest` |
-| `prototype/` | Maquette immersive (page unique, three.js, sans étape de construction) |
-| `tools/` | Extraction du schéma, génération du catalogue et du corpus, serveur d'aperçu |
+| `docs/PROPOSAL.md` | Concept, parameter analysis, place in the pack-kit ecosystem, architecture, build order, open questions |
+| `docs/letters/` | Draft letters (OneAngstrom, L_Sim) |
+| `schema/bigdft-input.schema.json` | The 313 input variables of BigDFT, PSolver and CheSS, extracted from the source |
+| `schema/ui-tiers.yaml` | Product decision: block and depth of each variable |
+| `ontology/workshop_layer.ttl` | Uninstantiated layer a BigDFT pack schema can merge |
+| `ontology/instances/bigdft-parameters.ttl` | Generated parameter graph, for pack-kit's `ttl_instances` loader |
+| `ontology/corpus/bigdft-variables.md` | Generated descriptions, one section per variable, for `markdown_sections` |
+| `prototype/` | Immersive mock-up (single page, three.js, no build step) |
+| `tools/` | Schema extraction, catalogue and graph generation, preview server |
 
-## Voir la maquette
+## See the mock-up
 
 ```bash
 python tools/preview.py        # http://localhost:8765
 ```
 
-## Régénérer après une montée de version de BigDFT
+## Regenerate after a BigDFT upgrade
 
 ```bash
 git clone --depth 1 https://gitlab.com/l_sim/bigdft-suite.git /tmp/bigdft-suite
 python tools/extract_schema.py /tmp/bigdft-suite     # schema/bigdft-input.schema.json
-python tools/build_prototype_schema.py               # prototype/js/schema.js, échoue si la curation est périmée
-python tools/build_aom_corpus.py                     # ontology/corpus/bigdft-variables.md
+python tools/build_prototype_schema.py               # prototype/js/schema.js, fails if the curation is stale
+python tools/build_parameter_instances.py            # ontology/instances/ and ontology/corpus/
 ```
 
-Dépendance : Python 3.10 ou plus récent, et PyYAML.
+Requires Python 3.10 or later and PyYAML.
