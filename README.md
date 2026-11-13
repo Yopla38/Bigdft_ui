@@ -10,13 +10,14 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 |---|---|
 | `docs/PROPOSAL.md` | Concept, parameter analysis, place in the pack-kit ecosystem, architecture, build order, open questions |
 | `docs/letters/` | Draft letters (OneAngstrom, L_Sim) |
-| `schema/bigdft-input.schema.json` | The 313 input variables of BigDFT, PSolver and CheSS, extracted from the source |
+| `schema/bigdft-input.schema.json` | The 311 input variables of BigDFT 1.9.1, PSolver and CheSS, extracted from the source. This is the version the PyBigDFT pack's container pins |
+| `schema/bigdft-input.devel.schema.json` | The same for the development branch (313 variables), to anticipate an upgrade |
 | `schema/ui-tiers.yaml` | Product decision: block and depth of each variable |
 | `ontology/workshop_layer.ttl` | Uninstantiated layer a BigDFT pack schema can merge |
 | `ontology/instances/bigdft-parameters.ttl` | Generated parameter graph, for pack-kit's `ttl_instances` loader |
 | `ontology/corpus/bigdft-variables.md` | Generated descriptions, one section per variable, for `markdown_sections` |
 | `prototype/` | Immersive mock-up (single page, three.js, no build step) |
-| `tools/` | Schema extraction, catalogue and graph generation, preview server |
+| `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
 
 ## See the mock-up
 
@@ -27,8 +28,10 @@ python tools/preview.py        # http://localhost:8765
 ## Regenerate after a BigDFT upgrade
 
 ```bash
-git clone --depth 1 https://gitlab.com/l_sim/bigdft-suite.git /tmp/bigdft-suite
-python tools/extract_schema.py /tmp/bigdft-suite     # schema/bigdft-input.schema.json
+git clone --depth 1 --branch <tag> https://gitlab.com/l_sim/bigdft-suite.git /tmp/bigdft-suite
+python tools/extract_schema.py /tmp/bigdft-suite -o /tmp/new.json --revision "tag <tag>"
+python tools/diff_schema.py schema/bigdft-input.schema.json /tmp/new.json   # what changes; fails if a control is lost
+cp /tmp/new.json schema/bigdft-input.schema.json
 python tools/build_prototype_schema.py               # prototype/js/schema.js, fails if the curation is stale
 python tools/build_parameter_instances.py            # ontology/instances/ and ontology/corpus/
 ```

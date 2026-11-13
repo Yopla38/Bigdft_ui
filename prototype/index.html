@@ -135,11 +135,13 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .cap > div + div{border-left:1px solid var(--line)}
 .cap input[type=range]{width:100%}
 .log{display:grid;gap:7px}
-.msg{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;font-size:13px;opacity:.38}
+.msg{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;font-size:13px;opacity:.38}
 .msg.seen{opacity:1}
 .msg .who{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);padding-top:2px}
 .msg .who.bot{color:var(--agent)}
 .msg code{color:var(--accent)}
+.rec{display:inline-block;margin-left:8px;font:11px var(--mono);padding:0 6px;border-radius:4px;border:1px solid var(--line-2);color:var(--fg-3);white-space:nowrap}
+.rec.verified{color:var(--ok);border-color:currentColor}.rec.superseded{text-decoration:line-through}
 
 .insp{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .insp-head{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
@@ -333,11 +335,13 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
               <p class="label">Capsule</p>
               <h3 class="serif" style="font-size:22px;margin:4px 0 6px" id="cap-title"></h3>
               <p style="color:var(--fg-2);font-size:13px" id="cap-meta"></p>
-              <input type="range" id="cap-range" min="0" max="8" value="0" step="1" aria-label="Capsule step" style="margin-top:14px">
+              <input type="range" id="cap-range" min="0" max="9" value="0" step="1" aria-label="Capsule step" style="margin-top:14px">
               <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
                 <button class="btn small" id="cap-play" type="button">Replay</button>
                 <button class="btn small" id="cap-fork" type="button">Fork from this step</button>
+                <button class="btn small" id="cap-verify" type="button">Verify</button>
               </div>
+              <p id="cap-verify-out" style="font-size:12px;color:var(--ok);margin-top:8px"></p>
             </div>
             <div class="log" id="cap-log"></div>
           </div>
@@ -363,12 +367,12 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
     <div class="board-in">
       <header class="board-head">
         <h1>Start from what already worked</h1>
-        <p>A capsule is the complete work of one session: the conversation, the files, the pinned environment. Replay it step by step, fork it at any point. A paper becomes a blueprint: each sentence of its Methods section is attached to a block.</p>
+        <p>A capsule packages a research session: what was asked, what the researcher accepted or corrected, the files written, the evidence behind every number. Replay it step by step, verify it, fork it at any point. A paper becomes a blueprint: each sentence of its Methods section is attached to a block.</p>
       </header>
       <section class="sect">
         <header><h2>Capsules</h2><span class="pill example">Examples</span></header>
         <div class="grid3">
-          <article class="tile"><h3>Benzene adsorption on graphene</h3><p>Building the surface, grid convergence study, three calculations, adsorption energy.</p><div class="meta"><span>9 steps</span><span>3 calculations</span><span>pinned container</span></div><div class="foot"><span class="chip">surface</span><button class="btn small" data-capsule type="button">Replay</button></div></article>
+          <article class="tile"><h3>Benzene adsorption on graphene</h3><p>Building the surface, grid convergence study, three calculations, adsorption energy.</p><div class="meta"><span>10 records</span><span>3 calculations</span><span>pinned container</span></div><div class="foot"><span class="chip">surface</span><button class="btn small" data-capsule type="button">Replay</button></div></article>
           <article class="tile"><h3>Fragments of a peptide in solution</h3><p>Linear-scaling mode, implicit solvent, purity indicator and bond orders between residues.</p><div class="meta"><span>11 steps</span><span>1 calculation</span><span>203 atoms</span></div><div class="foot"><span class="chip">biology</span><button class="btn small" data-load="ala20" type="button">Open the system</button></div></article>
           <article class="tile"><h3>Absorption spectrum of C₆₀</h3><p>Virtual states, coupling matrix, Tamm-Dancoff approximation, spectrum plot.</p><div class="meta"><span>6 steps</span><span>2 calculations</span><span>GPU</span></div><div class="foot"><span class="chip">excitations</span><button class="btn small" data-load="c60" type="button">Open the system</button></div></article>
         </div>

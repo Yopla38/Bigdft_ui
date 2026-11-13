@@ -7,7 +7,7 @@ Locally: `python tools/preview.py`, then <http://localhost:8765>.
 
 ## 1. The idea on one page
 
-BigDFT can do a great deal and exposes it through 313 input variables. The simplest way to "do everything" is neither a form with 313 fields nor an agent everything is delegated to. It is an **object you build**:
+BigDFT can do a great deal and exposes it through 311 input variables (version 1.9.1). The simplest way to "do everything" is neither a form with 311 fields nor an agent everything is delegated to. It is an **object you build**:
 
 > A simulation is a **blueprint of seven blocks** laid around a 3D scene. Each block answers one question. Each value says where it comes from. Whatever you do with the mouse, the agent can do through the same action, and the other way round.
 
@@ -21,17 +21,21 @@ The object is called a *blueprint*, not a recipe, on purpose: in aom-memory and 
 
 | Source | What I take from it |
 |---|---|
-| `bigdft-suite` upstream (GitLab `l_sim`, revision of 2026-09-25) | `input_variables_definition.yaml` of BigDFT, PSolver and CheSS: the code loads these files itself, so they are the source of truth. 313 variables with defaults, bounds, allowed values, activation conditions, and 12 named profiles (`linear`, `mixing`, `water`…). |
+| `bigdft-suite` upstream (GitLab `l_sim`), tag 1.9.1 and the development branch of 2026-09-25 | `input_variables_definition.yaml` of BigDFT, PSolver and CheSS: the code loads these files itself, so they are the source of truth. 311 variables in 1.9.1 (313 on the development branch), with defaults, bounds, allowed values, activation conditions and named profiles (`linear`, `mixing`, `water`…). |
 | PyBigDFT (`InputActions.py`, `Calculators.py`, `Fragments`, `BioQM`, `PostProcessing`) | About fifty high-level actions (`set_xc`, `optimize_geometry`, `set_implicit_solvent`…). They already are "moves": the mock-up emits real PyBigDFT. |
-| Your fork `Yopla38/BigDFT` | Dated 2017. I worked on upstream, which is richer (profiles, solvent, CheSS). |
-| `l_sim/ia_tools/pack-kit` (v0.7.0rc8) | What a pack is, how it is served (A2A), how it publishes its interface (panels), how it declares its files and its container. See §7. |
-| `l_sim/ia_tools/agent_slapsci` | **Private: I could not read it.** What I say about it comes from pack-kit's docstrings. |
+| `l_sim/ia_tools/pack/pack_pybigdft` | **The existing PyBigDFT pack.** Its container (`bigdft/runtime` pinned by digest, BigDFT 1.9.1), its tools (`run_in_container`, `parse_bigdft_log`, `visualize`, `download_xyz_for_bigdft`, `declare_file`, `query_memory`), its skills, its ontology (namespace `http://bigdft.org/onto#`), its tutorials corpus. The workshop builds on it. |
+| `l_sim/ia_tools/agent-slapsci` (v0.4.1) | The agent engine: one YAML per agent or pool, a permission gate, and a **wire protocol** (events out with a sequence number, commands in) that a browser can speak over a WebSocket. Also the **renderer** contract. See §7. |
+| `l_sim/ia_tools/pack-kit` (v0.7.0rc8) | What a pack is, how it is served (A2A), how libraries publish their interface (panels), how files and containers are declared. See §7. |
+| `l_sim/ia_tools/aom/aom_memory` | The experience memory (episodes, verdicts, recipes) and its export to **Capsule-Maker**: what a capsule actually contains. See §7. |
 | AOM format 1.0.1 (`hopa_aom/aom_format`) | SQLite file with six tables, facts with mandatory provenance, pivots for n-ary relations, artifacts for verbatim content. See §5. |
-| `BigDFT-group/llm-hackathon-2025` (LARA-HPC), OntoFlow | remotemanager, the BigDFT-school notebooks (the guided paths of the mock-up follow them), earlier ontologies. |
+| Your fork `Yopla38/BigDFT` | Dated 2017. I worked on upstream. |
+| `BigDFT-group/llm-hackathon-2025` (LARA-HPC), OntoFlow | remotemanager, the BigDFT-school notebooks, earlier ontologies. |
 | OneAngstrom partner program | SAMSON SDK, SAMSON Connect marketplace, no fixed fee, a percentage of sales, usage-based billing of cloud services called from SAMSON. SAMSON is a desktop application. See §9. |
 | V_Sim (`l_sim/v_sim`, 3.9.0 tagged June 2025) | Desktop application. See §9. |
 | Paper2Agent (arXiv 2509.06917) | Turns a paper and its code into a tested MCP server. See §7. |
 | WEAS, Mol\*, 3Dmol.js | See §8. |
+
+Not read: Capsule-Maker itself (I found no public repository; I know it through aom-memory's adapter and its mapping document), and the platform pack-kit was extracted from.
 
 ## 3. The seven blocks
 
@@ -47,7 +51,7 @@ The object is called a *blueprint*, not a recipe, on purpose: in aom-memory and 
 
 The order is the order in which a physicist states the problem. Boundary conditions live in Matter because they are a property of the cell (`posinp.cell`); their consequences (k-points, field) live in Environment.
 
-## 4. 313 parameters, three depths
+## 4. 311 parameters, three depths
 
 Nothing is copied by hand. `tools/extract_schema.py` reads the BigDFT source and writes `schema/bigdft-input.schema.json`. `schema/ui-tiers.yaml` holds only the product decision: for each variable, its block and its depth. Generation fails if a listed variable no longer exists upstream, so a BigDFT upgrade cannot leave an orphan control.
 
@@ -55,7 +59,7 @@ Nothing is copied by hand. `tools/extract_schema.py` reads the BigDFT source and
 |---|---|---|---|
 | Essential | 29 | a control drawn on the block | changes the physics or the cost, and a beginner can understand the question |
 | Advanced | 68 | an editable row, one click away | regularly useful to a practitioner (mixing, NEB, thermostat, localisation radii) |
-| Expert | 216 | full-text search over the whole code | internal numerical settings, debug outputs, experimental options |
+| Expert | 214 | full-text search over the whole code | internal numerical settings, debug outputs, experimental options |
 
 What becomes a "button", and why:
 
@@ -80,7 +84,7 @@ In the mock-up a dozen rules are hard-coded to show the behaviour. All are groun
 - electric field along a periodic direction → refused (documentation of `elecfield`);
 - biomolecule → implicit water with a soft-sphere cavity, SQNM with `biomode`.
 
-In production these rules are **facts of the pack's memory**, not code. The pack schema already has the right shapes, and I align on them instead of inventing a parallel vocabulary:
+In production these rules are **facts of the pack's memory**, not code. pack-kit's schema template already has the right shapes for advice, and I align on them instead of inventing a parallel vocabulary:
 
 | What the interface needs | In the memory |
 |---|---|
@@ -92,8 +96,8 @@ In production these rules are **facts of the pack's memory**, not code. The pack
 
 Two files implement the last row:
 
-- `ontology/workshop_layer.ttl`: an uninstantiated layer (5 classes, 12 properties) that adds to a pack schema only what the interface needs: section, block, tier, default, bounds, allowed values, activation dependency, profiles. It is descriptive on purpose: advice stays a `Prescription`.
-- `ontology/instances/bigdft-parameters.ttl`: the 313 parameters, 20 sections and 12 profiles as instances, generated from the source. It is meant for pack-kit's `ttl_instances` loader, which writes facts without an LLM call. A default of 0.45 paraphrased into "about 0.45 bohr" would be a wrong fact carried silently.
+- `ontology/workshop_layer.ttl`: an uninstantiated layer (5 classes, 12 properties) in the namespace of `pack_pybigdft` (`http://bigdft.org/onto#`, no name clash with its 59 terms). It adds only what the interface needs: section, block, tier, default, bounds, allowed values, activation dependency, profiles. It is descriptive on purpose: advice stays a `Prescription`.
+- `ontology/instances/bigdft-parameters.ttl`: the 311 parameters, 20 sections and 9 profiles of BigDFT 1.9.1 as instances, generated from the source. It is meant for pack-kit's `ttl_instances` loader, which writes facts without an LLM call. A default of 0.45 paraphrased into "about 0.45 bohr" would be a wrong fact carried silently.
 
 `ontology/corpus/bigdft-variables.md` carries the prose descriptions, one Markdown section per variable, for a `sources.yaml` entry using the `markdown_sections` preprocess. Given the n-ary nature of the advice ("this value, *for* that kind of system"), the pack should use `triplet_mode: nary`.
 
@@ -111,24 +115,30 @@ References will come from `bigdft_bibliography.yaml`, which the code already mai
 
 ## 7. Where the workshop sits in the existing ecosystem
 
-pack-kit changes the architecture I first sketched, for the better. The workshop should not bring its own agent plumbing. It should be a **host for packs**.
+The workshop should bring no agent plumbing of its own. It is a **browser front-end and a host for packs**, and almost every mechanism it needs already exists.
 
 | Existing piece | Role for the workshop |
 |---|---|
-| **Pack** (prompts, ontology, memory, tools, optional container) | One simulation code is one pack. BigDFT now; GROMACS later is a second pack, not a rewrite. pack-kit's own examples already speak of `.mdp` files. |
-| **Head agent**, owned by the user, calling packs with `use_pack` | The "Agent" drawer of the mock-up. It is optional and is never the centre: it is a second user of the same actions. |
-| **A2A server** of a pack | The transport. An A2A task in `input-required` (a tool the pack's policy sets to `ask`) is exactly the *Approve / Reject* card of the mock-up. |
-| **`declare_file` and `MANIFEST.json`** (path, role, sha256, `derived_from`) | The files of a blueprint (`input.yaml`, `run.py`, structures, figures) are declared, not guessed. `derived_from` gives the "Paper" and "Agent" provenance marks a verifiable origin. |
-| **Panels** (`pack_kit.panels`, capability vocabulary) | The workshop embeds what already exists: aom_web's memory console and agent-slapsci's transcript. It maps roles to `read / ingest / curate / purge / configure / optimize` once. |
-| **Experience memory** (aom-memory: episodes, judged, consolidated into recipes) | A **capsule** is an episode together with its workspace compartment and the container digest. Judged capsules become recipes, which feed the Library and the advice. |
-| **Container block** with a measured digest, launcher plus Landlock-confined agent | The Machine block lists what the pack declares. A capsule records the digest, never a tag. |
-| **LLM policy** (a pack never ships a model, the user's choice comes first) | The platform does not impose a model. |
+| **The PyBigDFT pack** (`pack_pybigdft`) | The engine room. Its container digest is what the Machine block shows; its tools are what runs. The workshop adds blueprint actions next to them, it does not replace them. |
+| **A pack per code** (pack-kit) | BigDFT now; GROMACS later is a second pack, not a rewrite. |
+| **agent-slapsci's wire protocol** (`service/protocol.py`): events out, each with a `seq`; commands in (`Send`, `Approve`, `Choose`, `Cancel`, `Resume`…) | The Agent drawer is one more front-end of this protocol, over a WebSocket. A browser that reconnects asks for everything after the last `seq` it saw. The existing transcript page (three static files and KaTeX) can be embedded unchanged. |
+| **The permission gate** (`allow / ask / deny`), `APPROVAL_REQUESTED` then `ApproveCommand` | The *Approve / Reject* card of the mock-up. In the PyBigDFT pack `declare_file` is already on `ask`. |
+| **Renderers** ("data plus one drawing per front-end"; today the choice menu) | The natural way for the agent to reach the scene. Three renderers to add: a **blueprint diff** (changes to approve), a **scene** (structure and overlays), a **plot**. Their rules already fit: fail closed with no client, always carry a text floor, a replayed request is inert. |
+| **The journal** (`sessions/<id>.events.jsonl`, append-only) | The raw trace of a session, and what a replay reads. |
+| **A2A server** of a pack, tasks in `input-required` | How a user's head agent reaches a deployed pack; approvals travel up the same way. |
+| **`declare_file` and `MANIFEST.json`** (path, role, sha256, `derived_from`) | The files of a blueprint are declared, not guessed. `derived_from` gives the "Paper" and "Agent" marks a verifiable origin. |
+| **Panels** (`pack_kit.panels`, capability vocabulary) | The workshop embeds aom_web's memory console and maps roles to `read / ingest / curate / purge / configure / optimize` once. |
+| **Experience memory** (aom-memory): one episode per intention, the researcher's verdicts (accepted, corrected, rejected), judged episodes consolidated into recipes | What happened, and what was learned from it. Recipes feed the Library and the advice. |
+| **Capsule-Maker**, fed by aom-memory's adapter | **What a capsule is**: `SUMMARY.md` with typed records (intention, acceptance, correction, rejection, result, hypothesis, question), one transcript per intention, the files the agent wrote with their sha256, the evidence behind every verified number, and a test that recounts every claim. `capsule-maker verify` checks it; approval is a human act. |
+| **LLM policy** (a pack never ships a model; the user's choice first) | The platform does not impose a model. |
 
-Consequences for the design:
+What this changes in the design:
 
-- **One action layer** (`blueprint.set`, `system.edit`, `job.submit`, `figure.render`…) serves the interface, the pack's tools (agent-slapsci `native:` functions) and an MCP server. The agent cannot do anything that is not visible and undoable in the interface.
-- **A capsule is a replayable journal** of those actions, human or agent. The slider of the mock-up does exactly that, and one can fork at any step.
-- **Paper → blueprint**: the Methods section is mapped onto blocks, each value marked "Paper" with its source passage; what the paper does not say is completed by the adviser and flagged. When a paper ships code, Paper2Agent can turn it into an MCP server added to the head agent's toolbox. The two approaches complement each other.
+- **The capsule tab shows records, not just steps.** The mock-up now displays an intention, a proposal the researcher corrected, a verified result, declared files, an acceptance, and a Verify button. "Replay" re-reads the journal; controls of a replayed request stay inert, as the renderer rules require.
+- **One action layer** (`blueprint.set`, `system.edit`, `job.submit`, `figure.render`…) serves the interface and the pack's tools (agent-slapsci `native:` functions), and an MCP server where one is wanted. The agent cannot do anything that is not visible and undoable in the interface.
+- **The interface describes the code that runs.** The schema is extracted from the tag the pack's container pins (1.9.1), not from the development branch. `tools/diff_schema.py` reports what an upgrade changes and fails if a curated control would disappear. Today: 8 variables added and 6 removed between 1.9.1 and development, no default changed, no curated control lost.
+- **Known silent failures become impossible by construction.** The pack's `xyz_downloader` documents one: a standard XYZ file carries no unit and BigDFT then reads it in bohr without a word. A blueprint always writes its units.
+- **Paper → blueprint**: the Methods section is mapped onto blocks, each value marked "Paper" with its source passage; what the paper does not say is completed by the adviser and flagged. When a paper ships code, Paper2Agent can turn it into an MCP server added to the head agent's toolbox.
 
 ## 8. Proposed architecture
 
@@ -187,10 +197,10 @@ Structuring choices:
 
 | Step | Content | Proof |
 |---|---|---|
-| 0, done | Extracted schema, curation, mock-up, workshop layer and parameter graph | this repository |
+| 0, done | Schema extracted for the pinned version, curation, mock-up, workshop layer and parameter graph | this repository |
 | 1 | Action layer, models generated from the schema, pinned PyBigDFT container, live convergence | a real H₂O calculation launched from the page |
 | 2 | Production scene: XYZ/PDB/CIF import, editing, `cube` reading, real results | density and orbitals of a real run in the scene |
-| 3 | Host a BigDFT pack: adviser reading the memory, head agent over A2A with approvals, panels embedded, capsules recorded and replayed | a capsule replayed end to end |
+| 3 | Host `pack_pybigdft`: adviser reading its memory, Agent drawer on the wire protocol with approvals, the three renderers, panels embedded, capsules exported and replayed | a capsule replayed and verified end to end |
 | 4 | Projects, sharing, anchored comments, presence | two people on the same scene |
 | 5 | Credits, estimate calibrated on past runs, HPC through remotemanager, expertise offers | a billed calculation |
 | 6 | Publish: vector figures, methods, references, RO-Crate; paper → blueprint | a figure and its paragraph usable as they are |
@@ -198,7 +208,7 @@ Structuring choices:
 
 ## 11. What the mock-up is, and is not
 
-Real in the mock-up: the 313 variables and their tiering, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic, the generated YAML and PyBigDFT, the bibliographic references.
+Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic, the generated YAML and PyBigDFT, the bibliographic references.
 
 Simulated: execution (no calculation runs), result values, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves.
 
@@ -207,9 +217,9 @@ Verified: renders without error in Chromium, light and dark themes, desktop and 
 ## 12. Questions to move forward
 
 1. **Existing platform.** pack-kit says it was extracted from a platform monorepo (FastAPI backend, React frontend, a runner with sidecars). Is the workshop to be built inside that platform, or beside it as a second host?
-2. **Existing BigDFT pack.** pack-kit's code mentions one. Should the workshop layer be merged into its schema, and may I read it and `agent_slapsci`?
-3. **Capsule format.** Is a capsule an aom-memory episode plus its workspace, as I assume in §7, or is there another serialisation to respect?
-4. **Compute at launch.** A single container, or a specific cluster from the start? Which image digest is the reference?
+2. **Capsule-Maker.** I did not find its repository. May I read it, so that the Library and the Verify action follow its real commands and record types rather than what aom-memory's adapter lets me infer?
+3. **Workshop layer.** Should `ontology/workshop_layer.ttl` be merged into `pack_pybigdft`'s schema, or kept as a separate layer loaded beside it?
+4. **Compute at launch.** The pack's Apptainer container alone, or a specific cluster from the start?
 5. **First audience.** Teaching, materials researchers, or biology? This sets the order of steps 2 to 4.
 6. **Openness.** The repository is MIT-licensed. Will the platform be open, or only parts of it?
 7. **OneAngstrom and L_Sim.** Do you already have contacts? Two draft letters are in `docs/letters/`.

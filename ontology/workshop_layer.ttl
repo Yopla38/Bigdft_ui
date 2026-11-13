@@ -27,21 +27,26 @@
 #  0.45 paraphrased into "about 0.45 bohr" would be a wrong fact
 #  the graph carries silently.
 #
-#  The prefix below is a placeholder. Point it at the namespace
-#  of the pack this layer is merged into.
+#  The namespace is the one of the existing PyBigDFT pack
+#  (l_sim/ia_tools/pack/pack_pybigdft, ontology/schema.ttl), so
+#  that the layer merges into it. That schema names concepts
+#  (ConvergenceParameter, BoundaryCondition, KPointMesh...); it
+#  has no class for an input variable as such, which is what
+#  Parameter adds here. Reconciling the two is the maintainer's
+#  call and is not done in this file.
 # =============================================================
-@prefix ws:   <https://example.org/onto/pack/bigdft#> .
+@prefix ws:   <http://bigdft.org/onto#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-<https://example.org/onto/pack/bigdft/workshop-layer> a owl:Ontology ;
+<http://bigdft.org/onto/workshop-layer> a owl:Ontology ;
   owl:versionInfo "0.2" ;
   rdfs:label "BigDFT pack - workshop layer"@en ;
   rdfs:comment "Describes the input variables of BigDFT, PSolver and CheSS as the interface exposes them."@en .
 
 # --- Things of the domain (leaves and descriptive nodes) -----
-ws:Parameter a owl:Class ; rdfs:label "Parameter"@en ; rdfs:comment "An input variable declared in an input_variables_definition.yaml of the BigDFT suite. Same class as the pack schema's Parameter."@en .
+ws:Parameter a owl:Class ; rdfs:label "Parameter"@en ; rdfs:comment "An input variable declared in an input_variables_definition.yaml of the BigDFT suite."@en .
 ws:Section a owl:Class ; rdfs:label "Input section"@en ; rdfs:comment "A group of variables of the YAML input file, e.g. dft, kpt, geopt, psolver.environment."@en .
 ws:Block a owl:Class ; rdfs:label "Block"@en ; rdfs:comment "One of the seven parts of a blueprint: Matter, Theory, Accuracy, Environment, Task, Observables, Machine."@en .
 ws:Tier a owl:Class ; rdfs:label "Exposure tier"@en ; rdfs:comment "How deep a parameter is shown: essential, advanced or expert."@en .

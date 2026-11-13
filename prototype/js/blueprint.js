@@ -191,7 +191,7 @@ window.OND = window.OND || {};
     self.checks = function () {
       const sys = st.sys, v = st.v, d = self.derived(), out = [];
       const add = (block, level, text) => out.push({ block, level, text });
-      add('matter', 'ok', sys.atoms.length + ' atoms, ' + d.ne + ' valence electrons');
+      add('matter', 'ok', sys.atoms.length + ' atoms, ' + d.ne + ' valence electrons, units written explicitly');
       if (d.ne % 2 && v.nspin === 1) add('theory', 'err', 'Odd electron count without spin polarisation');
       else if (v.nspin === 2 && (d.ne - v.mpol) % 2) add('theory', 'err', 'The magnetic moment must have the parity of the electron count');
       else add('theory', 'ok', 'Spin and charge are consistent');

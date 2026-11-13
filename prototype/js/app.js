@@ -285,7 +285,12 @@
           h('p', { style: 'font-size:13px;color:var(--fg-2)' }, 'Click an atom in the scene to substitute or remove it. The blueprint adapts: try doping silicon with a phosphorus.'),
           ui.undo.length ? h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: undoEdit }, 'Undo last edit (' + ui.undo.length + ')')) : null));
         if (sys.fragments) kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Fragments'), h('code', {}, sys.fragments.length + ' defined')), h('p', { style: 'font-size:13px;color:var(--fg-2)' }, sys.fragments.slice(0, 4).join(', ') + (sys.fragments.length > 4 ? '…' : '') + '. Turn on “Fragments” in the scene to colour them.')));
-      } else kids.push(...controls(ui.brick).filter(Boolean).map(ctl));
+      } else {
+        if (ui.brick === 'machine') kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Container'), h('code', {}, 'pack.container')),
+          h('code', { style: 'overflow-wrap:anywhere' }, 'bigdft/runtime@sha256:6f16f65f5b33…'),
+          h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'BigDFT 1.9.1. Declared by the PyBigDFT pack and pinned by digest, never by tag: two runs months apart stay comparable.')));
+        kids.push(...controls(ui.brick).filter(Boolean).map(ctl));
+      }
       const adv = st.advice.filter((a) => P[a.key][2] === ui.brick);
       for (const a of adv) kids.push(h('div', { class: 'advice' }, h('b', {}, 'The advice differs from your choice'), h('span', {}, a.reason), h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => blueprint.reset(a.key) }, 'Follow the advice'))));
       const mine = blueprint.checks().filter((c) => c.block === ui.brick && c.level !== 'ok');
@@ -428,19 +433,23 @@
   }
 
   // --- capsule ------------------------------------------------------------------
+  /* Shaped like a Capsule-Maker package built from an aom-memory: one episode
+   * per intention, the researcher's verdicts quoted verbatim, results verified
+   * only when their evidence is packaged, files listed with their sha256. */
   const CAPSULE = {
     title: 'Benzene adsorption on graphene',
-    meta: 'Recorded session: 9 steps, 3 calculations, pinned environment (container digest and versions). Move the slider to relive the session.',
+    meta: 'One intention, 10 records, 3 calculations, container pinned by digest. Move the slider to relive the session.',
     steps: [
-      ['you', null, 'I want the adsorption energy of benzene on graphene.', () => {}],
-      ['agent', 'use_pack', 'BigDFT pack loaded: read-only memory, tools, pinned container.', () => {}],
+      ['you', null, 'I want the adsorption energy of benzene on graphene.', () => {}, ['intention-01', 'context']],
+      ['agent', 'use_pack', 'BigDFT pack loaded: read-only memory, its tools, its container.', () => {}],
       ['agent', 'query_memory', 'Asked the memory about “physisorption on a surface”. Three facts kept, among them (Graphene) isA (Gapless system).', () => {}],
-      ['agent', 'build_surface', '5×3 sheet in an orthorhombic cell in the xz plane, benzene at 3.35 Å.', () => { ui.view.ghosts = true; }],
-      ['agent', 'set_parameters', 'PBE, mixing profile, 2×1×2 k-point mesh.', () => { blueprint.set('xc', 'PBE', 'agent'); blueprint.set('scf', 'mixing', 'agent'); blueprint.set('kpt', 2, 'agent'); }],
-      ['agent', 'convergence_study', 'Grid-spacing convergence study from 0.50 to 0.35 bohr. Kept: 0.40.', () => { blueprint.set('hgrid', 0.4, 'agent'); ui.view.grid = true; }],
-      ['agent', 'run', 'Three calculations submitted: complex, sheet alone, molecule alone.', () => { ui.view.grid = false; blueprint.set('density', true, 'agent'); }],
-      ['agent', 'declare_file', 'Adsorption energy by difference. input.yaml, run.py and the benzene HOMO figure are declared in the manifest.', () => { ui.view.orbital = true; }],
-      ['you', null, 'Same study with pyrene: the capsule forks here.', () => {}],
+      ['agent', 'set_parameters', 'PBE, mixing profile, Γ point only.', () => { blueprint.set('xc', 'PBE', 'agent'); blueprint.set('scf', 'mixing', 'agent'); blueprint.set('kpt', 1, 'agent'); }, ['proposal-01-1', 'superseded']],
+      ['you', null, 'Γ alone is not enough for a 12 Å sheet. Use a 2×1×2 mesh.', () => { blueprint.set('kpt', 2, 'you'); }, ['correction-01-1', 'verified']],
+      ['agent', 'convergence_study', 'Grid-spacing convergence from 0.50 to 0.35 bohr. Kept: 0.40.', () => { blueprint.set('hgrid', 0.4, 'agent'); ui.view.grid = true; }],
+      ['agent', 'run_in_container', 'Three calculations: complex, sheet alone, molecule alone.', () => { ui.view.grid = false; blueprint.set('density', true, 'agent'); }],
+      ['agent', 'parse_bigdft_log', 'All three reached #FINAL with no warning. Adsorption energy by difference.', () => {}, ['result-01', 'verified']],
+      ['agent', 'declare_file', 'input.yaml, run.py and the benzene HOMO figure declared in the manifest with their sha256.', () => { ui.view.orbital = true; }, ['files', 'verified']],
+      ['you', null, 'Accepted. Without dispersion this is a lower bound; redo it once D3 handles surfaces.', () => {}, ['acceptance-01-1', 'verified']],
     ],
   };
   let capBase = null, capTimer = null;
@@ -457,7 +466,8 @@
   }
   function initCapsule() {
     $('#cap-title').textContent = CAPSULE.title; $('#cap-meta').textContent = CAPSULE.meta;
-    $('#cap-log').replaceChildren(...CAPSULE.steps.map(([who, tool, text]) => h('div', { class: 'msg' }, h('span', { class: 'who' + (who === 'agent' ? ' bot' : '') }, who === 'agent' ? 'Agent' : 'Human'), h('div', {}, tool ? h('code', {}, tool + ' ') : null, text))));
+    $('#cap-log').replaceChildren(...CAPSULE.steps.map(([who, tool, text, , rec]) => h('div', { class: 'msg' }, h('span', { class: 'who' + (who === 'agent' ? ' bot' : '') }, who === 'agent' ? 'Agent' : 'Researcher'), h('div', {}, tool ? h('code', {}, tool + ' ') : null, text, rec ? h('span', { class: 'rec ' + rec[1] }, rec[0] + ' · ' + rec[1]) : null))));
+    $('#cap-verify').addEventListener('click', () => { $('#cap-verify-out').textContent = 'Example: 10 records, 3 files. Every file matches its sha256 and every correction is quoted verbatim in its trace.'; });
     $('#cap-range').addEventListener('input', (e) => { clearInterval(capTimer); capsuleGo(+e.target.value); });
     $('#cap-play').addEventListener('click', () => { clearInterval(capTimer); let k = 0; capsuleGo(0); capTimer = setInterval(() => { if (++k >= CAPSULE.steps.length) return clearInterval(capTimer); capsuleGo(k); }, 1500); });
     $('#cap-fork').addEventListener('click', () => { clearInterval(capTimer); capBase = null; for (const k in st.src) if (st.src[k] === 'agent') st.src[k] = 'you'; ui.brick = 'accuracy'; setTab('source'); refresh(); });

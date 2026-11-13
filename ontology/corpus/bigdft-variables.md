@@ -1,6 +1,6 @@
 # BigDFT input variables
 
-Source: bigdft-suite, revision 213bc56f51b9e990fe5b9f035402f36d01b19816 2026-09-25.
+Source: bigdft-suite, revision tag 1.9.1.
 
 ## dft.hgrids
 
@@ -312,14 +312,6 @@ Plots the density of states by calculating the value of psi*Hpsi per each KS orb
 Purpose: Write KS orbitals in the full simulation domain (might take lot of disk space!).
 Default: `"None"`.
 
-## output.apply_coeffs
-
-`apply_coeffs` is an input variable of section `output` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Observables block, at the expert tier.
-Purpose: apply the coefficients to the SFs when writing orbitals in LS-BigDFT.
-Default: `true`.
-
-Whether or not to apply the coefficients to the support functions when writing orbitals in a linear scaling calculation. If yes, will output wavefunctions as normal, if no, will instead output support functions in the global localisation region.
-
 ## output.outputpsiid
 
 `outputpsiid` is an input variable of section `output` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Observables block, at the expert tier.
@@ -331,10 +323,10 @@ Define the basename of all the files associated to the output of the wavefunctio
 ## output.coupling_matrix
 
 `coupling_matrix` is an input variable of section `output` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Observables block, at the advanced tier.
-Purpose: kind of the coupling matrix which have to be dumped.
+Purpose: kind of the coupling matrix which have to be plotted.
 Default: `"complete"`.
 
-Useful to separate the various contributions of the coupling matrix. May be written exclusively, separately or in complete form.
+Useful to separate the various contributions of the couling matrix. May be plotted exclusively, separately or in complete form.
 
 ## kpt.method
 
@@ -786,14 +778,6 @@ Default: `2.0`.
 
 The DIIS multiplier used for preconditioning the wavefunctions at constant potential.
 
-## mix.diis_sd_switch_tolerance
-
-`diis_sd_switch_tolerance` is an input variable of section `mix` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: Tolerance to switch between the Steppest Descent and the DIIS.
-Default: `0`.
-
-With this parameter we can tailor the behaviour of the SCF optimization cycle between DIIS and Steepest Descent. When the energy increases (up to such tolerance), the code switches between the different algorithms.
-
 ## sic.sic_approach
 
 `sic_approach` is an input variable of section `sic` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Theory block, at the advanced tier.
@@ -883,12 +867,6 @@ Default: `true`.
 `sw_eqfactor` is an input variable of section `mode` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Theory block, at the expert tier.
 Purpose: Factor on sigma value, rule the equilibrium bond length for the Stillinger-Weber potential.
 Default: `1.0`.
-
-## mode.sirius_config
-
-`sirius_config` is an input variable of section `mode` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Theory block, at the expert tier.
-Purpose: Dictionary to pass as sirius configuration (file path or full json dict wrapped in a string).
-Default: `"{\\\"parameters\\\": {\\\"electronic_structure_method\\\": \\\"full_potential_lapwlo\\\"}}"`.
 
 ## perf.debug
 
@@ -1254,14 +1232,6 @@ Default: `0`.
 
 Indicates how the support function matrices should be written to disk at the end of the run: * 0 => None * 1 => Plain text in sparse format * 11 => Plain text in dense format * 21 => Plain text in both formats * 2 => Fortran binary in sparse format * 12 => Fortran binary in dense format * 22 => Fortran binary in both formats * 4 => MPI native binary in sparse format
 
-## lin_general.output_matder
-
-`output_matder` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: Output sparse matrices derivatives; 0 no output, 1 formatted sparse,.
-Default: `0`.
-
-Indicates how the support function matrices should be written to disk at the end of the run: * 0 => None * 1 => Plain text in sparse format
-
 ## lin_general.output_coeff
 
 `output_coeff` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Observables block, at the expert tier.
@@ -1293,10 +1263,10 @@ Indicates how the support functions should be written to disk at the end of the 
 ## lin_general.kernel_restart_mode
 
 `kernel_restart_mode` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: Method for restarting kernel; 0 kernel, 1 coefficients, 2 random, 3 diagonal, 4 full kernel, 5 full coeffs.
+Purpose: Method for restarting kernel; 0 kernel, 1 coefficients, 2 random, 3 diagonal, 4 support function weights, 5 full kernel, 6 full coeffs.
 Default: `0`.
 
-Indicates how the kernel should be generated for a restart calculation: * 0 => Density kernel * 1 => Coefficients * 2 => Random * 3 => Diagonal kernel, i.e. support functions scaled by number of electrons (per fragment) * 4 => Atomic orbitals, i.e. first perform diagonalization and retain coefficients/kernel * 5 => Density kernel of full system (for the case where both fragment and full kernel is available) * 6 => Coefficients of full system (for the case where both fragment and full kernel is available) * 7 => Diagonal kernel with smearing
+Indicates how the kernel should be generated for a restart calculation: * 0 => Density kernel * 1 => Coefficients * 2 => Random * 3 => Diagonal kernel, i.e. support functions scaled by number of electrons (per fragment) * 4 => Support functions weights * 5 => Atomic orbitals, i.e. first perform diagonalization and retain coefficients/kernel * 6 => Density kernel of full system (for the case where both fragment and full kernel is available) * 7 => Coefficients of full system (for the case where both fragment and full kernel is available)
 
 ## lin_general.kernel_restart_noise
 
@@ -1321,6 +1291,52 @@ Purpose: Number of neighbours to output for each fragment.
 Default: `12.0`.
 
 Distance (in bohr) beyond which neighbouring atoms are not included in frag_env.xyz
+
+## lin_general.cdft_lag_mult_init
+
+`cdft_lag_mult_init` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: CDFT initial value for Lagrange multiplier.
+Default: `0.05`.
+
+The sign is no longer set automatically based on the charge to be constrained
+
+## lin_general.cdft_conv_crit
+
+`cdft_conv_crit` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: CDFT convergence threshold for the constrained charge.
+Default: `0.01`.
+
+possible value: 1 positive real number
+
+## lin_general.cdft_nit
+
+`cdft_nit` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: Number of iterations for CDFT loop over V_c.
+Default: `100`.
+
+## lin_general.cdft_orbital
+
+`cdft_orbital` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: Which orbital to add/remove charge from in CDFT.
+Default: `[0, 0]`.
+
+Indicates whether the constraint is spatial or orbital based 0 => spatial -1, -2 => HOMO, HOMO-1... 1, 2... => LUMO, LUMO+1...
+
+## lin_general.cdft_spin
+
+`cdft_spin` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: Which orbital to add/remove charge from in CDFT.
+Default: `[1, 1]`.
+
+Indicates whether each constraint is spin up or down
+
+## lin_general.cdft_type
+
+`cdft_type` is an input variable of section `lin_general` (bigdft/src/input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
+Purpose: Which type of excitation to do.
+Default: `1`.
+
+Indicates whether singlet/triplet, diag/off-diag 1 -> singlet, diag 2 -> triplet, diag 3 -> singlet, off-diag 4 -> triplet, off-diag
 
 ## lin_general.cdft_add_w_guess
 
@@ -1716,21 +1732,9 @@ Indicates the cutoff radius used for the matrix vector multiplications. Must be 
 
 `linear` is a profile called with `import: linear`. Linear parameters sufficient for PDoS, charge analysis, MD. Basic parameters to perform a linear calculation.
 
-## Profile linear_virtual
-
-`linear_virtual` is a profile called with `import: linear_virtual`. Input parameters to be added to the linear profile for virtual states inclusion.
-
 ## Profile linear_fragments
 
-`linear_fragments` is a profile called with `import: linear_fragments`. Input parameters to be added to the linear profile for fragment calculation (templates ready).
-
-## Profile linear_convergence
-
-`linear_convergence` is a profile called with `import: linear_convergence`. Parameters to supplement linear to help with convergence.. Include this profile with linear if you have convergence problems.
-
-## Profile linear_purify
-
-`linear_purify` is a profile called with `import: linear_purify`. Input parameters to turn on purification instead of chess. Extra parameters for linear if you want to use NTPoly purification
+`linear_fragments` is a profile called with `import: linear_fragments`. Input parameters to be added to the linear profile for fragment calculationn (templates ready).
 
 ## Profile md
 
@@ -2096,12 +2100,6 @@ Default: `4`.
 Purpose: SCALAPACK linear scaling max num procs.
 Default: `4`.
 
-## chess.ntpoly.serial_io
-
-`serial_io` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: turn on serial IO if MPI is having problem on a machine..
-Default: `false`.
-
 ## chess.ntpoly.threshold_density
 
 `threshold_density` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the advanced tier.
@@ -2125,21 +2123,3 @@ Default: `0.0`.
 `convergence_overlap` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
 Purpose: threshold for convergence of ntpoly overlap inverse calculation..
 Default: `1e-10`.
-
-## chess.ntpoly.temperature
-
-`temperature` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: temperature in Kelvin for smearing..
-Default: `300`.
-
-## chess.ntpoly.step_size
-
-`step_size` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: step size for differential equation solvers (WOM).
-Default: `0.01`.
-
-## chess.ntpoly.solver
-
-`solver` is an input variable of section `chess.ntpoly` (chess/src/chess_input_variables_definition.yaml). The workshop exposes it in the Accuracy block, at the expert tier.
-Purpose: the density matrix solver to use..
-Default: `1`.
