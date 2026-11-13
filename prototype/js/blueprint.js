@@ -1,4 +1,4 @@
-/* The recipe: one simulation described as seven blocks. This module owns the
+/* The blueprint: one simulation described as seven blocks. This module owns the
  * parameter values and their provenance, the adaptive defaults ("conseiller"),
  * the readiness checks, the cost estimate and the compilation to BigDFT's
  * native YAML input and to a PyBigDFT script. */
@@ -71,32 +71,32 @@ window.OND = window.OND || {};
   // --- parameters ------------------------------------------------------------
   /* key: [BigDFT default, schema path, block] */
   const PARAMS = {
-    xc: ['LDA', 'dft.ixc', 'theorie'], nspin: [1, 'dft.nspin', 'theorie'], mpol: [0, 'dft.mpol', 'theorie'],
-    charge: [0, 'dft.qcharge', 'theorie'], dispersion: [false, 'dft.dispersion', 'theorie'],
-    hgrid: [0.45, 'dft.hgrids', 'precision'], crmult: [5, 'dft.rmult', 'precision'], frmult: [8, 'dft.rmult', 'precision'],
-    gnrm: [1e-4, 'dft.gnrm_cv', 'precision'], algo: ['cubic', 'dft.inputpsiid', 'precision'],
-    kpt: [1, 'kpt.ngkpt', 'milieu'], solvent: ['none', 'psolver.environment.cavity', 'milieu'],
-    efield: [0, 'dft.elecfield', 'milieu'], scf: ['dirmin', 'mix.iscf', 'milieu'], tel: [0, 'mix.tel', 'milieu'],
-    action: ['sp', 'geopt.method', 'action'], geoptMethod: ['FIRE', 'geopt.method', 'action'],
-    geoptSteps: [50, 'geopt.ncount_cluster_x', 'action'], forcemax: [0, 'geopt.forcemax', 'action'],
-    biomode: [false, 'geopt.biomode', 'action'], mdSteps: [200, 'md.mdsteps', 'action'],
-    mdT: [300, 'md.temperature', 'action'], mdDt: [20, 'md.timestep', 'action'],
-    thermostat: ['none', 'md.thermostat', 'action'], nimg: [15, 'geopt.nimg', 'action'],
-    tddft: ['TDA', 'tddft.tddft_approach', 'action'], nvirt: [8, 'dft.nvirt', 'action'],
-    density: [false, 'dft.output_denspot', 'mesures'], nplot: [0, 'dft.nplot', 'mesures'], dos: [true, null, 'mesures'],
-    dipole: [false, 'lin_general.calc_dipole', 'mesures'], charges: [false, 'lin_general.charge_multipoles', 'mesures'],
+    xc: ['LDA', 'dft.ixc', 'theory'], nspin: [1, 'dft.nspin', 'theory'], mpol: [0, 'dft.mpol', 'theory'],
+    charge: [0, 'dft.qcharge', 'theory'], dispersion: [false, 'dft.dispersion', 'theory'],
+    hgrid: [0.45, 'dft.hgrids', 'accuracy'], crmult: [5, 'dft.rmult', 'accuracy'], frmult: [8, 'dft.rmult', 'accuracy'],
+    gnrm: [1e-4, 'dft.gnrm_cv', 'accuracy'], algo: ['cubic', 'dft.inputpsiid', 'accuracy'],
+    kpt: [1, 'kpt.ngkpt', 'environment'], solvent: ['none', 'psolver.environment.cavity', 'environment'],
+    efield: [0, 'dft.elecfield', 'environment'], scf: ['dirmin', 'mix.iscf', 'environment'], tel: [0, 'mix.tel', 'environment'],
+    action: ['sp', 'geopt.method', 'task'], geoptMethod: ['FIRE', 'geopt.method', 'task'],
+    geoptSteps: [50, 'geopt.ncount_cluster_x', 'task'], forcemax: [0, 'geopt.forcemax', 'task'],
+    biomode: [false, 'geopt.biomode', 'task'], mdSteps: [200, 'md.mdsteps', 'task'],
+    mdT: [300, 'md.temperature', 'task'], mdDt: [20, 'md.timestep', 'task'],
+    thermostat: ['none', 'md.thermostat', 'task'], nimg: [15, 'geopt.nimg', 'task'],
+    tddft: ['TDA', 'tddft.tddft_approach', 'task'], nvirt: [8, 'dft.nvirt', 'task'],
+    density: [false, 'dft.output_denspot', 'observables'], nplot: [0, 'dft.nplot', 'observables'], dos: [true, null, 'observables'],
+    dipole: [false, 'lin_general.calc_dipole', 'observables'], charges: [false, 'lin_general.charge_multipoles', 'observables'],
     target: ['cpu', 'perf.accel', 'machine'], mpi: [4, null, 'machine'], omp: [2, null, 'machine'],
   };
 
   const TARGETS = {
-    cpu: { label: 'Conteneur CPU', detail: 'PyBigDFT, image officielle', rate: 1, speed: 1 },
-    gpu: { label: 'Nœud GPU', detail: 'CUDA, échange exact accéléré', rate: 6, speed: 5 },
-    hpc: { label: 'Partition HPC', detail: 'via remotemanager', rate: 0.6, speed: 1 },
+    cpu: { label: 'CPU container', detail: 'PyBigDFT, pinned image', rate: 1, speed: 1 },
+    gpu: { label: 'GPU node', detail: 'CUDA, accelerated exact exchange', rate: 6, speed: 5 },
+    hpc: { label: 'HPC partition', detail: 'through remotemanager', rate: 0.6, speed: 1 },
   };
 
-  function Recipe() {
+  function Blueprint() {
     const st = { v: {}, src: {}, why: {}, expert: {}, sys: null, advice: [], vol: null };
-    for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'defaut'; }
+    for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; }
     const listeners = [];
     const self = { st, PARAMS, TARGETS };
 
@@ -106,15 +106,15 @@ window.OND = window.OND || {};
     self.setSystem = function (sys) { st.sys = sys; st.vol = null; advise(); emit('system'); };
     self.touchSystem = function () { st.vol = null; advise(); emit('system'); };
     self.set = function (key, value, src) {
-      st.v[key] = value; st.src[key] = src || 'vous'; delete st.why[key];
+      st.v[key] = value; st.src[key] = src || 'you'; delete st.why[key];
       if (key === 'crmult' || key === 'frmult') st.vol = null;
       advise(); emit(key);
     };
     self.clear = function () {
-      for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'defaut'; }
+      for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; }
       st.why = {}; st.expert = {};
     };
-    self.reset = function (key) { st.src[key] = 'defaut'; st.v[key] = PARAMS[key][0]; advise(); emit(key); };
+    self.reset = function (key) { st.src[key] = 'default'; st.v[key] = PARAMS[key][0]; advise(); emit(key); };
     self.setExpert = function (path, value) { if (value === '' || value == null) delete st.expert[path]; else st.expert[path] = value; emit('expert'); };
     self.snapshot = () => JSON.parse(JSON.stringify({ v: st.v, src: st.src, why: st.why, expert: st.expert }));
     self.restore = function (snap) { Object.assign(st, JSON.parse(JSON.stringify(snap))); advise(); emit('restore'); };
@@ -126,43 +126,43 @@ window.OND = window.OND || {};
     function rules() {
       const sys = st.sys, v = st.v, out = [], has = (t) => sys.traits.includes(t), comp = OND.chem.composition(sys);
       const n = sys.atoms.length, ne = OND.chem.electrons(sys, v.charge);
-      out.push(['xc', 'PBE', 'PBE est le compromis usuel entre coût et fiabilité pour les structures et les énergies.', ['Structure et énergie', 'fonctionnelleConseillée', 'PBE']]);
+      out.push(['xc', 'PBE', 'PBE is the usual trade-off between cost and reliability for structures and energies.', ['Structure and energy', 'recommendedFunctional', 'PBE']]);
       if (ne % 2) {
-        out.push(['nspin', 2, ne + ' électrons : un nombre impair impose un traitement polarisé en spin.', ['Nombre d’électrons impair', 'requiert', 'Spin colinéaire']]);
-        out.push(['mpol', 1, 'Moment magnétique de même parité que le nombre d’électrons.', ['Spin colinéaire', 'momentInitial', '1 µB']]);
+        out.push(['nspin', 2, ne + ' electrons: an odd count requires a spin-polarised treatment.', ['Odd electron count', 'requires', 'Collinear spin']]);
+        out.push(['mpol', 1, 'Magnetic moment with the parity of the electron count.', ['Collinear spin', 'initialMoment', '1 µB']]);
       }
-      if (comp.O || comp.N) out.push(['hgrid', 0.4, 'L’oxygène et l’azote ont des pseudopotentiels plus durs : une grille plus fine les décrit correctement.', ['Pseudopotentiel dur (N, O)', 'pasDeGrilleConseillé', '0,40 bohr']]);
-      if (v.charge < 0) out.push(['crmult', 7, 'Un anion a une densité plus diffuse : la région grossière doit s’étendre plus loin.', ['Anion', 'étendLaRégion', 'crmult = 7']]);
+      if (comp.O || comp.N) out.push(['hgrid', 0.4, 'Oxygen and nitrogen have harder pseudopotentials: a finer grid describes them properly.', ['Hard pseudopotential (N, O)', 'recommendedGridSpacing', '0.40 bohr']]);
+      if (v.charge < 0) out.push(['crmult', 7, 'An anion has a more diffuse density: the coarse region must reach further.', ['Anion', 'extendsRegion', 'crmult = 7']]);
       if (sys.bc !== 'free') {
         const L = Math.min(...sys.cell.filter(Boolean));
-        out.push(['kpt', Math.max(1, Math.ceil(20 / L)), 'Maille de ' + L.toFixed(1).replace('.', ',') + ' Å : la zone de Brillouin doit être échantillonnée dans les directions périodiques.', ['Système périodique', 'échantillonne', 'Grille de Monkhorst-Pack']]);
+        out.push(['kpt', Math.max(1, Math.ceil(20 / L)), L.toFixed(1) + ' Å cell: the Brillouin zone must be sampled along the periodic directions.', ['Periodic system', 'sampledBy', 'Monkhorst-Pack mesh']]);
       }
-      if (has('semi-métal')) {
-        out.push(['scf', 'mixing', 'Sans bande interdite, la minimisation directe converge mal : mélange de densité et états vides.', ['Système sans gap', 'requiert', 'Profil mixing']]);
-        out.push(['tel', 0.01, 'Température électronique du profil mixing de BigDFT.', ['Profil mixing', 'températureÉlectronique', '0,01 Ha']]);
+      if (has('semimetal')) {
+        out.push(['scf', 'mixing', 'Without a gap, direct minimisation converges poorly: density mixing and empty states.', ['Gapless system', 'requires', 'mixing profile']]);
+        out.push(['tel', 0.01, 'Electronic temperature of the BigDFT mixing profile.', ['mixing profile', 'electronicTemperature', '0.01 Ha']]);
       }
-      if ((has('van der Waals') || has('liaisons hydrogène')) && sys.bc === 'free') out.push(['dispersion', true, 'Les interactions non covalentes de ce système demandent une correction de dispersion.', ['Interaction non covalente', 'requiert', 'Correction D3 de Grimme']]);
-      if (n > 150 || has('fragments')) out.push(['algo', 'linear', n + ' atomes : le mode linéaire décrit le système par des fonctions support localisées et ouvre l’analyse en fragments.', ['Grand système', 'algorithmeConseillé', 'Mode linéaire']]);
-      if (has('biomolécule')) {
-        out.push(['solvent', 'water', 'Une biomolécule se décrit dans son milieu : solvant implicite, cavité soft-sphere.', ['Biomolécule', 'milieuConseillé', 'Eau implicite']]);
+      if ((has('van der Waals') || has('hydrogen bonds')) && sys.bc === 'free') out.push(['dispersion', true, 'The non-covalent interactions of this system call for a dispersion correction.', ['Non-covalent interaction', 'requires', 'Grimme D3 correction']]);
+      if (n > 150 || has('fragments')) out.push(['algo', 'linear', n + ' atoms: linear-scaling mode describes the system with localised support functions and opens fragment analysis.', ['Large system', 'recommendedAlgorithm', 'Linear scaling']]);
+      if (has('biomolecule')) {
+        out.push(['solvent', 'water', 'A biomolecule is described in its environment: implicit solvent, soft-sphere cavity.', ['Biomolecule', 'recommendedEnvironment', 'Implicit water']]);
         if (v.action === 'geopt') {
-          out.push(['geoptMethod', 'SQNM', 'SQNM dispose d’un mode dédié aux biomolécules.', ['Biomolécule', 'optimiseurConseillé', 'SQNM']]);
-          out.push(['biomode', true, 'Active le traitement séparé des modes d’élongation.', ['SQNM', 'option', 'biomode']]);
+          out.push(['geoptMethod', 'SQNM', 'SQNM has a mode dedicated to biomolecules.', ['Biomolecule', 'recommendedOptimiser', 'SQNM']]);
+          out.push(['biomode', true, 'Enables the separate treatment of stretching modes.', ['SQNM', 'option', 'biomode']]);
         }
       }
-      if (['PBE0', 'B3LYP', 'HF'].includes(v.xc)) out.push(['target', 'gpu', 'L’échange exact est le poste dominant : il est accéléré sur GPU.', ['Fonctionnelle hybride', 'matérielConseillé', 'GPU']]);
-      if (n > 100 || (sys.bc !== 'free' && v.kpt > 1)) { out.push(['mpi', 16, 'Taille du système : davantage de processus MPI.', ['Grand système', 'ressourceConseillée', '16 processus']]); }
+      if (['PBE0', 'B3LYP', 'HF'].includes(v.xc)) out.push(['target', 'gpu', 'Exact exchange dominates the cost: it is GPU-accelerated.', ['Hybrid functional', 'recommendedHardware', 'GPU']]);
+      if (n > 100 || (sys.bc !== 'free' && v.kpt > 1)) { out.push(['mpi', 16, 'System size: more MPI processes.', ['Large system', 'recommendedResource', '16 processes']]); }
       return out;
     }
 
     function advise() {
       if (!st.sys) return;
-      for (const k in st.src) if (st.src[k] === 'adapte') { st.v[k] = PARAMS[k][0]; st.src[k] = 'defaut'; delete st.why[k]; }
+      for (const k in st.src) if (st.src[k] === 'adapted') { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; delete st.why[k]; }
       st.advice = [];
       for (let pass = 0; pass < 2; pass++) {
         for (const [key, value, reason, triplet] of rules()) {
-          const mine = ['vous', 'agent', 'article'].includes(st.src[key]);
-          if (!mine) { st.v[key] = value; st.src[key] = 'adapte'; st.why[key] = { reason, triplet }; }
+          const mine = ['you', 'agent', 'paper'].includes(st.src[key]);
+          if (!mine) { st.v[key] = value; st.src[key] = 'adapted'; st.why[key] = { reason, triplet }; }
           else if (pass && st.v[key] !== value) st.advice.push({ key, value, reason, triplet });
         }
       }
@@ -191,20 +191,20 @@ window.OND = window.OND || {};
     self.checks = function () {
       const sys = st.sys, v = st.v, d = self.derived(), out = [];
       const add = (block, level, text) => out.push({ block, level, text });
-      add('matiere', 'ok', sys.atoms.length + ' atomes, ' + d.ne + ' électrons de valence');
-      if (d.ne % 2 && v.nspin === 1) add('theorie', 'err', 'Nombre d’électrons impair sans polarisation de spin');
-      else if (v.nspin === 2 && (d.ne - v.mpol) % 2) add('theorie', 'err', 'Le moment magnétique doit avoir la parité du nombre d’électrons');
-      else add('theorie', 'ok', 'Spin et charge cohérents');
-      if (v.dispersion && sys.bc !== 'free') add('theorie', 'warn', 'La correction D3 n’est disponible qu’en conditions libres');
-      else if (!v.dispersion && sys.traits.includes('van der Waals')) add('theorie', 'warn', 'Physisorption sans dispersion : D3 n’est pas disponible en conditions de surface, l’énergie d’adsorption sera sous-estimée');
-      if (v.hgrid > 0.55) add('precision', 'warn', 'Grille grossière : énergie peu convergée');
-      else add('precision', 'ok', 'Grille : ' + fmtInt(d.dof) + ' degrés de liberté par orbitale');
-      if (v.algo === 'linear' && v.kpt > 1) add('milieu', 'err', 'Le mode linéaire travaille au point Γ uniquement');
-      if (v.efield && sys.bc === 'periodic') add('milieu', 'err', 'Pas de champ électrique dans une direction périodique');
-      if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('milieu', 'warn', 'Un seul point k pour un système périodique');
-      if (d.credits > 128) add('machine', 'warn', 'Coût estimé supérieur à vos 128 crédits : réduisez la précision ou changez de cible');
-      if (d.mem > 64) add('machine', 'warn', 'Mémoire estimée élevée pour cette cible');
-      else add('machine', 'ok', 'Tient en mémoire : ' + d.mem.toFixed(d.mem < 10 ? 1 : 0).replace('.', ',') + ' Go estimés');
+      add('matter', 'ok', sys.atoms.length + ' atoms, ' + d.ne + ' valence electrons');
+      if (d.ne % 2 && v.nspin === 1) add('theory', 'err', 'Odd electron count without spin polarisation');
+      else if (v.nspin === 2 && (d.ne - v.mpol) % 2) add('theory', 'err', 'The magnetic moment must have the parity of the electron count');
+      else add('theory', 'ok', 'Spin and charge are consistent');
+      if (v.dispersion && sys.bc !== 'free') add('theory', 'warn', 'The D3 correction is only available with free boundary conditions');
+      else if (!v.dispersion && sys.traits.includes('van der Waals')) add('theory', 'warn', 'Physisorption without dispersion: D3 is not available with surface boundary conditions, the adsorption energy will be underestimated');
+      if (v.hgrid > 0.55) add('accuracy', 'warn', 'Coarse grid: energy poorly converged');
+      else add('accuracy', 'ok', 'Grid: ' + fmtInt(d.dof) + ' degrees of freedom per orbital');
+      if (v.algo === 'linear' && v.kpt > 1) add('environment', 'err', 'Linear-scaling mode works at the Γ point only');
+      if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction');
+      if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system');
+      if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target');
+      if (d.mem > 64) add('machine', 'warn', 'High estimated memory for this target');
+      else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB estimated');
       return out;
     };
 
@@ -253,7 +253,7 @@ window.OND = window.OND || {};
       for (const path in st.expert) {
         const cut = path.lastIndexOf('.');
         put(path.slice(0, cut), path.slice(cut + 1), st.expert[path]);
-        S[path.slice(0, cut)][S[path.slice(0, cut)].length - 1][2] = 'réglage expert';
+        S[path.slice(0, cut)][S[path.slice(0, cut)].length - 1][2] = 'expert setting';
       }
       return { imports, sections: S, file: XYZ[sys.id] };
     };
@@ -265,7 +265,7 @@ window.OND = window.OND || {};
     self.yaml = function () {
       const sys = st.sys, inp = self.input(), L = [];
       const line = (ind, k, val, c) => L.push({ ind, k, val, c });
-      if (inp.imports.length) line(0, 'import', inp.imports.length > 1 ? '[' + inp.imports.join(', ') + ']' : inp.imports[0], 'profils fournis par BigDFT');
+      if (inp.imports.length) line(0, 'import', inp.imports.length > 1 ? '[' + inp.imports.join(', ') + ']' : inp.imports[0], 'profiles shipped with BigDFT');
       const tree = {};
       for (const sec in inp.sections) { let node = tree; for (const part of sec.split('.')) node = node[part] = node[part] || {}; node.__ = inp.sections[sec]; }
       (function walk(node, ind) {
@@ -278,10 +278,10 @@ window.OND = window.OND || {};
       })(tree, 0);
       line(0, 'posinp', null);
       line(1, 'units', 'angstroem');
-      if (sys.cell) line(1, 'cell', '[' + sys.cell.map((c) => (c ? c.toFixed(3) : '.inf')).join(', ') + ']', sys.bc === 'surface' ? 'surface : libre selon y' : 'périodique');
+      if (sys.cell) line(1, 'cell', '[' + sys.cell.map((c) => (c ? c.toFixed(3) : '.inf')).join(', ') + ']', sys.bc === 'surface' ? 'surface: free along y' : 'periodic');
       line(1, 'positions', null);
       sys.atoms.slice(0, 4).forEach((at) => L.push({ ind: 1, item: at.el, val: '[' + at.p.map((x, d) => (x + sys.origin[d]).toFixed(4)).join(', ') + ']' }));
-      if (sys.atoms.length > 4) L.push({ ind: 1, note: '… ' + (sys.atoms.length - 4) + ' autres atomes' });
+      if (sys.atoms.length > 4) L.push({ ind: 1, note: '… ' + (sys.atoms.length - 4) + ' more atoms' });
       return L;
     };
 
@@ -323,8 +323,8 @@ window.OND = window.OND || {};
     return self;
   }
 
-  const fmtInt = (x) => Math.round(x).toLocaleString('fr-FR');
+  const fmtInt = (x) => Math.round(x).toLocaleString('en-US');
   OND.grid = { classifier, volumes };
-  OND.Recipe = Recipe;
+  OND.Blueprint = Blueprint;
   OND.fmtInt = fmtInt;
 })(window.OND);

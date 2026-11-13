@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
 <style>
 /* Layout: an instrument, not a page. A dark laboratory bench where the 3D stage is the
-   work surface, the recipe is a stack of seven blocks on its left, and the inspector
+   work surface, the blueprint is a stack of seven blocks on its left, and the inspector
    of the selected block on its right. Journal-style serif for names, mono for values. */
 :root{
   --bg:#0a1416;--panel:#0f1c1f;--panel-2:#152629;--raise:#1b3034;--line:#22383c;--line-2:#314d52;
@@ -158,7 +158,7 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .ctl-val output{font:500 13px var(--mono);min-width:86px;text-align:right}
 .prov{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--fg-2)}
 .src-chip{flex:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid currentColor;font-weight:600}
-.src-defaut{color:var(--fg-3)}.src-adapte{color:var(--accent)}.src-vous{color:var(--fg)}.src-agent{color:var(--agent)}.src-article{color:var(--pos)}
+.src-default{color:var(--fg-3)}.src-adapted{color:var(--accent)}.src-you{color:var(--fg)}.src-agent{color:var(--agent)}.src-paper{color:var(--pos)}
 .trip{font:11px var(--mono);color:var(--fg-3);margin-top:3px;overflow-wrap:anywhere}
 .trip em{font-style:normal;color:var(--accent)}
 .stepper{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:8px}
@@ -259,84 +259,84 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 
 <div class="app">
   <header class="top">
-    <a class="brand" href="#atelier" aria-label="Ondelette, atelier de la matière">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M1 17h5c2 0 2.6-1.2 3.4-3.6C10.6 9.800 11.600 4 13.600 4c2.6 0 2.4 22 5 22 1.8 0 2.4-5.6 3.4-7.6.6-1.200 1.200-1.400 2.600-1.400H29" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
-      <b>Ondelette</b><small>atelier de la matière</small>
+    <a class="brand" href="#workshop" aria-label="Ondelette, the matter workshop">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M1 17h5c2 0 2.6-1.2 3.4-3.6C10.6 9.8 11.6 4 13.6 4c2.6 0 2.4 22 5 22 1.8 0 2.4-5.6 3.4-7.6.6-1.2 1.2-1.4 2.6-1.4H29" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+      <b>Ondelette</b><small>the matter workshop</small>
     </a>
-    <nav class="spaces" aria-label="Espaces">
-      <a href="#atelier">Atelier</a><a href="#bibliotheque">Bibliothèque</a><a href="#laboratoire">Laboratoire</a><a href="#calcul">Calcul</a><a href="#publication">Publication</a>
+    <nav class="spaces" aria-label="Spaces">
+      <a href="#workshop">Workshop</a><a href="#library">Library</a><a href="#lab">Lab</a><a href="#compute">Compute</a><a href="#publish">Publish</a>
     </nav>
     <div class="top-right">
-      <span class="pill example" title="Les résultats numériques affichés sont des exemples">Maquette</span>
-      <span class="avatars" aria-label="3 personnes dans ce projet"><i>IN</i><i>MA</i><i>+1</i></span>
-      <span class="pill num">128 crédits</span>
-      <button class="btn" id="agent-open" type="button">Compagnon</button>
+      <span class="pill example" title="Numerical results shown here are examples">Mock-up</span>
+      <span class="avatars" aria-label="3 people in this project"><i>IN</i><i>MA</i><i>+1</i></span>
+      <span class="pill num">128 credits</span>
+      <button class="btn" id="agent-open" type="button">Agent</button>
     </div>
   </header>
 
-  <!-- ================= ATELIER ================= -->
-  <section class="view atelier" id="view-atelier">
-    <aside class="rail" aria-label="Recette">
+  <!-- ================= WORKSHOP ================= -->
+  <section class="view atelier" id="view-workshop">
+    <aside class="rail" aria-label="Blueprint">
       <div class="bricks" id="bricks"></div>
       <div class="launch">
         <div class="ready">
-          <svg viewBox="0 0 54 54" role="img" aria-label="Préparation de la recette">
+          <svg viewBox="0 0 54 54" role="img" aria-label="Blueprint readiness">
             <circle cx="27" cy="27" r="22" fill="none" stroke="var(--line-2)" stroke-width="5"/>
             <circle id="ring" cx="27" cy="27" r="22" fill="none" stroke="var(--ok)" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" transform="rotate(-90 27 27)"/>
             <text id="ring-t" x="27" y="31" text-anchor="middle" style="font:500 12px var(--mono);fill:var(--fg)">0</text>
           </svg>
           <dl id="estimate"></dl>
         </div>
-        <button class="btn cta" id="launch" type="button">Lancer le calcul</button>
+        <button class="btn cta" id="launch" type="button">Run calculation</button>
       </div>
     </aside>
 
     <div class="center">
       <div class="stage" id="stage">
         <div class="stage-title"><h1 id="sys-name"></h1><p id="sys-blurb"></p><div class="chips" id="sys-chips"></div></div>
-        <div class="viewbar" id="viewbar" role="group" aria-label="Affichage">
-          <button class="tog" data-view="grid" type="button" aria-pressed="false">Grille d'ondelettes</button>
-          <button class="tog" data-view="density" type="button" aria-pressed="false">Densité</button>
-          <button class="tog" data-view="orbital" type="button" aria-pressed="false">Orbitale</button>
+        <div class="viewbar" id="viewbar" role="group" aria-label="Display">
+          <button class="tog" data-view="grid" type="button" aria-pressed="false">Wavelet grid</button>
+          <button class="tog" data-view="density" type="button" aria-pressed="false">Density</button>
+          <button class="tog" data-view="orbital" type="button" aria-pressed="false">Orbital</button>
           <button class="tog" data-view="fragment" type="button" aria-pressed="false">Fragments</button>
-          <button class="tog" data-view="ghosts" type="button" aria-pressed="true">Images périodiques</button>
-          <button class="tog" data-view="vdw" type="button" aria-pressed="false">Volumes atomiques</button>
+          <button class="tog" data-view="ghosts" type="button" aria-pressed="true">Periodic images</button>
+          <button class="tog" data-view="vdw" type="button" aria-pressed="false">Space-filling</button>
         </div>
-        <div class="pin" id="pin" hidden><b>Inès</b> · une lacune ici changerait-elle le gap ?</div>
-        <p class="hint" id="hint">Glissez pour tourner · cliquez un atome pour le substituer ou créer une lacune</p>
+        <div class="pin" id="pin" hidden><b>Inès</b> · would a vacancy here change the gap?</div>
+        <p class="hint" id="hint">Drag to rotate · click an atom to substitute it or create a vacancy</p>
         <div class="selcard" id="selcard" hidden></div>
         <div class="legend" id="legend" hidden></div>
       </div>
       <div class="dock" id="dock">
         <div class="tabs" role="tablist">
           <button class="tab" role="tab" data-tab="source" aria-selected="true" type="button">Source</button>
-          <button class="tab" role="tab" data-tab="run" aria-selected="false" type="button">Exécution</button>
+          <button class="tab" role="tab" data-tab="run" aria-selected="false" type="button">Run</button>
           <button class="tab" role="tab" data-tab="capsule" aria-selected="false" type="button">Capsule</button>
           <span class="sp"></span>
-          <button class="btn small" id="dock-toggle" type="button">Replier</button>
+          <button class="btn small" id="dock-toggle" type="button">Collapse</button>
         </div>
         <div class="dock-body">
           <div class="src" data-panel="source">
-            <div><h3>input.yaml <span>ce que BigDFT lit</span></h3><pre id="yaml"></pre></div>
-            <div><h3>run.py <span>le même calcul avec PyBigDFT</span></h3><pre id="python"></pre></div>
+            <div><h3>input.yaml <span>what BigDFT reads</span></h3><pre id="yaml"></pre></div>
+            <div><h3>run.py <span>the same calculation with PyBigDFT</span></h3><pre id="python"></pre></div>
           </div>
           <div class="run" data-panel="run" hidden>
             <div>
               <div class="steps" id="run-steps"></div>
-              <p class="label" id="run-title">Convergence du cycle auto-cohérent</p>
+              <p class="label" id="run-title">Self-consistent cycle convergence</p>
               <div class="chart" id="scf-chart"></div>
             </div>
-            <div id="results"><p class="label">Résultats</p><p style="color:var(--fg-2);margin-top:8px">Lancez le calcul : la convergence s'affiche ici en direct, puis les observables demandées dans la brique Mesures.</p></div>
+            <div id="results"></div>
           </div>
           <div class="cap" data-panel="capsule" hidden>
             <div>
               <p class="label">Capsule</p>
               <h3 class="serif" style="font-size:22px;margin:4px 0 6px" id="cap-title"></h3>
               <p style="color:var(--fg-2);font-size:13px" id="cap-meta"></p>
-              <input type="range" id="cap-range" min="0" max="7" value="0" step="1" aria-label="Étape de la capsule" style="margin-top:14px">
+              <input type="range" id="cap-range" min="0" max="8" value="0" step="1" aria-label="Capsule step" style="margin-top:14px">
               <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-                <button class="btn small" id="cap-play" type="button">Rejouer</button>
-                <button class="btn small" id="cap-fork" type="button">Reprendre à cette étape</button>
+                <button class="btn small" id="cap-play" type="button">Replay</button>
+                <button class="btn small" id="cap-fork" type="button">Fork from this step</button>
               </div>
             </div>
             <div class="log" id="cap-log"></div>
@@ -345,12 +345,12 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
       </div>
     </div>
 
-    <aside class="insp" aria-label="Réglages de la brique">
+    <aside class="insp" aria-label="Block settings">
       <div class="insp-head">
         <div><h2 id="insp-title"></h2><p id="insp-role"></p></div>
-        <div class="seg" id="depth" role="group" aria-label="Profondeur des réglages">
-          <button type="button" data-depth="0" aria-pressed="true">Essentiel</button>
-          <button type="button" data-depth="1" aria-pressed="false">Avancé</button>
+        <div class="seg" id="depth" role="group" aria-label="Depth of settings">
+          <button type="button" data-depth="0" aria-pressed="true">Essential</button>
+          <button type="button" data-depth="1" aria-pressed="false">Advanced</button>
           <button type="button" data-depth="2" aria-pressed="false">Expert</button>
         </div>
       </div>
@@ -358,156 +358,156 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
     </aside>
   </section>
 
-  <!-- ================= BIBLIOTHEQUE ================= -->
-  <section class="view board" id="view-bibliotheque" hidden>
+  <!-- ================= LIBRARY ================= -->
+  <section class="view board" id="view-library" hidden>
     <div class="board-in">
       <header class="board-head">
-        <h1>Repartir de ce qui a déjà marché</h1>
-        <p>Une capsule est le travail complet d'une session : la conversation, les fichiers, l'environnement figé. On la rejoue pas à pas, on bifurque à n'importe quelle étape. Un article devient une recette : chaque phrase de la section Méthodes est rattachée à une brique.</p>
+        <h1>Start from what already worked</h1>
+        <p>A capsule is the complete work of one session: the conversation, the files, the pinned environment. Replay it step by step, fork it at any point. A paper becomes a blueprint: each sentence of its Methods section is attached to a block.</p>
       </header>
       <section class="sect">
-        <header><h2>Capsules</h2><span class="pill example">Exemples</span></header>
+        <header><h2>Capsules</h2><span class="pill example">Examples</span></header>
         <div class="grid3">
-          <article class="tile"><h3>Adsorption du benzène sur graphène</h3><p>Construction de la surface, étude de convergence de la grille, trois calculs, énergie d'adsorption.</p><div class="meta"><span>8 étapes</span><span>3 calculs</span><span>conteneur figé</span></div><div class="foot"><span class="chip">surface</span><button class="btn small" data-capsule type="button">Revivre</button></div></article>
-          <article class="tile"><h3>Fragments d'un peptide en solution</h3><p>Mode linéaire, solvant implicite, indicateur de pureté et ordres de liaison entre résidus.</p><div class="meta"><span>11 étapes</span><span>1 calcul</span><span>203 atomes</span></div><div class="foot"><span class="chip">biologie</span><button class="btn small" data-load="ala20" type="button">Ouvrir le système</button></div></article>
-          <article class="tile"><h3>Spectre d'absorption du C₆₀</h3><p>États virtuels, matrice de couplage, approximation de Tamm-Dancoff, tracé du spectre.</p><div class="meta"><span>6 étapes</span><span>2 calculs</span><span>GPU</span></div><div class="foot"><span class="chip">excitations</span><button class="btn small" data-load="c60" type="button">Ouvrir le système</button></div></article>
+          <article class="tile"><h3>Benzene adsorption on graphene</h3><p>Building the surface, grid convergence study, three calculations, adsorption energy.</p><div class="meta"><span>9 steps</span><span>3 calculations</span><span>pinned container</span></div><div class="foot"><span class="chip">surface</span><button class="btn small" data-capsule type="button">Replay</button></div></article>
+          <article class="tile"><h3>Fragments of a peptide in solution</h3><p>Linear-scaling mode, implicit solvent, purity indicator and bond orders between residues.</p><div class="meta"><span>11 steps</span><span>1 calculation</span><span>203 atoms</span></div><div class="foot"><span class="chip">biology</span><button class="btn small" data-load="ala20" type="button">Open the system</button></div></article>
+          <article class="tile"><h3>Absorption spectrum of C₆₀</h3><p>Virtual states, coupling matrix, Tamm-Dancoff approximation, spectrum plot.</p><div class="meta"><span>6 steps</span><span>2 calculations</span><span>GPU</span></div><div class="foot"><span class="chip">excitations</span><button class="btn small" data-load="c60" type="button">Open the system</button></div></article>
         </div>
       </section>
       <section class="sect">
-        <header><h2>Depuis un article</h2><span class="pill example">Texte d'exemple</span></header>
+        <header><h2>From a paper</h2><span class="pill example">Example text</span></header>
         <div class="grid2">
           <div class="tile">
-            <p class="label">Section Méthodes, telle que déposée</p>
-            <p class="paper">« Les calculs ont été menés sur une <mark>supercellule de 64 atomes de silicium</mark> contenant <mark>un phosphore substitutionnel</mark>, avec la fonctionnelle <mark>PBE</mark>, un <mark>pas de grille de 0,40 bohr</mark> et une <mark>grille 2×2×2 de points k</mark>. Les positions ont été <mark>relaxées</mark> jusqu'à des forces inférieures à <mark>0,005 Ha/bohr</mark>. »</p>
+            <p class="label">Methods section, as submitted</p>
+            <p class="paper">“Calculations were carried out on a <mark>64-atom silicon supercell</mark> containing <mark>one substitutional phosphorus</mark>, with the <mark>PBE</mark> functional, a <mark>grid spacing of 0.40 bohr</mark> and a <mark>2×2×2 k-point mesh</mark>. Atomic positions were <mark>relaxed</mark> until forces fell below <mark>0.005 Ha/bohr</mark>.”</p>
           </div>
           <div class="tile">
-            <p class="label">Recette reconstruite</p>
+            <p class="label">Rebuilt blueprint</p>
             <div class="map">
-              <div><b>Matière</b><span>Si₆₃P, périodique</span><small>lu</small></div>
-              <div><b>Théorie</b><span>PBE</span><small>lu</small></div>
-              <div><b>Théorie</b><span>spin colinéaire, moment 1 µB</span><small style="color:var(--accent)">complété</small></div>
-              <div><b>Précision</b><span>h = 0,40 bohr</span><small>lu</small></div>
-              <div><b>Milieu</b><span>k 2×2×2</span><small>lu</small></div>
-              <div><b>Action</b><span>relaxation, 0,005 Ha/bohr</span><small>lu</small></div>
+              <div><b>Matter</b><span>Si₆₃P, periodic</span><small>read</small></div>
+              <div><b>Theory</b><span>PBE</span><small>read</small></div>
+              <div><b>Theory</b><span>collinear spin, moment 1 µB</span><small style="color:var(--accent)">completed</small></div>
+              <div><b>Accuracy</b><span>h = 0.40 bohr</span><small>read</small></div>
+              <div><b>Environment</b><span>k 2×2×2</span><small>read</small></div>
+              <div><b>Task</b><span>relaxation, 0.005 Ha/bohr</span><small>read</small></div>
             </div>
-            <p>L'article ne dit rien du spin. Le phosphore apporte un électron de plus : le conseiller complète et le signale.</p>
-            <div class="foot"><span></span><button class="btn cta small" id="paper-build" type="button">Reconstruire dans l'atelier</button></div>
+            <p>The paper says nothing about spin. Phosphorus brings one more electron: the adviser completes the blueprint and says so.</p>
+            <div class="foot"><span></span><button class="btn cta small" id="paper-build" type="button">Rebuild in the workshop</button></div>
           </div>
         </div>
       </section>
       <section class="sect">
-        <header><h2>Parcours guidés</h2><span style="color:var(--fg-3);font-size:13px">adaptés des carnets BigDFT-school</span></header>
+        <header><h2>Guided paths</h2><span style="color:var(--fg-3);font-size:13px">adapted from the BigDFT-school notebooks</span></header>
         <div class="grid3">
-          <article class="tile"><h3>Premier calcul</h3><p>Une molécule, une énergie, lire le résultat.</p><div class="meta"><span>Découverte</span><span>10 min</span></div></article>
-          <article class="tile"><h3>La molécule N₂</h3><p>Longueur de liaison, énergie d'atomisation, spin des atomes isolés.</p><div class="meta"><span>Découverte</span><span>20 min</span></div></article>
-          <article class="tile"><h3>Converger la grille</h3><p>Voir l'énergie se stabiliser quand h diminue et que les régions s'étendent.</p><div class="meta"><span>Intermédiaire</span><span>30 min</span></div></article>
-          <article class="tile"><h3>Ondelettes ou gaussiennes</h3><p>Comparer une base systématique à des bases localisées.</p><div class="meta"><span>Intermédiaire</span><span>30 min</span></div></article>
-          <article class="tile"><h3>Passer à l'échelle linéaire</h3><p>Fonctions support, noyau de densité, premiers milliers d'atomes.</p><div class="meta"><span>Avancé</span><span>45 min</span></div></article>
-          <article class="tile"><h3>Raisonner en fragments</h3><p>Découper un grand système et mesurer ce qui lie ses parties.</p><div class="meta"><span>Avancé</span><span>45 min</span></div></article>
+          <article class="tile"><h3>First calculation</h3><p>One molecule, one energy, reading the result.</p><div class="meta"><span>Discovery</span><span>10 min</span></div></article>
+          <article class="tile"><h3>The N₂ molecule</h3><p>Bond length, atomisation energy, spin of the isolated atoms.</p><div class="meta"><span>Discovery</span><span>20 min</span></div></article>
+          <article class="tile"><h3>Converging the grid</h3><p>Watch the energy settle as h decreases and the regions extend.</p><div class="meta"><span>Intermediate</span><span>30 min</span></div></article>
+          <article class="tile"><h3>Wavelets or Gaussians</h3><p>Compare a systematic basis with localised basis sets.</p><div class="meta"><span>Intermediate</span><span>30 min</span></div></article>
+          <article class="tile"><h3>Going linear scaling</h3><p>Support functions, density kernel, the first thousands of atoms.</p><div class="meta"><span>Advanced</span><span>45 min</span></div></article>
+          <article class="tile"><h3>Thinking in fragments</h3><p>Partition a large system and measure what binds its parts.</p><div class="meta"><span>Advanced</span><span>45 min</span></div></article>
         </div>
       </section>
     </div>
   </section>
 
-  <!-- ================= LABORATOIRE ================= -->
-  <section class="view board" id="view-laboratoire" hidden>
+  <!-- ================= LAB ================= -->
+  <section class="view board" id="view-lab" hidden>
     <div class="board-in">
       <header class="board-head">
-        <h1>Une paillasse à plusieurs</h1>
-        <p>Un projet réunit des scènes, des calculs, des figures et des notes. Chacun voit ce que les autres regardent, commente un atome ou une courbe, reprend une recette là où un collègue l'a laissée.</p>
+        <h1>One bench, several hands</h1>
+        <p>A project gathers scenes, calculations, figures and notes. Everyone sees what the others are looking at, comments on an atom or a curve, and picks up a blueprint where a colleague left it.</p>
       </header>
       <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
         <section class="sect">
-          <header><h2>Défauts dans le silicium</h2><span class="pill example">Projet d'exemple</span></header>
+          <header><h2>Defects in silicon</h2><span class="pill example">Example project</span></header>
           <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-            <article class="tile"><p class="label">Scène</p><h3>Si₆₃P relaxé</h3><p>Phosphore substitutionnel, spin colinéaire.</p><div class="meta"><span>Inès · hier</span></div></article>
-            <article class="tile"><p class="label">Série</p><h3>Convergence en points k</h3><p>1×1×1 à 4×4×4, quatre calculs.</p><div class="meta"><span class="state ok">terminé</span></div></article>
-            <article class="tile"><p class="label">Figure</p><h3>Densité d'états, dopé et pur</h3><p>Prête pour une colonne, 85 mm.</p><div class="meta"><span>Marc · lundi</span></div></article>
-            <article class="tile"><p class="label">Note</p><h3>Énergie de formation</h3><p>$E_f = E_{\mathrm{Si}_{63}\mathrm{P}} - \tfrac{63}{64}E_{\mathrm{Si}_{64}} - \mu_{\mathrm P}$</p><div class="meta"><span>Inès · lundi</span></div></article>
-            <article class="tile"><p class="label">Calcul</p><h3>Lacune neutre</h3><p>Relaxation SQNM, 63 atomes.</p><div class="meta"><span class="state run">en cours, pas 14</span></div></article>
-            <article class="tile"><p class="label">Capsule</p><h3>Lacune chargée, comment faire</h3><p>Session accompagnée par un expert.</p><div class="meta"><span>partagée au projet</span></div></article>
+            <article class="tile"><p class="label">Scene</p><h3>Relaxed Si₆₃P</h3><p>Substitutional phosphorus, collinear spin.</p><div class="meta"><span>Inès · yesterday</span></div></article>
+            <article class="tile"><p class="label">Series</p><h3>k-point convergence</h3><p>1×1×1 to 4×4×4, four calculations.</p><div class="meta"><span class="state ok">done</span></div></article>
+            <article class="tile"><p class="label">Figure</p><h3>Density of states, doped and pure</h3><p>Ready for one column, 85 mm.</p><div class="meta"><span>Marc · Monday</span></div></article>
+            <article class="tile"><p class="label">Note</p><h3>Formation energy</h3><p>$E_f = E_{\mathrm{Si}_{63}\mathrm{P}} - \tfrac{63}{64}E_{\mathrm{Si}_{64}} - \mu_{\mathrm P}$</p><div class="meta"><span>Inès · Monday</span></div></article>
+            <article class="tile"><p class="label">Calculation</p><h3>Neutral vacancy</h3><p>SQNM relaxation, 63 atoms.</p><div class="meta"><span class="state run">running, step 14</span></div></article>
+            <article class="tile"><p class="label">Capsule</p><h3>Charged vacancy, how to</h3><p>A session coached by an expert.</p><div class="meta"><span>shared with the project</span></div></article>
           </div>
         </section>
         <section class="sect">
-          <header><h2>Fil du projet</h2></header>
+          <header><h2>Project thread</h2></header>
           <div class="tile thread">
-            <div><i>IN</i><p><b>Inès</b> <small>sur l'atome Si 17 · 10:42</small><br>Une lacune ici changerait-elle le gap ? J'ai épinglé l'atome dans la scène.</p></div>
-            <div><i>MA</i><p><b>Marc</b> <small>expert BigDFT · 11:05</small><br>Oui, attendez-vous à des états dans le gap. Prenez une cellule de 216 atomes pour limiter l'interaction entre images. J'ai dupliqué votre recette avec la bonne taille.</p></div>
-            <div><i>IN</i><p><b>Inès</b> <small>11:20</small><br>Lancé sur la partition HPC. La courbe de convergence est dans la série.</p></div>
+            <div><i>IN</i><p><b>Inès</b> <small>on atom Si 18 · 10:42</small><br>Would a vacancy here change the gap? I pinned the atom in the scene.</p></div>
+            <div><i>MA</i><p><b>Marc</b> <small>BigDFT expert · 11:05</small><br>Yes, expect states in the gap. Use a 216-atom cell to limit the interaction between images. I duplicated your blueprint at the right size.</p></div>
+            <div><i>IN</i><p><b>Inès</b> <small>11:20</small><br>Submitted to the HPC partition. The convergence curve is in the series.</p></div>
           </div>
-          <div class="tile"><p class="label">Ce que le partage transporte</p><p>La scène 3D avec son point de vue, la recette et la provenance de chaque valeur, les fichiers d'entrée et de sortie, l'environnement d'exécution. Rien à réinstaller pour reproduire.</p></div>
+          <div class="tile"><p class="label">What sharing carries</p><p>The 3D scene with its viewpoint, the blueprint and the provenance of every value, the input and output files, the execution environment. Nothing to reinstall to reproduce.</p></div>
         </section>
       </div>
     </div>
   </section>
 
-  <!-- ================= CALCUL ================= -->
-  <section class="view board" id="view-calcul" hidden>
+  <!-- ================= COMPUTE ================= -->
+  <section class="view board" id="view-compute" hidden>
     <div class="board-in">
       <header class="board-head">
-        <h1>Du temps de calcul, et des gens qui savent</h1>
-        <p>Chaque recette annonce son coût avant de partir. On choisit où elle tourne, on suit la file, on peut demander à un expert de relire ou d'accompagner.</p>
+        <h1>Computing time, and people who know</h1>
+        <p>Every blueprint states its cost before it leaves. Choose where it runs, follow the queue, ask an expert to review it or to work alongside you.</p>
       </header>
       <section class="sect">
-        <header><h2>Où faire tourner</h2><span class="pill example">Tarifs fictifs</span></header>
+        <header><h2>Where to run</h2><span class="pill example">Fictitious prices</span></header>
         <div class="grid3">
-          <article class="tile"><h3>Conteneur CPU</h3><p>Image BigDFT officielle, démarrage immédiat. Pour apprendre et pour les systèmes jusqu'à quelques centaines d'atomes.</p><p class="price">1 <small style="font-size:12px;color:var(--fg-3)">crédit / cœur·heure</small></p></article>
-          <article class="tile"><h3>Nœud GPU</h3><p>Fonctionnelles hybrides et grands systèmes : l'échange exact et le solveur de Poisson sont accélérés.</p><p class="price">6 <small style="font-size:12px;color:var(--fg-3)">crédits / cœur·heure</small></p></article>
-          <article class="tile"><h3>Partition HPC</h3><p>Votre allocation ou celle d'un partenaire, soumission par remotemanager. Pour les milliers d'atomes.</p><p class="price">0,6 <small style="font-size:12px;color:var(--fg-3)">crédit / cœur·heure</small></p></article>
+          <article class="tile"><h3>CPU container</h3><p>Pinned BigDFT image, starts immediately. For learning and for systems up to a few hundred atoms.</p><p class="price">1 <small style="font-size:12px;color:var(--fg-3)">credit / core·hour</small></p></article>
+          <article class="tile"><h3>GPU node</h3><p>Hybrid functionals and large systems: exact exchange and the Poisson solver are accelerated.</p><p class="price">6 <small style="font-size:12px;color:var(--fg-3)">credits / core·hour</small></p></article>
+          <article class="tile"><h3>HPC partition</h3><p>Your allocation or a partner's, submitted through remotemanager. For thousands of atoms.</p><p class="price">0.6 <small style="font-size:12px;color:var(--fg-3)">credit / core·hour</small></p></article>
         </div>
       </section>
       <section class="sect">
-        <header><h2>File d'attente</h2></header>
+        <header><h2>Queue</h2></header>
         <div class="tile scroll-x">
           <table>
-            <thead><tr><th>Calcul</th><th>Cible</th><th>État</th><th>Avancement</th><th style="text-align:right">Crédits</th></tr></thead>
+            <thead><tr><th>Calculation</th><th>Target</th><th>State</th><th>Progress</th><th style="text-align:right">Credits</th></tr></thead>
             <tbody>
-              <tr><td>Lacune neutre, relaxation</td><td>HPC · 64 cœurs</td><td><span class="state run">en cours</span></td><td class="num">pas 14 / 50</td><td class="num" style="text-align:right">9,2</td></tr>
-              <tr><td>Si₆₃P, densité d'états</td><td>CPU · 16 cœurs</td><td><span class="state wait">en file</span></td><td class="num">2ᵉ position</td><td class="num" style="text-align:right">≈ 1,4</td></tr>
-              <tr><td>Convergence en points k (4)</td><td>CPU · 16 cœurs</td><td><span class="state ok">terminé</span></td><td class="num">4 / 4</td><td class="num" style="text-align:right">5,1</td></tr>
+              <tr><td>Neutral vacancy, relaxation</td><td>HPC · 64 cores</td><td><span class="state run">running</span></td><td class="num">step 14 / 50</td><td class="num" style="text-align:right">9.2</td></tr>
+              <tr><td>Si₆₃P, density of states</td><td>CPU · 16 cores</td><td><span class="state wait">queued</span></td><td class="num">2nd in line</td><td class="num" style="text-align:right">≈ 1.4</td></tr>
+              <tr><td>k-point convergence (4)</td><td>CPU · 16 cores</td><td><span class="state ok">done</span></td><td class="num">4 / 4</td><td class="num" style="text-align:right">5.1</td></tr>
             </tbody>
           </table>
         </div>
       </section>
       <section class="sect">
-        <header><h2>Expertise</h2><span class="pill example">Offres d'exemple</span></header>
+        <header><h2>Expertise</h2><span class="pill example">Example offers</span></header>
         <div class="grid3">
-          <article class="tile"><h3>Relecture d'une recette</h3><p>Un expert vérifie vos choix avant un calcul coûteux et annote la recette.</p><div class="meta"><span>sous 48 h</span></div></article>
-          <article class="tile"><h3>Séance accompagnée</h3><p>Une heure à deux dans le même atelier. La séance devient une capsule que vous gardez.</p><div class="meta"><span>1 h</span></div></article>
-          <article class="tile"><h3>Étude sur mesure</h3><p>Vous décrivez la question, une équipe conduit l'étude et livre recettes, données et figures.</p><div class="meta"><span>sur devis</span></div></article>
+          <article class="tile"><h3>Blueprint review</h3><p>An expert checks your choices before an expensive calculation and annotates the blueprint.</p><div class="meta"><span>within 48 h</span></div></article>
+          <article class="tile"><h3>Coached session</h3><p>One hour, two people, the same workshop. The session becomes a capsule you keep.</p><div class="meta"><span>1 h</span></div></article>
+          <article class="tile"><h3>Custom study</h3><p>You describe the question, a team runs the study and delivers blueprints, data and figures.</p><div class="meta"><span>on quote</span></div></article>
         </div>
       </section>
     </div>
   </section>
 
-  <!-- ================= PUBLICATION ================= -->
-  <section class="view board" id="view-publication" hidden>
+  <!-- ================= PUBLISH ================= -->
+  <section class="view board" id="view-publish" hidden>
     <div class="board-in">
       <header class="board-head">
-        <h1>De la scène à l'article</h1>
-        <p>La figure est rendue à la taille de la revue. Le paragraphe de méthodes et les références sont écrits à partir de la recette en cours : changez une brique, ils suivent.</p>
+        <h1>From the scene to the paper</h1>
+        <p>The figure is rendered at journal size. The methods paragraph and the references are written from the current blueprint: change a block and they follow.</p>
       </header>
       <div class="grid2">
         <div class="fig">
-          <div class="seg" id="fig-preset" role="group" aria-label="Format de figure">
-            <button type="button" data-w="85" aria-pressed="true">1 colonne · 85 mm</button>
-            <button type="button" data-w="170" aria-pressed="false">2 colonnes · 170 mm</button>
-            <button type="button" data-w="120" aria-pressed="false">Couverture</button>
+          <div class="seg" id="fig-preset" role="group" aria-label="Figure format">
+            <button type="button" data-w="85" aria-pressed="true">1 column · 85 mm</button>
+            <button type="button" data-w="170" aria-pressed="false">2 columns · 170 mm</button>
+            <button type="button" data-w="120" aria-pressed="false">Cover</button>
           </div>
-          <div class="fig-frame"><img id="fig-img" alt="Rendu de la scène en cours sur fond blanc"></div>
-          <div class="meta"><span id="fig-size" class="num"></span><span>fond blanc</span><span>PNG, SVG, PDF · glTF, POV-Ray · cube</span></div>
+          <div class="fig-frame"><img id="fig-img" alt="Render of the current scene on a white background"></div>
+          <div class="meta"><span id="fig-size" class="num"></span><span>white background</span><span>PNG, SVG, PDF · glTF, POV-Ray · cube</span></div>
         </div>
         <div class="sect">
           <div class="tile">
-            <div class="foot" style="margin:0"><p class="label">Méthodes</p><button class="btn small" id="copy-methods" type="button">Copier</button></div>
+            <div class="foot" style="margin:0"><p class="label">Methods</p><button class="btn small" id="copy-methods" type="button">Copy</button></div>
             <p class="methods" id="methods"></p>
           </div>
           <div class="tile">
-            <div class="foot" style="margin:0"><p class="label">Équations de la recette</p></div>
+            <div class="foot" style="margin:0"><p class="label">Equations of the blueprint</p></div>
             <div id="pub-eq" style="overflow-x:auto;display:grid;gap:10px"></div>
           </div>
           <div class="tile">
-            <div class="foot" style="margin:0"><p class="label">Références à citer</p><button class="btn small" id="copy-refs" type="button">Copier</button></div>
+            <div class="foot" style="margin:0"><p class="label">References to cite</p><button class="btn small" id="copy-refs" type="button">Copy</button></div>
             <ol class="refs" id="refs"></ol>
           </div>
         </div>
@@ -517,9 +517,9 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 </div>
 
 <div class="agent" id="agent" hidden>
-  <header><div><b>Compagnon</b><small>Facultatif. Il propose, vous décidez.</small></div><button class="btn small" id="agent-close" type="button">Fermer</button></header>
+  <header><div><b>Agent</b><small>Optional. It proposes, you decide.</small></div><button class="btn small" id="agent-close" type="button">Close</button></header>
   <div class="agent-body" id="agent-body"></div>
-  <form id="agent-form"><input id="agent-input" type="text" placeholder="Décrivez ce que vous voulez faire" aria-label="Message au compagnon"><button class="btn small" type="submit">Envoyer</button></form>
+  <form id="agent-form"><input id="agent-input" type="text" placeholder="Describe what you want to do" aria-label="Message to the agent"><button class="btn small" type="submit">Send</button></form>
 </div>
 
 <script>window.MathJax={tex:{inlineMath:[['$','$']]},svg:{fontCache:'global'},startup:{typeset:false}};</script>
@@ -528,6 +528,6 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
 <script src="js/chem.js"></script>
 <script src="js/stage.js"></script>
-<script src="js/recipe.js"></script>
+<script src="js/blueprint.js"></script>
 <script src="js/schema.js"></script>
 <script src="js/app.js"></script>

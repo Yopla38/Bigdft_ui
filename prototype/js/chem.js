@@ -11,14 +11,14 @@ window.OND = window.OND || {};
    * the per-species lengths multiplied by dft.rmult. Order-of-magnitude values
    * used only for the live estimate; the run reads them from the pseudopotential. */
   const EL = {
-    H:  { z: 1,  val: 1, rcov: 0.31, rc: 1.46, rf: 0.20, color: 0xdfe5e8, name: 'Hydrogène' },
-    B:  { z: 5,  val: 3, rcov: 0.84, rc: 1.60, rf: 0.23, color: 0xe7a39a, name: 'Bore' },
-    C:  { z: 6,  val: 4, rcov: 0.76, rc: 1.58, rf: 0.23, color: 0x566067, name: 'Carbone' },
-    N:  { z: 7,  val: 5, rcov: 0.71, rc: 1.37, rf: 0.21, color: 0x3f74e0, name: 'Azote' },
-    O:  { z: 8,  val: 6, rcov: 0.66, rc: 1.47, rf: 0.20, color: 0xe0503f, name: 'Oxygène' },
-    Si: { z: 14, val: 4, rcov: 1.11, rc: 1.71, rf: 0.32, color: 0xc9a56d, name: 'Silicium' },
-    P:  { z: 15, val: 5, rcov: 1.07, rc: 1.63, rf: 0.30, color: 0xe58a2b, name: 'Phosphore' },
-    S:  { z: 16, val: 6, rcov: 1.05, rc: 1.60, rf: 0.29, color: 0xe2c53a, name: 'Soufre' },
+    H:  { z: 1,  val: 1, rcov: 0.31, rc: 1.46, rf: 0.20, color: 0xdfe5e8, name: 'Hydrogen' },
+    B:  { z: 5,  val: 3, rcov: 0.84, rc: 1.60, rf: 0.23, color: 0xe7a39a, name: 'Boron' },
+    C:  { z: 6,  val: 4, rcov: 0.76, rc: 1.58, rf: 0.23, color: 0x566067, name: 'Carbon' },
+    N:  { z: 7,  val: 5, rcov: 0.71, rc: 1.37, rf: 0.21, color: 0x3f74e0, name: 'Nitrogen' },
+    O:  { z: 8,  val: 6, rcov: 0.66, rc: 1.47, rf: 0.20, color: 0xe0503f, name: 'Oxygen' },
+    Si: { z: 14, val: 4, rcov: 1.11, rc: 1.71, rf: 0.32, color: 0xc9a56d, name: 'Silicon' },
+    P:  { z: 15, val: 5, rcov: 1.07, rc: 1.63, rf: 0.30, color: 0xe58a2b, name: 'Phosphorus' },
+    S:  { z: 16, val: 6, rcov: 1.05, rc: 1.60, rf: 0.29, color: 0xe2c53a, name: 'Sulfur' },
   };
 
   // --- small vector helpers -------------------------------------------------
@@ -48,9 +48,9 @@ window.OND = window.OND || {};
   function water() {
     const a = 104.52 * Math.PI / 360, r = 0.9572;
     return {
-      id: 'h2o', name: 'Eau', formula: 'H₂O', bc: 'free', cell: null,
-      blurb: 'Une molécule isolée. Le point de départ de toute prise en main.',
-      traits: ['molécule'],
+      id: 'h2o', name: 'Water', formula: 'H₂O', bc: 'free', cell: null,
+      blurb: 'One isolated molecule. Where every first session starts.',
+      traits: ['molecule'],
       atoms: [
         { el: 'O', p: [0, 0, 0] },
         { el: 'H', p: [r * Math.sin(a), r * Math.cos(a), 0] },
@@ -71,9 +71,9 @@ window.OND = window.OND || {};
       }
     }
     return {
-      id: 'c60', name: 'Fullerène C₆₀', formula: 'C₆₀', bc: 'free', cell: null,
-      blurb: 'Icosaèdre tronqué idéal, liaisons de 1,42 Å. Un classique des orbitales π.',
-      traits: ['molécule', 'π conjugué'],
+      id: 'c60', name: 'C₆₀ fullerene', formula: 'C₆₀', bc: 'free', cell: null,
+      blurb: 'Ideal truncated icosahedron, 1.42 Å bonds. A classic of π orbitals.',
+      traits: ['molecule', 'π-conjugated'],
       atoms,
       // pi-like frontier orbital: radial p functions modulated by an l=5 harmonic
       orbital: {
@@ -98,12 +98,12 @@ window.OND = window.OND || {};
       atoms.push({ el: 'H', p: [cx + 2.48 * Math.cos(t), h, cz + 2.48 * Math.sin(t)], frag: 1 });
     }
     return {
-      id: 'gr-bz', name: 'Benzène sur graphène', formula: 'C₆H₆ / graphène', bc: 'surface', cell: [nx * a, null, nz * b],
-      blurb: 'Une surface : périodique dans le plan xz, libre selon y. Physisorption, donc dispersion.',
-      traits: ['surface', 'semi-métal', 'van der Waals'],
-      atoms, fragments: ['Graphène', 'Benzène'],
+      id: 'gr-bz', name: 'Benzene on graphene', formula: 'C₆H₆ / graphene', bc: 'surface', cell: [nx * a, null, nz * b],
+      blurb: 'A surface: periodic in the xz plane, free along y. Physisorption, hence dispersion.',
+      traits: ['surface', 'semimetal', 'van der Waals'],
+      atoms, fragments: ['Graphene', 'Benzene'],
       orbital: {
-        label: 'HOMO du benzène (e₁g)', normal: () => [0, 1, 0],
+        label: 'Benzene HOMO (e₁g)', normal: () => [0, 1, 0],
         coeff: (at) => (at.frag === 1 && at.el === 'C' ? Math.cos(Math.atan2(at.p[2] - cz, at.p[0] - cx)) : 0),
       },
     };
@@ -116,9 +116,9 @@ window.OND = window.OND || {};
       atoms.push({ el: 'Si', p: [(f[0] + o + i) * a, (f[1] + o + j) * a, (f[2] + o + k) * a] });
     }
     return {
-      id: 'si64', name: 'Silicium, 64 atomes', formula: 'Si₆₄', bc: 'periodic', cell: [n * a, n * a, n * a],
-      blurb: 'Supercellule 2×2×2 du diamant, a = 5,431 Å. Substituez un atome pour le doper.',
-      traits: ['cristal', 'semi-conducteur'],
+      id: 'si64', name: 'Silicon, 64 atoms', formula: 'Si₆₄', bc: 'periodic', cell: [n * a, n * a, n * a],
+      blurb: '2×2×2 diamond supercell, a = 5.431 Å. Substitute an atom to dope it.',
+      traits: ['crystal', 'semiconductor'],
       atoms,
     };
   }
@@ -150,9 +150,9 @@ window.OND = window.OND || {};
       if (r === nres - 1) { push('O', nextN, r); push('H', nerf(CA, C, nextN, 0.97, 108, 180), r); }
     }
     return {
-      id: 'ala20', name: 'Peptide (Ala)₂₀ en hélice α', formula: 'C₆₀H₁₀₂N₂₀O₂₁', bc: 'free', cell: null,
-      blurb: 'Hélice α idéalisée de 20 résidus. Assez grande pour raisonner en fragments.',
-      traits: ['biomolécule', 'liaisons hydrogène', 'fragments'],
+      id: 'ala20', name: '(Ala)₂₀ peptide, α helix', formula: 'C₆₀H₁₀₂N₂₀O₂₁', bc: 'free', cell: null,
+      blurb: 'Idealised α helix of 20 residues. Large enough to think in fragments.',
+      traits: ['biomolecule', 'hydrogen bonds', 'fragments'],
       atoms, fragments: Array.from({ length: nres }, (_, i) => 'Ala ' + (i + 1)),
     };
   }
@@ -196,7 +196,7 @@ window.OND = window.OND || {};
 
   OND.chem = {
     BOHR, EL, build, bonds, electrons, composition,
-    list: [['h2o', 'Eau'], ['c60', 'Fullerène C₆₀'], ['gr-bz', 'Benzène sur graphène'], ['si64', 'Silicium cristallin'], ['ala20', 'Peptide en hélice α']],
+    list: [['h2o', 'Water'], ['c60', 'C₆₀ fullerene'], ['gr-bz', 'Benzene on graphene'], ['si64', 'Crystalline silicon'], ['ala20', 'α-helix peptide']],
     vec: { sub, add, mul, dot, cross, len, unit },
   };
 })(window.OND);

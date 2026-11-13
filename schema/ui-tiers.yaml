@@ -3,53 +3,53 @@
 # The variables themselves (names, defaults, ranges, conditions) are NOT listed
 # here: they are extracted from the BigDFT source by tools/extract_schema.py.
 # This file only answers two product questions for each variable:
-#   - which building block ("brique") of the workshop owns it;
+#   - which building block of the workshop owns it;
 #   - at which depth it is shown: essential (a control on the block),
 #     advanced (one click away), expert (searchable, never hidden).
 # Anything not listed is "expert" and inherits its block from its section.
 # tools/build_prototype_schema.py fails if a path below does not exist upstream.
 
-briques:
-  matiere:   {label: Matière,   role: "Atomes, cellule, conditions aux limites, fragments"}
-  theorie:   {label: Théorie,   role: "Niveau de description : fonctionnelle, spin, charge, dispersion"}
-  precision: {label: Précision, role: "Grille d'ondelettes, convergence, algorithme cubique ou linéaire"}
-  milieu:    {label: Milieu,    role: "Points k, solvant implicite, champ électrique, température électronique"}
-  action:    {label: Action,    role: "Ce que l'on fait : énergie, relaxation, dynamique, chemin, excitations"}
-  mesures:   {label: Mesures,   role: "Ce que l'on observe : densité, orbitales, DOS, charges, dipôle"}
-  machine:   {label: Machine,   role: "Où cela tourne : conteneur, cœurs, GPU, budget"}
+blocks:
+  matter:      {label: Matter,      role: "Atoms, cell, boundary conditions, fragments"}
+  theory:      {label: Theory,      role: "Level of description: functional, spin, charge, dispersion"}
+  accuracy:    {label: Accuracy,    role: "Wavelet grid, convergence, cubic or linear-scaling algorithm"}
+  environment: {label: Environment, role: "k-points, implicit solvent, electric field, electronic temperature"}
+  task:        {label: Task,        role: "What is done: energy, relaxation, dynamics, path, excitations"}
+  observables: {label: Observables, role: "What is looked at: density, orbitals, DOS, charges, dipole"}
+  machine:     {label: Machine,     role: "Where it runs: container, cores, GPU, budget"}
 
 # Default block of every section (namespace.section).
 sections:
-  bigdft.dft: precision
-  bigdft.output: mesures
-  bigdft.kpt: milieu
-  bigdft.geopt: action
-  bigdft.md: action
-  bigdft.mix: precision
-  bigdft.sic: theorie
-  bigdft.tddft: action
-  bigdft.mode: theorie
+  bigdft.dft: accuracy
+  bigdft.output: observables
+  bigdft.kpt: environment
+  bigdft.geopt: task
+  bigdft.md: task
+  bigdft.mix: accuracy
+  bigdft.sic: theory
+  bigdft.tddft: task
+  bigdft.mode: theory
   bigdft.perf: machine
-  bigdft.lin_general: precision
-  bigdft.lin_basis: precision
-  bigdft.lin_kernel: precision
-  bigdft.lin_basis_params: precision
-  psolver.kernel: milieu
-  psolver.environment: milieu
+  bigdft.lin_general: accuracy
+  bigdft.lin_basis: accuracy
+  bigdft.lin_kernel: accuracy
+  bigdft.lin_basis_params: accuracy
+  psolver.kernel: environment
+  psolver.environment: environment
   psolver.setup: machine
-  chess.foe: precision
+  chess.foe: accuracy
   chess.lapack: machine
-  chess.ntpoly: precision
+  chess.ntpoly: accuracy
 
 # Variables whose block differs from their section's default.
 overrides:
-  theorie: [bigdft.dft.ixc, bigdft.dft.nspin, bigdft.dft.mpol, bigdft.dft.qcharge, bigdft.dft.dispersion,
+  theory: [bigdft.dft.ixc, bigdft.dft.nspin, bigdft.dft.mpol, bigdft.dft.qcharge, bigdft.dft.dispersion,
             bigdft.dft.alpha_hf, bigdft.dft.magnetic_torque, bigdft.dft.spin_dynamics,
             bigdft.dft.occupancy_control, bigdft.dft.projection]
-  milieu:  [bigdft.dft.elecfield, bigdft.dft.external_potential, bigdft.mix.tel, bigdft.mix.occopt,
+  environment:  [bigdft.dft.elecfield, bigdft.dft.external_potential, bigdft.mix.tel, bigdft.mix.occopt,
             bigdft.dft.disablesym]
-  action:  [bigdft.dft.norbv, bigdft.dft.nvirt, bigdft.dft.gnrm_cv_virt, bigdft.dft.itermax_virt]
-  mesures: [bigdft.dft.output_denspot, bigdft.dft.nplot, bigdft.dft.plot_pot_axes, bigdft.dft.plot_mppot_axes,
+  task:  [bigdft.dft.norbv, bigdft.dft.nvirt, bigdft.dft.gnrm_cv_virt, bigdft.dft.itermax_virt]
+  observables: [bigdft.dft.output_denspot, bigdft.dft.nplot, bigdft.dft.plot_pot_axes, bigdft.dft.plot_mppot_axes,
             bigdft.dft.calculate_strten, bigdft.perf.calculate_forces, bigdft.perf.calculate_gap,
             bigdft.perf.foe_gap, bigdft.perf.loewdin_charge_analysis, bigdft.perf.coeff_weight_analysis,
             bigdft.perf.wf_extent_analysis, bigdft.lin_general.calc_dipole, bigdft.lin_general.calc_quadrupole,
