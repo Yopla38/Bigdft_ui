@@ -1,0 +1,533 @@
+<title>Atelier Ondelette</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: an instrument, not a page. A dark laboratory bench where the 3D stage is the
+   work surface, the recipe is a stack of seven blocks on its left, and the inspector
+   of the selected block on its right. Journal-style serif for names, mono for values. */
+:root{
+  --bg:#0a1416;--panel:#0f1c1f;--panel-2:#152629;--raise:#1b3034;--line:#22383c;--line-2:#314d52;
+  --fg:#e7efed;--fg-2:#a3b7b4;--fg-3:#6e8683;
+  --accent:#72d5e6;--accent-ink:#06262c;--accent-soft:rgba(114,213,230,.12);
+  --pos:#f2ac45;--neg:#6a94f5;--ok:#63c7a1;--warn:#edb84f;--err:#ee7d6f;--agent:#c4a5f5;
+  --stage-a:#143036;--stage-b:#050b0d;--cta:#eef4f2;--cta-ink:#0a1416;
+  --display:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --gut-l:max(16px,env(safe-area-inset-left,0px));--gut-r:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#e6eceb;--panel:#f4f7f6;--panel-2:#ffffff;--raise:#e9efee;--line:#d2dbd9;--line-2:#b4c2bf;
+  --fg:#0d1f22;--fg-2:#3f5755;--fg-3:#6f8683;
+  --accent:#0a7286;--accent-ink:#ffffff;--accent-soft:rgba(10,114,134,.10);
+  --pos:#b96a06;--neg:#2f5fd0;--ok:#1e8a63;--warn:#946500;--err:#c2402f;--agent:#6b46c1;
+  --stage-a:#ffffff;--stage-b:#d3dedc;--cta:#0d1f22;--cta-ink:#f4f7f6;color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#e6eceb;--panel:#f4f7f6;--panel-2:#ffffff;--raise:#e9efee;--line:#d2dbd9;--line-2:#b4c2bf;
+  --fg:#0d1f22;--fg-2:#3f5755;--fg-3:#6f8683;
+  --accent:#0a7286;--accent-ink:#ffffff;--accent-soft:rgba(10,114,134,.10);
+  --pos:#b96a06;--neg:#2f5fd0;--ok:#1e8a63;--warn:#946500;--err:#c2402f;--agent:#6b46c1;
+  --stage-a:#ffffff;--stage-b:#d3dedc;--cta:#0d1f22;--cta-ink:#f4f7f6;color-scheme:light}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+code,.mono{font-family:var(--mono);font-size:12px}
+h1,h2,h3,p{margin:0}
+.serif{font-family:var(--display);font-weight:400;letter-spacing:.005em}
+.label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-3);font-weight:500}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr)}
+.top{display:flex;align-items:center;gap:20px;padding:10px var(--gut-r) 10px var(--gut-l);border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg);flex:none}
+.brand b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1}
+.brand small{color:var(--fg-3);font-size:12px}
+.spaces{display:flex;gap:2px;overflow-x:auto;min-width:0;scrollbar-width:none}
+.spaces a{padding:7px 12px;border-radius:6px;color:var(--fg-2);text-decoration:none;white-space:nowrap;font-weight:500}
+.spaces a:hover{color:var(--fg);background:var(--raise)}
+.spaces a[aria-current="page"]{color:var(--fg);background:var(--raise);box-shadow:inset 0 -2px 0 var(--accent)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;border:1px solid var(--line-2);font-size:12px;color:var(--fg-2);white-space:nowrap}
+.pill.example{border-style:dashed}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:7px 13px;border-radius:7px;border:1px solid var(--line-2);font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--raise)}
+.btn.cta{background:var(--cta);color:var(--cta-ink);border-color:var(--cta)}
+.btn.cta:hover{filter:brightness(.94)}
+.btn.cta[disabled]{opacity:.45;cursor:not-allowed}
+.btn.small{padding:4px 9px;font-size:12px}
+.avatars{display:flex}.avatars i{width:24px;height:24px;border-radius:50%;border:2px solid var(--panel);margin-left:-7px;display:grid;place-items:center;font:500 10px var(--sans);font-style:normal;background:var(--raise);color:var(--fg-2)}
+
+.view{min-height:0}
+/* ---------- atelier ---------- */
+.atelier{display:grid;grid-template-columns:252px minmax(0,1fr) 344px;height:100%}
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.bricks{flex:1;overflow-y:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:0}
+.brick{display:grid;grid-template-columns:30px minmax(0,1fr) 10px;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 10px;border-radius:9px;border:1px solid transparent;position:relative}
+.brick + .brick::before{content:"";position:absolute;left:24px;top:-5px;height:10px;width:1px;background:var(--line-2)}
+.brick:hover{background:var(--panel-2)}
+.brick[aria-pressed="true"]{background:var(--panel-2);border-color:var(--line-2)}
+.brick .glyph{width:30px;height:30px;border-radius:8px;background:var(--raise);display:grid;place-items:center;color:var(--fg-2)}
+.brick[aria-pressed="true"] .glyph{background:var(--accent);color:var(--accent-ink)}
+.brick b{display:block;font-weight:600;font-size:13px}
+.brick span{display:block;color:var(--fg-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}.dot.warn{background:var(--warn)}.dot.err{background:var(--err)}
+.launch{border-top:1px solid var(--line);padding:14px;display:grid;gap:12px}
+.ready{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center}
+.ready svg{width:54px;height:54px}
+.ready dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:12px}
+.ready dt{color:var(--fg-3)}.ready dd{margin:0;text-align:right}
+.center{display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0}
+.stage{position:relative;min-height:0;background:radial-gradient(120% 90% at 50% 38%,var(--stage-a),var(--stage-b));overflow:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.stage-title{position:absolute;left:18px;top:14px;right:200px;pointer-events:none}
+.stage-title h1{font-family:var(--display);font-weight:400;font-size:34px;line-height:1.05;text-wrap:balance}
+.stage-title p{color:var(--fg-2);margin-top:6px;max-width:44ch;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{font-size:11px;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--panel) 78%,transparent);border:1px solid var(--line-2);color:var(--fg-2)}
+.viewbar{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.tog{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;border:1px solid var(--line-2);background:color-mix(in srgb,var(--panel) 82%,transparent);font-size:12px;font-weight:500;color:var(--fg-2);backdrop-filter:blur(6px)}
+.tog::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor}
+.tog[aria-pressed="true"]{color:var(--fg);border-color:var(--accent)}
+.tog[aria-pressed="true"]::before{background:var(--accent);border-color:var(--accent)}
+.tog[disabled]{opacity:.4;cursor:not-allowed}
+.legend{position:absolute;right:14px;bottom:12px;font-size:12px;color:var(--fg-2);display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:6px 10px;border-radius:7px;border:1px solid var(--line)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.selcard{position:absolute;left:14px;bottom:12px;width:min(300px,calc(100% - 28px));background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px;display:grid;gap:9px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.selcard .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.el{min-width:30px;padding:4px 7px;border-radius:6px;border:1px solid var(--line-2);font:500 12px var(--mono)}
+.el:hover{border-color:var(--accent)}
+.pin{position:absolute;transform:translate(10px,-100%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px 10px 10px 2px;padding:6px 9px;font-size:12px;max-width:190px;pointer-events:none}
+.pin b{color:var(--agent);font-weight:600}
+.hint{position:absolute;left:18px;bottom:14px;font-size:12px;color:var(--fg-3)}
+
+.dock{border-top:1px solid var(--line);background:var(--panel);display:grid;grid-template-rows:auto minmax(0,1fr);height:238px}
+.dock.closed{height:auto}.dock.closed .dock-body{display:none}
+.tabs{display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{padding:5px 11px;border-radius:6px;color:var(--fg-2);font-weight:500;font-size:13px;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--raise);color:var(--fg)}
+.tabs .sp{flex:1}
+.dock-body{min-height:0;overflow:auto}
+.src{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);height:100%}
+.src > div{min-width:0;overflow:auto;padding:10px 14px}
+.src > div + div{border-left:1px solid var(--line)}
+.src h3{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-3);font-weight:500;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
+.k{color:var(--accent)}.c{color:var(--fg-3);font-style:italic}.s{color:var(--pos)}
+.run{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);height:100%}
+.run > div{padding:10px 14px;min-width:0;overflow:auto}
+.run > div + div{border-left:1px solid var(--line)}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.step{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--line-2);color:var(--fg-3)}
+.step.on{color:var(--fg);border-color:var(--accent)}.step.done{color:var(--ok);border-color:transparent;background:var(--raise)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;margin:0;font-size:13px}
+.kv dt{color:var(--fg-3)}.kv dd{margin:0;text-align:right}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:11px var(--sans);fill:var(--fg-3)}
+.tip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:3px 7px;font:12px var(--mono);white-space:nowrap;transform:translate(-50%,-130%)}
+.cap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);height:100%}
+.cap > div{padding:10px 14px;min-width:0;overflow:auto}
+.cap > div + div{border-left:1px solid var(--line)}
+.cap input[type=range]{width:100%}
+.log{display:grid;gap:7px}
+.msg{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;font-size:13px;opacity:.38}
+.msg.seen{opacity:1}
+.msg .who{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3);padding-top:2px}
+.msg .who.bot{color:var(--agent)}
+.msg code{color:var(--accent)}
+
+.insp{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.insp-head{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.insp-head h2{font-family:var(--display);font-weight:400;font-size:28px;line-height:1}
+.insp-head p{color:var(--fg-2);font-size:13px}
+.seg{display:inline-flex;justify-self:start;align-self:start;border:1px solid var(--line-2);border-radius:8px;padding:2px;gap:2px;max-width:100%;flex-wrap:wrap}
+.seg button{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;color:var(--fg-2)}
+.seg button[aria-pressed="true"]{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.insp-body{flex:1;overflow-y:auto;padding:6px 16px 20px}
+.ctl{padding:12px 0;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.ctl-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.ctl-head b{font-weight:500}
+.ctl-head code{color:var(--fg-3);font-size:11px}
+.ctl-val{display:flex;align-items:center;gap:10px}
+.ctl-val input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ctl-val output{font:500 13px var(--mono);min-width:86px;text-align:right}
+.prov{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--fg-2)}
+.src-chip{flex:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid currentColor;font-weight:600}
+.src-defaut{color:var(--fg-3)}.src-adapte{color:var(--accent)}.src-vous{color:var(--fg)}.src-agent{color:var(--agent)}.src-article{color:var(--pos)}
+.trip{font:11px var(--mono);color:var(--fg-3);margin-top:3px;overflow-wrap:anywhere}
+.trip em{font-style:normal;color:var(--accent)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:8px}
+.stepper button{width:30px;height:28px;font-size:16px;color:var(--fg-2)}
+.stepper output{min-width:64px;text-align:center;font:500 13px var(--mono)}
+.switch{width:38px;height:22px;border-radius:99px;background:var(--raise);border:1px solid var(--line-2);position:relative;flex:none}
+.switch::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--fg-3);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(16px);background:var(--accent-ink)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.card{text-align:left;padding:10px;border-radius:9px;border:1px solid var(--line-2);display:grid;gap:3px;align-content:start}
+.card:hover{background:var(--panel-2)}
+.card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.card b{font-weight:600;font-size:13px}.card span{font-size:12px;color:var(--fg-3)}
+.eq{margin-top:14px;padding:12px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);overflow-x:auto;display:grid;gap:8px}
+.eq p{font-size:12px;color:var(--fg-2)}
+.advice{margin-top:12px;padding:10px 12px;border-radius:9px;border:1px dashed var(--warn);display:grid;gap:6px;font-size:13px}
+.vsearch{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);margin:12px 0 4px}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
+.vrow code{color:var(--accent);overflow-wrap:anywhere}
+.vrow small{grid-column:1;color:var(--fg-3);font-size:12px}
+.vrow input,.vrow select{grid-column:2;grid-row:1/3;width:100%;padding:5px 7px;border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);font:12px var(--mono)}
+.vrow input.set,.vrow select.set{border-color:var(--accent)}
+.count{font-size:12px;color:var(--fg-3);padding:6px 0}
+
+/* ---------- boards ---------- */
+.board{height:100%;overflow-y:auto;padding:28px var(--gut-r) 48px var(--gut-l)}
+.board-in{max-width:1180px;margin:0 auto;display:grid;gap:34px}
+.board-head h1{font-family:var(--display);font-weight:400;font-size:44px;line-height:1.02;text-wrap:balance}
+.board-head p{color:var(--fg-2);max-width:66ch;margin-top:10px;font-size:15px}
+.sect{display:grid;gap:14px}
+.sect > header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sect h2{font-family:var(--display);font-weight:400;font-size:26px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.tile h3{font-size:15px;font-weight:600}
+.tile p{color:var(--fg-2);font-size:13px}
+.meta{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12px;color:var(--fg-3)}
+.tile .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap}
+.paper{font-family:var(--display);font-size:21px;line-height:1.45;color:var(--fg)}
+.paper mark{background:var(--accent-soft);color:inherit;border-bottom:1.5px solid var(--accent);padding:0 2px;border-radius:2px}
+.map{display:grid;gap:8px}
+.map div{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
+.map small{color:var(--fg-3)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-3);font-weight:500;padding:6px 10px 6px 0;border-bottom:1px solid var(--line-2)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.scroll-x{overflow-x:auto}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.state::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--fg-3)}
+.state.ok::before{background:var(--ok)}.state.run::before{background:var(--accent)}.state.wait::before{background:var(--warn)}
+.price{font:500 22px var(--mono)}
+.thread{display:grid;gap:12px}
+.thread div{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;font-size:13px}
+.thread i{width:28px;height:28px;border-radius:50%;background:var(--raise);display:grid;place-items:center;font:500 11px var(--sans);font-style:normal;color:var(--fg-2)}
+.thread b{font-weight:600}.thread small{color:var(--fg-3)}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;min-width:0;align-content:start}
+.fig-frame{background:#fff;border-radius:6px;display:grid;place-items:center;overflow:hidden;max-width:100%}
+.fig-frame img{display:block;width:100%;height:auto}
+.methods{font-size:15px;line-height:1.65;max-width:68ch}
+.refs{margin:0;padding-left:20px;display:grid;gap:6px;font-size:13px;color:var(--fg-2)}
+
+/* ---------- companion ---------- */
+.agent{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100vw - 32px));max-height:min(70vh,560px);background:var(--panel-2);border:1px solid var(--line-2);border-radius:14px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:30}
+.agent header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.agent header b{font-weight:600}.agent header small{color:var(--fg-3);display:block;font-size:12px}
+.agent-body{overflow-y:auto;padding:12px 14px;display:grid;gap:10px;align-content:start}
+.prop{border:1px solid var(--line-2);border-radius:10px;padding:10px;display:grid;gap:8px;font-size:13px}
+.diff{font:12px var(--mono);display:grid;gap:2px}
+.diff span{color:var(--fg-3)}.diff b{color:var(--agent);font-weight:500}
+.agent form{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+.agent input{flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel)}
+
+@media (max-width:1080px){.atelier{grid-template-columns:220px minmax(0,1fr) 300px}.stage-title h1{font-size:28px}}
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{display:block;height:auto}
+  .top{flex-wrap:wrap;gap:8px 14px}.brand small,.top-right .avatars{display:none}.spaces{order:3;width:100%}
+  .atelier{display:block;height:auto}
+  .rail{border-right:0;border-bottom:1px solid var(--line)}
+  .bricks{flex-direction:row;overflow-x:auto;padding:10px var(--gut-r) 10px var(--gut-l);gap:6px}
+  .brick{width:auto;flex:none;min-width:150px}.brick + .brick::before{display:none}
+  .launch{padding:12px var(--gut-r) 12px var(--gut-l)}
+  .stage{height:62vh;min-height:380px}
+  .stage-title{right:16px;left:var(--gut-l)}.stage-title h1{font-size:24px}.stage-title p{display:none}
+  .viewbar{flex-direction:row;top:auto;bottom:10px;left:var(--gut-l);right:var(--gut-r);overflow-x:auto;scrollbar-width:none}.tog{flex:none}
+  .legend,.selcard,.hint{bottom:54px}.legend{left:var(--gut-l);right:var(--gut-r);justify-content:flex-start}
+  .dock{height:auto}.dock-body{max-height:340px}
+  .src,.run,.cap{grid-template-columns:minmax(0,1fr);height:auto}
+  .src > div + div,.run > div + div,.cap > div + div{border-left:0;border-top:1px solid var(--line)}
+  .insp{border-left:0;border-top:1px solid var(--line)}
+  .insp-head,.insp-body{padding-left:var(--gut-l);padding-right:var(--gut-r)}
+  .board{height:auto}.board-head h1{font-size:34px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <a class="brand" href="#atelier" aria-label="Ondelette, atelier de la matière">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M1 17h5c2 0 2.6-1.2 3.4-3.6C10.6 9.800 11.600 4 13.600 4c2.6 0 2.4 22 5 22 1.8 0 2.4-5.6 3.4-7.6.6-1.200 1.200-1.400 2.600-1.400H29" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>
+      <b>Ondelette</b><small>atelier de la matière</small>
+    </a>
+    <nav class="spaces" aria-label="Espaces">
+      <a href="#atelier">Atelier</a><a href="#bibliotheque">Bibliothèque</a><a href="#laboratoire">Laboratoire</a><a href="#calcul">Calcul</a><a href="#publication">Publication</a>
+    </nav>
+    <div class="top-right">
+      <span class="pill example" title="Les résultats numériques affichés sont des exemples">Maquette</span>
+      <span class="avatars" aria-label="3 personnes dans ce projet"><i>IN</i><i>MA</i><i>+1</i></span>
+      <span class="pill num">128 crédits</span>
+      <button class="btn" id="agent-open" type="button">Compagnon</button>
+    </div>
+  </header>
+
+  <!-- ================= ATELIER ================= -->
+  <section class="view atelier" id="view-atelier">
+    <aside class="rail" aria-label="Recette">
+      <div class="bricks" id="bricks"></div>
+      <div class="launch">
+        <div class="ready">
+          <svg viewBox="0 0 54 54" role="img" aria-label="Préparation de la recette">
+            <circle cx="27" cy="27" r="22" fill="none" stroke="var(--line-2)" stroke-width="5"/>
+            <circle id="ring" cx="27" cy="27" r="22" fill="none" stroke="var(--ok)" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" transform="rotate(-90 27 27)"/>
+            <text id="ring-t" x="27" y="31" text-anchor="middle" style="font:500 12px var(--mono);fill:var(--fg)">0</text>
+          </svg>
+          <dl id="estimate"></dl>
+        </div>
+        <button class="btn cta" id="launch" type="button">Lancer le calcul</button>
+      </div>
+    </aside>
+
+    <div class="center">
+      <div class="stage" id="stage">
+        <div class="stage-title"><h1 id="sys-name"></h1><p id="sys-blurb"></p><div class="chips" id="sys-chips"></div></div>
+        <div class="viewbar" id="viewbar" role="group" aria-label="Affichage">
+          <button class="tog" data-view="grid" type="button" aria-pressed="false">Grille d'ondelettes</button>
+          <button class="tog" data-view="density" type="button" aria-pressed="false">Densité</button>
+          <button class="tog" data-view="orbital" type="button" aria-pressed="false">Orbitale</button>
+          <button class="tog" data-view="fragment" type="button" aria-pressed="false">Fragments</button>
+          <button class="tog" data-view="ghosts" type="button" aria-pressed="true">Images périodiques</button>
+          <button class="tog" data-view="vdw" type="button" aria-pressed="false">Volumes atomiques</button>
+        </div>
+        <div class="pin" id="pin" hidden><b>Inès</b> · une lacune ici changerait-elle le gap ?</div>
+        <p class="hint" id="hint">Glissez pour tourner · cliquez un atome pour le substituer ou créer une lacune</p>
+        <div class="selcard" id="selcard" hidden></div>
+        <div class="legend" id="legend" hidden></div>
+      </div>
+      <div class="dock" id="dock">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="source" aria-selected="true" type="button">Source</button>
+          <button class="tab" role="tab" data-tab="run" aria-selected="false" type="button">Exécution</button>
+          <button class="tab" role="tab" data-tab="capsule" aria-selected="false" type="button">Capsule</button>
+          <span class="sp"></span>
+          <button class="btn small" id="dock-toggle" type="button">Replier</button>
+        </div>
+        <div class="dock-body">
+          <div class="src" data-panel="source">
+            <div><h3>input.yaml <span>ce que BigDFT lit</span></h3><pre id="yaml"></pre></div>
+            <div><h3>run.py <span>le même calcul avec PyBigDFT</span></h3><pre id="python"></pre></div>
+          </div>
+          <div class="run" data-panel="run" hidden>
+            <div>
+              <div class="steps" id="run-steps"></div>
+              <p class="label" id="run-title">Convergence du cycle auto-cohérent</p>
+              <div class="chart" id="scf-chart"></div>
+            </div>
+            <div id="results"><p class="label">Résultats</p><p style="color:var(--fg-2);margin-top:8px">Lancez le calcul : la convergence s'affiche ici en direct, puis les observables demandées dans la brique Mesures.</p></div>
+          </div>
+          <div class="cap" data-panel="capsule" hidden>
+            <div>
+              <p class="label">Capsule</p>
+              <h3 class="serif" style="font-size:22px;margin:4px 0 6px" id="cap-title"></h3>
+              <p style="color:var(--fg-2);font-size:13px" id="cap-meta"></p>
+              <input type="range" id="cap-range" min="0" max="7" value="0" step="1" aria-label="Étape de la capsule" style="margin-top:14px">
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                <button class="btn small" id="cap-play" type="button">Rejouer</button>
+                <button class="btn small" id="cap-fork" type="button">Reprendre à cette étape</button>
+              </div>
+            </div>
+            <div class="log" id="cap-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="insp" aria-label="Réglages de la brique">
+      <div class="insp-head">
+        <div><h2 id="insp-title"></h2><p id="insp-role"></p></div>
+        <div class="seg" id="depth" role="group" aria-label="Profondeur des réglages">
+          <button type="button" data-depth="0" aria-pressed="true">Essentiel</button>
+          <button type="button" data-depth="1" aria-pressed="false">Avancé</button>
+          <button type="button" data-depth="2" aria-pressed="false">Expert</button>
+        </div>
+      </div>
+      <div class="insp-body" id="insp-body"></div>
+    </aside>
+  </section>
+
+  <!-- ================= BIBLIOTHEQUE ================= -->
+  <section class="view board" id="view-bibliotheque" hidden>
+    <div class="board-in">
+      <header class="board-head">
+        <h1>Repartir de ce qui a déjà marché</h1>
+        <p>Une capsule est le travail complet d'une session : la conversation, les fichiers, l'environnement figé. On la rejoue pas à pas, on bifurque à n'importe quelle étape. Un article devient une recette : chaque phrase de la section Méthodes est rattachée à une brique.</p>
+      </header>
+      <section class="sect">
+        <header><h2>Capsules</h2><span class="pill example">Exemples</span></header>
+        <div class="grid3">
+          <article class="tile"><h3>Adsorption du benzène sur graphène</h3><p>Construction de la surface, étude de convergence de la grille, trois calculs, énergie d'adsorption.</p><div class="meta"><span>8 étapes</span><span>3 calculs</span><span>conteneur figé</span></div><div class="foot"><span class="chip">surface</span><button class="btn small" data-capsule type="button">Revivre</button></div></article>
+          <article class="tile"><h3>Fragments d'un peptide en solution</h3><p>Mode linéaire, solvant implicite, indicateur de pureté et ordres de liaison entre résidus.</p><div class="meta"><span>11 étapes</span><span>1 calcul</span><span>203 atomes</span></div><div class="foot"><span class="chip">biologie</span><button class="btn small" data-load="ala20" type="button">Ouvrir le système</button></div></article>
+          <article class="tile"><h3>Spectre d'absorption du C₆₀</h3><p>États virtuels, matrice de couplage, approximation de Tamm-Dancoff, tracé du spectre.</p><div class="meta"><span>6 étapes</span><span>2 calculs</span><span>GPU</span></div><div class="foot"><span class="chip">excitations</span><button class="btn small" data-load="c60" type="button">Ouvrir le système</button></div></article>
+        </div>
+      </section>
+      <section class="sect">
+        <header><h2>Depuis un article</h2><span class="pill example">Texte d'exemple</span></header>
+        <div class="grid2">
+          <div class="tile">
+            <p class="label">Section Méthodes, telle que déposée</p>
+            <p class="paper">« Les calculs ont été menés sur une <mark>supercellule de 64 atomes de silicium</mark> contenant <mark>un phosphore substitutionnel</mark>, avec la fonctionnelle <mark>PBE</mark>, un <mark>pas de grille de 0,40 bohr</mark> et une <mark>grille 2×2×2 de points k</mark>. Les positions ont été <mark>relaxées</mark> jusqu'à des forces inférieures à <mark>0,005 Ha/bohr</mark>. »</p>
+          </div>
+          <div class="tile">
+            <p class="label">Recette reconstruite</p>
+            <div class="map">
+              <div><b>Matière</b><span>Si₆₃P, périodique</span><small>lu</small></div>
+              <div><b>Théorie</b><span>PBE</span><small>lu</small></div>
+              <div><b>Théorie</b><span>spin colinéaire, moment 1 µB</span><small style="color:var(--accent)">complété</small></div>
+              <div><b>Précision</b><span>h = 0,40 bohr</span><small>lu</small></div>
+              <div><b>Milieu</b><span>k 2×2×2</span><small>lu</small></div>
+              <div><b>Action</b><span>relaxation, 0,005 Ha/bohr</span><small>lu</small></div>
+            </div>
+            <p>L'article ne dit rien du spin. Le phosphore apporte un électron de plus : le conseiller complète et le signale.</p>
+            <div class="foot"><span></span><button class="btn cta small" id="paper-build" type="button">Reconstruire dans l'atelier</button></div>
+          </div>
+        </div>
+      </section>
+      <section class="sect">
+        <header><h2>Parcours guidés</h2><span style="color:var(--fg-3);font-size:13px">adaptés des carnets BigDFT-school</span></header>
+        <div class="grid3">
+          <article class="tile"><h3>Premier calcul</h3><p>Une molécule, une énergie, lire le résultat.</p><div class="meta"><span>Découverte</span><span>10 min</span></div></article>
+          <article class="tile"><h3>La molécule N₂</h3><p>Longueur de liaison, énergie d'atomisation, spin des atomes isolés.</p><div class="meta"><span>Découverte</span><span>20 min</span></div></article>
+          <article class="tile"><h3>Converger la grille</h3><p>Voir l'énergie se stabiliser quand h diminue et que les régions s'étendent.</p><div class="meta"><span>Intermédiaire</span><span>30 min</span></div></article>
+          <article class="tile"><h3>Ondelettes ou gaussiennes</h3><p>Comparer une base systématique à des bases localisées.</p><div class="meta"><span>Intermédiaire</span><span>30 min</span></div></article>
+          <article class="tile"><h3>Passer à l'échelle linéaire</h3><p>Fonctions support, noyau de densité, premiers milliers d'atomes.</p><div class="meta"><span>Avancé</span><span>45 min</span></div></article>
+          <article class="tile"><h3>Raisonner en fragments</h3><p>Découper un grand système et mesurer ce qui lie ses parties.</p><div class="meta"><span>Avancé</span><span>45 min</span></div></article>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ================= LABORATOIRE ================= -->
+  <section class="view board" id="view-laboratoire" hidden>
+    <div class="board-in">
+      <header class="board-head">
+        <h1>Une paillasse à plusieurs</h1>
+        <p>Un projet réunit des scènes, des calculs, des figures et des notes. Chacun voit ce que les autres regardent, commente un atome ou une courbe, reprend une recette là où un collègue l'a laissée.</p>
+      </header>
+      <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+        <section class="sect">
+          <header><h2>Défauts dans le silicium</h2><span class="pill example">Projet d'exemple</span></header>
+          <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+            <article class="tile"><p class="label">Scène</p><h3>Si₆₃P relaxé</h3><p>Phosphore substitutionnel, spin colinéaire.</p><div class="meta"><span>Inès · hier</span></div></article>
+            <article class="tile"><p class="label">Série</p><h3>Convergence en points k</h3><p>1×1×1 à 4×4×4, quatre calculs.</p><div class="meta"><span class="state ok">terminé</span></div></article>
+            <article class="tile"><p class="label">Figure</p><h3>Densité d'états, dopé et pur</h3><p>Prête pour une colonne, 85 mm.</p><div class="meta"><span>Marc · lundi</span></div></article>
+            <article class="tile"><p class="label">Note</p><h3>Énergie de formation</h3><p>$E_f = E_{\mathrm{Si}_{63}\mathrm{P}} - \tfrac{63}{64}E_{\mathrm{Si}_{64}} - \mu_{\mathrm P}$</p><div class="meta"><span>Inès · lundi</span></div></article>
+            <article class="tile"><p class="label">Calcul</p><h3>Lacune neutre</h3><p>Relaxation SQNM, 63 atomes.</p><div class="meta"><span class="state run">en cours, pas 14</span></div></article>
+            <article class="tile"><p class="label">Capsule</p><h3>Lacune chargée, comment faire</h3><p>Session accompagnée par un expert.</p><div class="meta"><span>partagée au projet</span></div></article>
+          </div>
+        </section>
+        <section class="sect">
+          <header><h2>Fil du projet</h2></header>
+          <div class="tile thread">
+            <div><i>IN</i><p><b>Inès</b> <small>sur l'atome Si 17 · 10:42</small><br>Une lacune ici changerait-elle le gap ? J'ai épinglé l'atome dans la scène.</p></div>
+            <div><i>MA</i><p><b>Marc</b> <small>expert BigDFT · 11:05</small><br>Oui, attendez-vous à des états dans le gap. Prenez une cellule de 216 atomes pour limiter l'interaction entre images. J'ai dupliqué votre recette avec la bonne taille.</p></div>
+            <div><i>IN</i><p><b>Inès</b> <small>11:20</small><br>Lancé sur la partition HPC. La courbe de convergence est dans la série.</p></div>
+          </div>
+          <div class="tile"><p class="label">Ce que le partage transporte</p><p>La scène 3D avec son point de vue, la recette et la provenance de chaque valeur, les fichiers d'entrée et de sortie, l'environnement d'exécution. Rien à réinstaller pour reproduire.</p></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CALCUL ================= -->
+  <section class="view board" id="view-calcul" hidden>
+    <div class="board-in">
+      <header class="board-head">
+        <h1>Du temps de calcul, et des gens qui savent</h1>
+        <p>Chaque recette annonce son coût avant de partir. On choisit où elle tourne, on suit la file, on peut demander à un expert de relire ou d'accompagner.</p>
+      </header>
+      <section class="sect">
+        <header><h2>Où faire tourner</h2><span class="pill example">Tarifs fictifs</span></header>
+        <div class="grid3">
+          <article class="tile"><h3>Conteneur CPU</h3><p>Image BigDFT officielle, démarrage immédiat. Pour apprendre et pour les systèmes jusqu'à quelques centaines d'atomes.</p><p class="price">1 <small style="font-size:12px;color:var(--fg-3)">crédit / cœur·heure</small></p></article>
+          <article class="tile"><h3>Nœud GPU</h3><p>Fonctionnelles hybrides et grands systèmes : l'échange exact et le solveur de Poisson sont accélérés.</p><p class="price">6 <small style="font-size:12px;color:var(--fg-3)">crédits / cœur·heure</small></p></article>
+          <article class="tile"><h3>Partition HPC</h3><p>Votre allocation ou celle d'un partenaire, soumission par remotemanager. Pour les milliers d'atomes.</p><p class="price">0,6 <small style="font-size:12px;color:var(--fg-3)">crédit / cœur·heure</small></p></article>
+        </div>
+      </section>
+      <section class="sect">
+        <header><h2>File d'attente</h2></header>
+        <div class="tile scroll-x">
+          <table>
+            <thead><tr><th>Calcul</th><th>Cible</th><th>État</th><th>Avancement</th><th style="text-align:right">Crédits</th></tr></thead>
+            <tbody>
+              <tr><td>Lacune neutre, relaxation</td><td>HPC · 64 cœurs</td><td><span class="state run">en cours</span></td><td class="num">pas 14 / 50</td><td class="num" style="text-align:right">9,2</td></tr>
+              <tr><td>Si₆₃P, densité d'états</td><td>CPU · 16 cœurs</td><td><span class="state wait">en file</span></td><td class="num">2ᵉ position</td><td class="num" style="text-align:right">≈ 1,4</td></tr>
+              <tr><td>Convergence en points k (4)</td><td>CPU · 16 cœurs</td><td><span class="state ok">terminé</span></td><td class="num">4 / 4</td><td class="num" style="text-align:right">5,1</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="sect">
+        <header><h2>Expertise</h2><span class="pill example">Offres d'exemple</span></header>
+        <div class="grid3">
+          <article class="tile"><h3>Relecture d'une recette</h3><p>Un expert vérifie vos choix avant un calcul coûteux et annote la recette.</p><div class="meta"><span>sous 48 h</span></div></article>
+          <article class="tile"><h3>Séance accompagnée</h3><p>Une heure à deux dans le même atelier. La séance devient une capsule que vous gardez.</p><div class="meta"><span>1 h</span></div></article>
+          <article class="tile"><h3>Étude sur mesure</h3><p>Vous décrivez la question, une équipe conduit l'étude et livre recettes, données et figures.</p><div class="meta"><span>sur devis</span></div></article>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ================= PUBLICATION ================= -->
+  <section class="view board" id="view-publication" hidden>
+    <div class="board-in">
+      <header class="board-head">
+        <h1>De la scène à l'article</h1>
+        <p>La figure est rendue à la taille de la revue. Le paragraphe de méthodes et les références sont écrits à partir de la recette en cours : changez une brique, ils suivent.</p>
+      </header>
+      <div class="grid2">
+        <div class="fig">
+          <div class="seg" id="fig-preset" role="group" aria-label="Format de figure">
+            <button type="button" data-w="85" aria-pressed="true">1 colonne · 85 mm</button>
+            <button type="button" data-w="170" aria-pressed="false">2 colonnes · 170 mm</button>
+            <button type="button" data-w="120" aria-pressed="false">Couverture</button>
+          </div>
+          <div class="fig-frame"><img id="fig-img" alt="Rendu de la scène en cours sur fond blanc"></div>
+          <div class="meta"><span id="fig-size" class="num"></span><span>fond blanc</span><span>PNG, SVG, PDF · glTF, POV-Ray · cube</span></div>
+        </div>
+        <div class="sect">
+          <div class="tile">
+            <div class="foot" style="margin:0"><p class="label">Méthodes</p><button class="btn small" id="copy-methods" type="button">Copier</button></div>
+            <p class="methods" id="methods"></p>
+          </div>
+          <div class="tile">
+            <div class="foot" style="margin:0"><p class="label">Équations de la recette</p></div>
+            <div id="pub-eq" style="overflow-x:auto;display:grid;gap:10px"></div>
+          </div>
+          <div class="tile">
+            <div class="foot" style="margin:0"><p class="label">Références à citer</p><button class="btn small" id="copy-refs" type="button">Copier</button></div>
+            <ol class="refs" id="refs"></ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="agent" id="agent" hidden>
+  <header><div><b>Compagnon</b><small>Facultatif. Il propose, vous décidez.</small></div><button class="btn small" id="agent-close" type="button">Fermer</button></header>
+  <div class="agent-body" id="agent-body"></div>
+  <form id="agent-form"><input id="agent-input" type="text" placeholder="Décrivez ce que vous voulez faire" aria-label="Message au compagnon"><button class="btn small" type="submit">Envoyer</button></form>
+</div>
+
+<script>window.MathJax={tex:{inlineMath:[['$','$']]},svg:{fontCache:'global'},startup:{typeset:false}};</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+<script src="js/chem.js"></script>
+<script src="js/stage.js"></script>
+<script src="js/recipe.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/app.js"></script>
