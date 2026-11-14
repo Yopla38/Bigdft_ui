@@ -1,0 +1,35 @@
+# Guided paths published in the Library.
+#
+# A guided path is a Jupyter notebook. An administrator adds one from the
+# Library (the importer shows what it understood before anything is published);
+# this file is the same list for the notebooks shipped with the workshop.
+# A notebook says its own title and steps. It does not say who it is for or how
+# long it takes: that is what an entry adds.
+
+origin: "BigDFT-school notebooks, as collected in BigDFT-group/llm-hackathon-2025 (MIT licence)"
+
+guides:
+  - file: 01-QuickStart.ipynb
+    level: Discovery
+    minutes: 10
+    summary: "Build a small system, run it, read the result."
+  - file: 02-N2.ipynb
+    level: Discovery
+    minutes: 20
+    summary: "A first run with default parameters, then changing them: functional, pseudopotentials, orbitals."
+  - file: 03-BasisSetConvergence.ipynb
+    level: Intermediate
+    minutes: 30
+    summary: "Watch the energy settle as the grid spacing decreases and the regions extend."
+  - file: 04-BasisSetComparison.ipynb
+    level: Intermediate
+    minutes: 30
+    summary: "Compare a systematic wavelet basis with Gaussian basis sets."
+  - file: 05-LinearScaling-QuickStart.ipynb
+    level: Advanced
+    minutes: 45
+    summary: "Support functions, density kernel, a first linear-scaling run."
+  - file: 06-LinearScaling.ipynb
+    level: Advanced
+    minutes: 45
+    summary: "Beyond default parameters: localisation radii, kernel, density of states, when to use it."

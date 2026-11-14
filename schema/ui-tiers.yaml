@@ -1,0 +1,159 @@
+# Curation of the 313 BigDFT input variables for the interface.
+#
+# The variables themselves (names, defaults, ranges, conditions) are NOT listed
+# here: they are extracted from the BigDFT source by tools/extract_schema.py.
+# This file only answers two product questions for each variable:
+#   - which building block of the workshop owns it;
+#   - at which depth it is shown: essential (a control on the block),
+#     advanced (one click away), expert (searchable, never hidden).
+# Anything not listed is "expert" and inherits its block from its section.
+# tools/build_prototype_schema.py fails if a path below does not exist upstream.
+
+blocks:
+  matter:      {label: Matter,      role: "Atoms, cell, boundary conditions, fragments"}
+  theory:      {label: Theory,      role: "Level of description: functional, spin, charge, dispersion"}
+  accuracy:    {label: Accuracy,    role: "Wavelet grid, convergence, cubic or linear-scaling algorithm"}
+  environment: {label: Environment, role: "k-points, implicit solvent, electric field, electronic temperature"}
+  task:        {label: Task,        role: "What is done: energy, relaxation, dynamics, path, excitations"}
+  observables: {label: Observables, role: "What is looked at: density, orbitals, DOS, charges, dipole"}
+  machine:     {label: Machine,     role: "Where it runs: container, cores, GPU, budget"}
+
+# Default block of every section (namespace.section).
+sections:
+  bigdft.dft: accuracy
+  bigdft.output: observables
+  bigdft.kpt: environment
+  bigdft.geopt: task
+  bigdft.md: task
+  bigdft.mix: accuracy
+  bigdft.sic: theory
+  bigdft.tddft: task
+  bigdft.mode: theory
+  bigdft.perf: machine
+  bigdft.lin_general: accuracy
+  bigdft.lin_basis: accuracy
+  bigdft.lin_kernel: accuracy
+  bigdft.lin_basis_params: accuracy
+  psolver.kernel: environment
+  psolver.environment: environment
+  psolver.setup: machine
+  chess.foe: accuracy
+  chess.lapack: machine
+  chess.ntpoly: accuracy
+
+# Variables whose block differs from their section's default.
+overrides:
+  theory: [bigdft.dft.ixc, bigdft.dft.nspin, bigdft.dft.mpol, bigdft.dft.qcharge, bigdft.dft.dispersion,
+            bigdft.dft.alpha_hf, bigdft.dft.magnetic_torque, bigdft.dft.spin_dynamics,
+            bigdft.dft.occupancy_control, bigdft.dft.projection]
+  environment:  [bigdft.dft.elecfield, bigdft.dft.external_potential, bigdft.mix.tel, bigdft.mix.occopt,
+            bigdft.dft.disablesym]
+  task:  [bigdft.dft.norbv, bigdft.dft.nvirt, bigdft.dft.gnrm_cv_virt, bigdft.dft.itermax_virt]
+  observables: [bigdft.dft.output_denspot, bigdft.dft.nplot, bigdft.dft.plot_pot_axes, bigdft.dft.plot_mppot_axes,
+            bigdft.dft.calculate_strten, bigdft.perf.calculate_forces, bigdft.perf.calculate_gap,
+            bigdft.perf.foe_gap, bigdft.perf.loewdin_charge_analysis, bigdft.perf.coeff_weight_analysis,
+            bigdft.perf.wf_extent_analysis, bigdft.lin_general.calc_dipole, bigdft.lin_general.calc_quadrupole,
+            bigdft.lin_general.charge_multipoles, bigdft.lin_general.support_function_multipoles,
+            bigdft.lin_general.output_wf, bigdft.lin_general.output_mat, bigdft.lin_general.output_coeff,
+            bigdft.lin_general.output_fragments, bigdft.lin_general.calculate_FOE_eigenvalues]
+
+essential:
+  - bigdft.dft.ixc
+  - bigdft.dft.nspin
+  - bigdft.dft.mpol
+  - bigdft.dft.qcharge
+  - bigdft.dft.dispersion
+  - bigdft.dft.hgrids
+  - bigdft.dft.rmult
+  - bigdft.dft.gnrm_cv
+  - bigdft.dft.inputpsiid
+  - bigdft.kpt.method
+  - bigdft.kpt.ngkpt
+  - psolver.environment.cavity
+  - bigdft.dft.elecfield
+  - bigdft.mix.tel
+  - bigdft.geopt.method
+  - bigdft.geopt.ncount_cluster_x
+  - bigdft.geopt.forcemax
+  - bigdft.md.mdsteps
+  - bigdft.md.temperature
+  - bigdft.md.timestep
+  - bigdft.md.thermostat
+  - bigdft.tddft.tddft_approach
+  - bigdft.dft.output_denspot
+  - bigdft.dft.nplot
+  - bigdft.output.orbitals
+  - bigdft.lin_general.calc_dipole
+  - bigdft.lin_general.charge_multipoles
+  - bigdft.perf.accel
+  - psolver.setup.accel
+
+advanced:
+  - bigdft.dft.itermax
+  - bigdft.dft.nrepmax
+  - bigdft.dft.ncong
+  - bigdft.dft.idsx
+  - bigdft.dft.ngrids
+  - bigdft.dft.norbv
+  - bigdft.dft.nvirt
+  - bigdft.dft.alpha_hf
+  - bigdft.dft.disablesym
+  - bigdft.dft.calculate_strten
+  - bigdft.dft.external_potential
+  - bigdft.dft.rbuf
+  - bigdft.sic.sic_approach
+  - bigdft.sic.sic_alpha
+  - bigdft.mode.method
+  - bigdft.mode.mm_paramset
+  - bigdft.mix.iscf
+  - bigdft.mix.itrpmax
+  - bigdft.mix.rpnrm_cv
+  - bigdft.mix.norbsempty
+  - bigdft.mix.occopt
+  - bigdft.mix.alphamix
+  - bigdft.kpt.kptrlen
+  - bigdft.kpt.shiftk
+  - bigdft.kpt.bands
+  - bigdft.geopt.betax
+  - bigdft.geopt.frac_fluct
+  - bigdft.geopt.nimg
+  - bigdft.geopt.climbing
+  - bigdft.geopt.neb_method
+  - bigdft.geopt.biomode
+  - bigdft.geopt.history
+  - bigdft.md.nose_chain_length
+  - bigdft.md.nose_frequency
+  - bigdft.md.wavefunction_extrapolation
+  - bigdft.md.print_frequency
+  - psolver.environment.epsilon
+  - psolver.environment.radii_set
+  - psolver.environment.gps_algorithm
+  - psolver.environment.pb_method
+  - psolver.environment.delta
+  - psolver.environment.fact_rigid
+  - psolver.environment.cavitation
+  - psolver.kernel.isf_order
+  - psolver.kernel.screening
+  - bigdft.lin_basis_params.nbasis
+  - bigdft.lin_basis_params.rloc
+  - bigdft.lin_basis_params.rloc_kernel
+  - bigdft.lin_basis_params.confinement
+  - bigdft.lin_kernel.linear_method
+  - bigdft.lin_kernel.nit
+  - bigdft.lin_basis.nit
+  - bigdft.lin_general.hybrid
+  - bigdft.lin_general.nit
+  - bigdft.lin_general.output_wf
+  - bigdft.lin_general.output_mat
+  - bigdft.lin_general.subspace_diag
+  - bigdft.lin_general.extra_states
+  - bigdft.lin_general.support_function_multipoles
+  - bigdft.output.verbosity
+  - bigdft.output.sdos
+  - bigdft.output.coupling_matrix
+  - bigdft.perf.calculate_forces
+  - bigdft.perf.calculate_gap
+  - bigdft.perf.loewdin_charge_analysis
+  - bigdft.perf.foe_gap
+  - chess.foe.fscale
+  - chess.ntpoly.threshold_density
