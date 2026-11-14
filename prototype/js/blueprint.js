@@ -156,15 +156,18 @@ window.OND = window.OND || {};
       return out;
     }
 
+    /* A choice that is safer than the advice (finer grid, larger region) needs no notice. */
+    const stricter = (key, mine, advised) => (key === 'hgrid' && mine < advised) || ((key === 'crmult' || key === 'frmult' || key === 'kpt') && mine > advised);
+
     function advise() {
       if (!st.sys) return;
       for (const k in st.src) if (st.src[k] === 'adapted') { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; delete st.why[k]; }
       st.advice = [];
       for (let pass = 0; pass < 2; pass++) {
         for (const [key, value, reason, triplet] of rules()) {
-          const mine = ['you', 'agent', 'paper', 'guide'].includes(st.src[key]);
+          const mine = ['you', 'agent', 'paper', 'guide', 'run'].includes(st.src[key]);
           if (!mine) { st.v[key] = value; st.src[key] = 'adapted'; st.why[key] = { reason, triplet }; }
-          else if (pass && st.v[key] !== value) st.advice.push({ key, value, reason, triplet });
+          else if (pass && st.v[key] !== value && !stricter(key, st.v[key], value)) st.advice.push({ key, value, reason, triplet });
         }
       }
     }
@@ -178,13 +181,14 @@ window.OND = window.OND || {};
       const dof = nc + 7 * nf, nk = sys.bc === 'free' ? 1 : Math.ceil(v.kpt ** (sys.bc === 'periodic' ? 3 : 2) / 2);
       const cores = v.mpi * v.omp, T = TARGETS[v.target];
       const hybrid = ['PBE0', 'B3LYP', 'HF'].includes(v.xc) ? Math.max(4, norb / 6) : 1;
-      const work = v.algo === 'linear' ? 9e-3 * sys.atoms.length * (dof / sys.atoms.length) : 3e-6 * norb * dof * nk * hybrid;
+      const work = v.algo === 'linear' ? 9e-3 * sys.atoms.length * (dof / sys.atoms.length) : 2.2e-6 * norb * dof * nk * hybrid; // core-seconds per iteration, calibrated on the recorded 6a runs (2.0e-6 to 2.2e-6)
       const iters = Math.round(14 + 7 * Math.log10(1e-4 / v.gnrm)) + (v.scf === 'mixing' ? 18 : 0) + (v.solvent !== 'none' ? 4 : 0);
       const outer = { sp: 1, geopt: Math.min(v.geoptSteps, 28), md: v.mdSteps * 0.45, neb: v.nimg * 14, tddft: 1.6, frag: 1.3 }[v.action];
       const seconds = work * iters * outer / (cores * T.speed) + 25;
       return {
         ne, norb, nc, nf, dof, nk, iters,
-        mem: norb * dof * 8 * 9 * (v.algo === 'linear' ? 0.12 : 1) / 1e9,
+        // GB per MPI task, fitted on BigDFT's own "Estimated Memory Peak" for the 6a runs (S0 and T1, 20 tasks)
+        mem: dof * (1.66e-4 + 1.714e-4 * norb / v.mpi) * (v.algo === 'linear' ? 0.12 : 1) / 1000,
         seconds, credits: cores * seconds / 3600 * T.rate,
       };
     };
@@ -206,8 +210,8 @@ window.OND = window.OND || {};
       if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction', ['efield']);
       if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system: the Brillouin zone is not sampled', ['kpt']);
       if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target', ['target', 'mpi', 'hgrid', 'kpt']);
-      if (d.mem > 64) add('machine', 'warn', 'High estimated memory for this target', ['hgrid', 'crmult']);
-      else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB estimated');
+      if (d.mem > 16) add('machine', 'warn', 'High estimated memory per MPI task: use more tasks or a coarser grid', ['mpi', 'hgrid', 'crmult']);
+      else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB per MPI task, estimated');
       return out;
     };
 

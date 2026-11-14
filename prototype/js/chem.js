@@ -10,16 +10,20 @@ window.OND = window.OND || {};
    * rcov: covalent radius (A); rc/rf: coarse/fine localisation radii (bohr),
    * the per-species lengths multiplied by dft.rmult. Order-of-magnitude values
    * used only for the live estimate; the run reads them from the pseudopotential. */
+  /* H, C, N, O and S carry the radii BigDFT 1.9.5 printed for the HGH-K PBE
+   * pseudopotentials of a real run (tools/build_results.py reads them from the
+   * log). B, Si and P are approximate: no run of ours has printed them yet. */
   const EL = {
-    H:  { z: 1,  val: 1, rcov: 0.31, rc: 1.46, rf: 0.20, color: 0xdfe5e8, name: 'Hydrogen' },
+    H:  { z: 1,  val: 1, rcov: 0.31, rc: 1.4634, rf: 0.2000, color: 0xdfe5e8, name: 'Hydrogen' },
     B:  { z: 5,  val: 3, rcov: 0.84, rc: 1.60, rf: 0.23, color: 0xe7a39a, name: 'Boron' },
-    C:  { z: 6,  val: 4, rcov: 0.76, rc: 1.58, rf: 0.23, color: 0x566067, name: 'Carbon' },
-    N:  { z: 7,  val: 5, rcov: 0.71, rc: 1.37, rf: 0.21, color: 0x3f74e0, name: 'Nitrogen' },
-    O:  { z: 8,  val: 6, rcov: 0.66, rc: 1.47, rf: 0.20, color: 0xe0503f, name: 'Oxygen' },
+    C:  { z: 6,  val: 4, rcov: 0.76, rc: 1.5844, rf: 0.2915, color: 0x566067, name: 'Carbon' },
+    N:  { z: 7,  val: 5, rcov: 0.71, rc: 1.3703, rf: 0.2455, color: 0x3f74e0, name: 'Nitrogen' },
+    O:  { z: 8,  val: 6, rcov: 0.66, rc: 1.2156, rf: 0.2113, color: 0xe0503f, name: 'Oxygen' },
     Si: { z: 14, val: 4, rcov: 1.11, rc: 1.71, rf: 0.32, color: 0xc9a56d, name: 'Silicon' },
     P:  { z: 15, val: 5, rcov: 1.07, rc: 1.63, rf: 0.30, color: 0xe58a2b, name: 'Phosphorus' },
-    S:  { z: 16, val: 6, rcov: 1.05, rc: 1.60, rf: 0.29, color: 0xe2c53a, name: 'Sulfur' },
+    S:  { z: 16, val: 6, rcov: 1.05, rc: 1.3823, rf: 0.3648, color: 0xe2c53a, name: 'Sulfur' },
   };
+
 
   // --- small vector helpers -------------------------------------------------
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -157,7 +161,19 @@ window.OND = window.OND || {};
     };
   }
 
-  const builders = { h2o: water, c60, 'gr-bz': grapheneBenzene, si64: silicon, ala20: () => helix(20) };
+  /* The one system that was really computed: its geometry and results come from
+   * the published logs of a BigDFT campaign (see tools/build_results.py). */
+  function peptide6a() {
+    const study = OND.study;
+    return {
+      id: '6a', name: 'Tetrapeptide 6a', formula: 'C₃₁H₃₄N₄O₇S', bc: 'free', cell: null, recorded: true,
+      blurb: 'A photocatalytic tetrapeptide, 77 atoms. Its triplet energy was computed with BigDFT on TSUBAME4.0: the results shown for it are real.',
+      traits: ['molecule', 'real study'],
+      atoms: study.system.atoms.map(([el, x, y, z]) => ({ el, p: [x, y, z] })),
+    };
+  }
+
+  const builders = { h2o: water, c60, 'gr-bz': grapheneBenzene, si64: silicon, ala20: () => helix(20), '6a': peptide6a };
 
   function build(id) {
     const sys = builders[id]();
@@ -196,7 +212,7 @@ window.OND = window.OND || {};
 
   OND.chem = {
     BOHR, EL, build, bonds, electrons, composition,
-    list: [['h2o', 'Water'], ['c60', 'C₆₀ fullerene'], ['gr-bz', 'Benzene on graphene'], ['si64', 'Crystalline silicon'], ['ala20', 'α-helix peptide']],
+    list: [['h2o', 'Water'], ['c60', 'C₆₀ fullerene'], ['gr-bz', 'Benzene on graphene'], ['si64', 'Crystalline silicon'], ['ala20', 'α-helix peptide'], ['6a', 'Tetrapeptide 6a']],
     vec: { sub, add, mul, dot, cross, len, unit },
   };
 })(window.OND);

@@ -27,6 +27,7 @@ The object is called a *blueprint*, not a recipe, on purpose: in aom-memory and 
 | `l_sim/ia_tools/agent-slapsci` (v0.4.1) | The agent engine: one YAML per agent or pool, a permission gate, and a **wire protocol** (events out with a sequence number, commands in) that a browser can speak over a WebSocket. Also the **renderer** contract. See §7. |
 | `l_sim/ia_tools/pack-kit` (v0.7.0rc8) | What a pack is, how it is served (A2A), how libraries publish their interface (panels), how files and containers are declared. See §7. |
 | `l_sim/ia_tools/aom/aom_memory` | The experience memory (episodes, verdicts, recipes) and its export to **Capsule-Maker**: what a capsule actually contains. See §7. |
+| `BigDFT-group/capsule-maker` | **The capsule format** (1.0 and 1.1): a directory with `manifest.json`, typed records, an inventory with SHA-256 digests, a review, and lineage from a parent capsule. Also the published artefacts of a real BigDFT campaign, which the mock-up now shows. See §3 and §7. |
 | AOM format 1.0.1 (`hopa_aom/aom_format`) | SQLite file with six tables, facts with mandatory provenance, pivots for n-ary relations, artifacts for verbatim content. See §5. |
 | Your fork `Yopla38/BigDFT` | Dated 2017. I worked on upstream. |
 | `BigDFT-group/llm-hackathon-2025` (LARA-HPC), OntoFlow | remotemanager, the BigDFT-school notebooks, earlier ontologies. |
@@ -35,7 +36,7 @@ The object is called a *blueprint*, not a recipe, on purpose: in aom-memory and 
 | Paper2Agent (arXiv 2509.06917) | Turns a paper and its code into a tested MCP server. See §7. |
 | WEAS, Mol\*, 3Dmol.js | See §8. |
 
-Not read: Capsule-Maker itself (I found no public repository; I know it through aom-memory's adapter and its mapping document), and the platform pack-kit was extracted from.
+Not read: `Pack_pybigdft_HAPS`, which lives on a local machine this cloud session cannot reach, and the platform pack-kit was extracted from.
 
 ## 3. The seven blocks
 
@@ -69,7 +70,25 @@ So composition belongs in the product. I propose a **study**: blueprints snapped
 | **Hand-over** | geometry, wavefunctions, support functions or density from one run to the next | relax then compute a spectrum; cubic run then virtual states; template then fragments; relaxed end points then a path |
 | **Combination** | several results into one derived quantity, written as a formula | $E_{\mathrm{ads}}=E_{\mathrm{complex}}-E_{\mathrm{sheet}}-E_{\mathrm{molecule}}$, atomisation and formation energies |
 
-A link is checked like a parameter: a wavefunction hand-over needs the same grid, a fragment template needs the same species. The study states its total cost before launch, re-runs only what a change invalidates downstream, and its execution is a chain of episodes (`followsEpisode`), so a capsule of a study replays as one. The mock-up does not show studies yet; its capsule already describes one (three calculations and a difference).
+A link is checked like a parameter: a wavefunction hand-over needs the same grid, a fragment template needs the same species. The study states its total cost before launch, re-runs only what a change invalidates downstream, and its execution is a chain of episodes, so a capsule of a study replays as one.
+
+The **Study** space of the mock-up shows a real one: the ΔSCF triplet energy of the tetrapeptide 6a (77 atoms), computed with BigDFT 1.9.5 on TSUBAME4.0 and published with its logs in `BigDFT-group/capsule-maker`. Eleven blocks: a starting geometry, two grid series, single points, two relaxations (one set aside by the researcher), PBE0 stages still queued, and two formulas. The board is drawn natively (HTML cards, SVG links) rather than with Cytoscape.js, because a block has to carry live content: a status, a typeset formula, later a thumbnail. Cytoscape.js keeps its place for large graphs such as a memory.
+
+### Results: a view is a description, code is the exception
+
+`tools/build_results.py` reads the BigDFT logfiles of that campaign and writes a small typed result set (40 single points, 4 relaxations). Every number of the Study space comes from it. Three ways to get a view, from no code to code:
+
+1. **From the catalogue.** A view is attached to a kind of result: a series, a trace, a trajectory, a spectrum, a comparison. It is a short declarative definition (which runs, which quantity, unit, scale, grouping), shown under each figure. The workshop draws it. Nothing is executed.
+2. **Describe it.** The agent answers a request with a view definition, approved like any change to a blueprint. In the mock-up, asking how the triplet energy depends on the grid adds a figure that needs no code, because the data are already extracted. The agent writes code only when they are not.
+3. **An analysis cell.** Python, for what no view covers. It runs in the pack's container, beside the calculation: read-only on the run's files, no network, time and memory limits. This is the confinement pack-kit already gives an agent (a launcher that only knows `apptainer exec --containall --cleanenv` on one mounted folder, the agent itself under Landlock). The cell must return a **table**, not a picture: the workshop draws it, so the figure stays consistent, themed and exportable. The cell is saved with the study, declared with its digest, and travels in the capsule as a procedure. Written by the agent, it passes the same approval. A cell that proves useful can be promoted to the catalogue by a maintainer.
+
+This answers the question of where user code may run. Not in the page and not on the platform: nothing a user writes ever executes there. Not "agent only" either: a researcher must be able to do without it. Free plotting code is the escape hatch, not the path: an image made by a script can be attached, but it cannot be restyled or re-exported, and it is marked as such.
+
+What makes the figures publishable: one renderer for the screen and for print. "Journal, 1 column" draws the figure at 85 mm with 7 pt type, as it will be printed; the SVG that is shown is the SVG that is copied, with every colour resolved. Each figure has a title that states the finding, a caption written from the numbers, a table view of its data, and a palette checked for colour-vision deficiency. What makes them honest: a converged run that warned is shown with its warnings; a queued stage is shown as queued; a criterion fixed before the calculations is drawn before the result exists.
+
+Two things the real logs allowed me to check. With the localisation radii BigDFT printed, the workshop's own count of coarse and fine grid points matches BigDFT's on all twelve grids of the study to within 0.03 %: the grid drawn in the scene is the grid that is computed. And the time and memory estimates are now fitted on these runs instead of guessed.
+
+A **dry run** comes before a run. The researcher of that study made it a rule ("every BigDFT input must first pass a dry run"): BigDFT builds the input, counts electrons and grid points and estimates memory without a self-consistent step. The workshop has the button next to Run.
 
 ## 4. 311 parameters, three depths
 
@@ -151,12 +170,12 @@ The workshop should bring no agent plumbing of its own. It is a **browser front-
 | **`declare_file` and `MANIFEST.json`** (path, role, sha256, `derived_from`) | The files of a blueprint are declared, not guessed. `derived_from` gives the "Paper" and "Agent" marks a verifiable origin. |
 | **Panels** (`pack_kit.panels`, capability vocabulary) | The workshop embeds aom_web's memory console and maps roles to `read / ingest / curate / purge / configure / optimize` once. |
 | **Experience memory** (aom-memory): one episode per intention, the researcher's verdicts (accepted, corrected, rejected), judged episodes consolidated into recipes | What happened, and what was learned from it. Recipes feed the Library and the advice. |
-| **Capsule-Maker**, fed by aom-memory's adapter | **What a capsule is**: `SUMMARY.md` with typed records (intention, acceptance, correction, rejection, result, hypothesis, question), one transcript per intention, the files the agent wrote with their sha256, the evidence behind every verified number, and a test that recounts every claim. `capsule-maker verify` checks it; approval is a human act. |
+| **Capsule-Maker** | **What a capsule is**: a goal, typed records (context, decision, correction, failed attempt, result, hypothesis, question, procedure, evidence) with a status (verified, superseded, unresolved, hypothesis, unverified), the files behind them with their digests, a review. A capsule can extend a parent (C1 → C2) and embeds it, so lineage verifies alone. Inspecting, importing and verifying never run code; running its tests is a separate act of trust. The Study space shows the real C2 capsule of the 6a campaign: 88 records, 173 files. |
 | **LLM policy** (a pack never ships a model; the user's choice first) | The platform does not impose a model. |
 
 What this changes in the design:
 
-- **The capsule tab shows records, not just steps.** The mock-up now displays an intention, a proposal the researcher corrected, a verified result, declared files, an acceptance, and a Verify button. "Replay" re-reads the journal; controls of a replayed request stay inert, as the renderer rules require.
+- **The capsule tab shows records, not just steps.** The replay example uses Capsule-Maker's kinds and statuses. "Fork" is `extend`: a child capsule with its parent embedded. The real capsule is browsed by kind in the Study space, each record with who decided (tool, researcher, AI, paper).
 - **One action layer** (`blueprint.set`, `system.edit`, `job.submit`, `figure.render`…) serves the interface and the pack's tools (agent-slapsci `native:` functions), and an MCP server where one is wanted. The agent cannot do anything that is not visible and undoable in the interface.
 - **The interface describes the code that runs.** The schema is extracted from the tag the pack's container pins (1.9.1), not from the development branch. `tools/diff_schema.py` reports what an upgrade changes and fails if a curated control would disappear. Today: 8 variables added and 6 removed between 1.9.1 and development, no default changed, no curated control lost.
 - **Known silent failures become impossible by construction.** The pack's `xyz_downloader` documents one: a standard XYZ file carries no unit and BigDFT then reads it in bohr without a word. A blueprint always writes its units.
@@ -231,16 +250,16 @@ Structuring choices:
 
 ## 11. What the mock-up is, and is not
 
-Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the bibliographic references.
+Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the whole Study space (structure, energies, convergence traces, orbitals, relaxations, warnings, capsule records, all read from published BigDFT logs), the bibliographic references.
 
-Simulated: execution (no calculation runs), result values, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up.
+Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up.
 
 Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated `input.yaml` has not been fed to a real BigDFT.
 
 ## 12. Questions to move forward
 
 1. **Existing platform.** pack-kit says it was extracted from a platform monorepo (FastAPI backend, React frontend, a runner with sidecars). Is the workshop to be built inside that platform, or beside it as a second host?
-2. **Capsule-Maker.** I did not find its repository. May I read it, so that the Library and the Verify action follow its real commands and record types rather than what aom-memory's adapter lets me infer?
+2. **`Pack_pybigdft_HAPS`.** I could not reach `/home/yopla/PycharmProjects/Pack_pybigdft_HAPS`: this session runs in a cloud container. Push it to a repository I can read, or run a session on that machine, and I will wire the dry run and the real launch to its commands.
 3. **Workshop layer.** Should `ontology/workshop_layer.ttl` be merged into `pack_pybigdft`'s schema, or kept as a separate layer loaded beside it?
 4. **Compute at launch.** The pack's Apptainer container alone, or a specific cluster from the start?
 5. **First audience.** Teaching, materials researchers, or biology? This sets the order of steps 2 to 4.

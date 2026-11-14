@@ -25,7 +25,7 @@
   const blueprint = OND.Blueprint(), P = blueprint.PARAMS, st = blueprint.st;
   const stage = OND.Stage($('#stage'));
   const SCHEMA = OND.schema.variables;
-  const ui = { brick: 'matter', depth: 0, view: { grid: false, density: false, orbital: false, fragment: false, ghosts: true, vdw: false }, sel: null, undo: [], drag: false, ran: false, query: '' };
+  const ui = { brick: 'matter', depth: 0, view: { grid: false, density: false, orbital: false, fragment: false, ghosts: true, vdw: false }, sel: null, undo: [], drag: false, ran: false, query: '', notes: [] };
 
   const icon = (d) => '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const BRICKS = [
@@ -37,7 +37,7 @@
     ['observables', 'Observables', 'What you want to look at in the end.', icon('<path d="M3 17h14M5.500 14V9M10 14V4M14.500 14v-7"/>')],
     ['machine', 'Machine', 'Where the calculation runs, and on what budget.', icon('<rect x="5" y="5" width="10" height="10" rx="1.500"/><path d="M8 2v3M12 2v3M8 15v3M12 15v3M2 8h3M2 12h3M15 8h3M15 12h3"/>')],
   ];
-  const SRC = { default: 'BigDFT default', adapted: 'Adapted', you: 'You', agent: 'Agent', paper: 'Paper', guide: 'Guide' };
+  const SRC = { default: 'BigDFT default', adapted: 'Adapted', you: 'You', agent: 'Agent', paper: 'Paper', guide: 'Guide', run: 'Recorded run' };
   const BC = { free: 'isolated', surface: 'surface (x, z periodic)', periodic: 'periodic' };
   const ACTIONS = [['sp', 'Energy', 'Single point: energy and forces'], ['geopt', 'Relaxation', 'Find the equilibrium geometry'], ['md', 'Dynamics', 'Follow the motion of the atoms'], ['neb', 'Path', 'Barrier between two states'], ['tddft', 'Excitations', 'Absorption spectrum'], ['frag', 'Fragments', 'What binds the parts']];
 
@@ -64,6 +64,7 @@
     fn(st.sys.atoms);
     st.sys.atoms.forEach((at, i) => { at.i = i; });
     ui.sel = null; st.sys.edited = true;
+    ui.notes = ui.notes.filter((n) => n.sys !== st.sys.id); // atom indices no longer mean the same atoms
     blueprint.touchSystem();
     stage.setSystem(st.sys, true);
     syncStage(true);
@@ -90,6 +91,7 @@
     const css = getComputedStyle(document.documentElement), g = (n) => css.getPropertyValue(n).trim();
     stage.setColors({ coarse: g('--fg-3'), fine: g('--accent'), pos: g('--pos'), neg: g('--neg'), dens: g('--accent'), sel: g('--fg'), cell: g('--fg-3') });
     if (st.sys) syncStage(true);
+    if (OND.studyView && !$('#view-study').hidden) OND.studyView.refresh();
   }
 
   // --- rail -----------------------------------------------------------------
@@ -120,10 +122,11 @@
     $('#ring').setAttribute('stroke-dashoffset', String(138.2 * (1 - score / 100)));
     $('#ring').setAttribute('stroke', bad ? 'var(--err)' : warn ? 'var(--warn)' : 'var(--ok)');
     $('#ring-t').textContent = score;
+    const rec = recorded(); // a recorded run states what it cost; anything else is an estimate
     $('#estimate').replaceChildren(
-      h('dt', {}, 'Time'), h('dd', { class: 'num' }, '≈ ' + duration(d.seconds)),
-      h('dt', {}, 'Cost'), h('dd', { class: 'num' }, '≈ ' + fr(d.credits, d.credits < 10 ? 1 : 0) + ' credits'),
-      h('dt', {}, 'Memory'), h('dd', { class: 'num' }, '≈ ' + fr(d.mem, d.mem < 10 ? 1 : 0) + ' GB'));
+      h('dt', {}, 'Time'), h('dd', { class: 'num' }, rec ? duration(rec.wall) : '≈ ' + duration(d.seconds)),
+      h('dt', {}, 'Cost'), h('dd', { class: 'num' }, rec ? fr(rec.cores * rec.wall / 3600 * blueprint.TARGETS[st.v.target].rate, 1) + ' credits' : '≈ ' + fr(d.credits, d.credits < 10 ? 1 : 0) + ' credits'),
+      h('dt', {}, 'Mem./task'), h('dd', { class: 'num' }, rec ? fr(rec.mem / 1000, 1) + ' GB' : '≈ ' + fr(d.mem, d.mem < 10 ? 1 : 0) + ' GB'));
     const btn = $('#launch');
     btn.disabled = bad > 0;
     btn.textContent = bad ? 'Blueprint incomplete' : 'Run calculation';
@@ -159,7 +162,20 @@
       h('div', { class: 'row', style: 'justify-content:space-between' }, h('b', {}, EL[at.el].name + ' · atom ' + (i + 1)), h('button', { class: 'btn small', type: 'button', onclick: () => { ui.sel = null; refresh(); syncStage(); } }, 'Close')),
       h('span', { class: 'label' }, 'Substitute with'),
       h('div', { class: 'row' }, Object.keys(EL).filter((e) => e !== at.el).map((e) => h('button', { class: 'el', type: 'button', title: EL[e].name, onclick: () => editAtoms((A) => { A[i].el = e; }) }, e))),
-      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', onclick: () => editAtoms((A) => { A.splice(i, 1); }) }, 'Create a vacancy')));
+      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', onclick: () => editAtoms((A) => { A.splice(i, 1); }) }, 'Create a vacancy')),
+      h('form', { class: 'row', onsubmit: (e) => { e.preventDefault(); const t = $('#note-text').value.trim(); if (!t) return; addNote(i, t, 'You'); ui.sel = null; refresh(); syncStage(); } },
+        h('input', { id: 'note-text', type: 'text', placeholder: 'Leave a note on this atom', 'aria-label': 'Note on this atom', maxlength: 120 }), h('button', { class: 'btn small', type: 'submit' }, 'Pin')));
+  }
+
+  // --- notes pinned on atoms: written by you, or shown on request from a project -----
+  function addNote(index, text, author, example) { ui.notes.push({ sys: st.sys.id, i: index, text, author, example }); renderPins(); }
+  function renderPins() {
+    $('#pins').replaceChildren(...ui.notes.filter((n) => n.sys === st.sys.id && st.sys.atoms[n.i]).map((n) => {
+      const el = h('div', { class: 'pin' }, h('b', {}, n.author), ' · ' + n.text + (n.example ? ' (example from the Lab)' : ''),
+        h('button', { type: 'button', 'aria-label': 'Remove this note', onclick: () => { ui.notes.splice(ui.notes.indexOf(n), 1); renderPins(); } }, '×'));
+      el.note = n;
+      return el;
+    }));
   }
 
   // --- inspector ---------------------------------------------------------------
@@ -183,7 +199,7 @@
         onchange: () => { ui.drag = false; refresh(); },
       }), out);
     }
-    const user = ['you', 'agent', 'paper', 'guide'].includes(src);
+    const user = ['you', 'agent', 'paper', 'guide', 'run'].includes(src);
     return h('div', { class: 'ctl', id: 'row-' + k },
       h('div', { class: 'ctl-head' }, h('b', {}, def.label), P[k][1] ? h('code', {}, P[k][1]) : null),
       body,
@@ -423,7 +439,69 @@
     $('#dock').classList.remove('closed'); $('#dock-toggle').textContent = 'Collapse';
     $('#dock').classList.toggle('tall', name === 'guide'); // a tutorial needs room to be read
   }
+  // --- real results: the recorded runs of the 6a study ------------------------------
+  const REC = OND.studyView.energies.prod;
+  /* The recorded run that matches the blueprint, if any: same system, same physics. */
+  function recorded() {
+    const v = st.v, sys = st.sys;
+    if (!sys.recorded || sys.edited) return null;
+    const same = v.xc === 'PBE' && v.hgrid === 0.35 && v.crmult === 6 && v.frmult === 9 && v.solvent === 'none' && v.action === 'sp' && v.charge === 0 && v.algo === 'cubic' && !v.dispersion;
+    return !same ? null : v.nspin === 1 ? REC.S0 : v.nspin === 2 && v.mpol === 2 ? REC.T1 : null;
+  }
+  function openRecorded() {
+    loadSystem('6a');
+    for (const [k, val] of [['xc', 'PBE'], ['hgrid', 0.35], ['crmult', 6], ['frmult', 9], ['gnrm', 1e-5], ['solvent', 'none'], ['target', 'hpc'], ['mpi', 20], ['omp', 4]]) blueprint.set(k, val, 'run');
+    ui.brick = 'accuracy'; location.hash = 'workshop'; dryRun();
+  }
+  function dryRun() {
+    const d = blueprint.derived(), rec = recorded(), dl = h('dl', { class: 'kv' }), row = (k, val) => dl.append(h('dt', {}, k), h('dd', { class: 'num' }, val));
+    clearInterval(runTimer); setTab('run');
+    $('#run-steps').replaceChildren(); $('#scf-chart').replaceChildren(); $('#run-title').textContent = '';
+    row('Valence electrons', String(d.ne)); row('Orbitals', String(d.norb));
+    row('Coarse grid points', (rec ? '' : '≈ ') + fr(rec ? rec.nc : d.nc, 0)); row('Fine grid points', (rec ? '' : '≈ ') + fr(rec ? rec.nf : d.nf, 0));
+    row('Degrees of freedom per orbital', (rec ? '' : '≈ ') + fr(rec ? rec.dof : d.dof, 0));
+    row('Memory peak per MPI task', rec ? fr(rec.mem, 0) + ' MB' : '≈ ' + fr(d.mem * 1000, 0) + ' MB');
+    const bad = blueprint.checks().filter((c) => c.level === 'err');
+    $('#results').replaceChildren(
+      h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('p', { class: 'label' }, 'Dry run'), h('span', { class: 'pill' + (rec ? '' : ' example') }, rec ? 'recorded on TSUBAME4.0' : 'workshop estimate')),
+      h('p', { style: 'color:var(--fg-2);font-size:13px;margin:6px 0 8px' }, 'A dry run builds the input, counts electrons and grid points and estimates the memory, without a single self-consistent step. It takes seconds: do it before every run.'),
+      dl,
+      bad.length ? h('div', { class: 'notice err' }, h('b', {}, 'The input would be refused'), h('span', {}, bad.map((c) => c.text).join(' · '))) : h('p', { style: 'color:var(--ok);font-size:13px;margin-top:8px' }, rec ? 'Passed. BigDFT read this input and the run that followed is recorded: “Run calculation” replays it.' : 'No inconsistency found. In production these numbers come from BigDFT itself, not from the workshop.'));
+  }
+  function runRecorded(rec) {
+    resetRun(); setTab('run');
+    const names = ['Queued', 'Container ready', 'Self-consistent cycle', 'Analysis'], pills = names.map((n) => h('span', { class: 'step' }, n));
+    $('#run-steps').replaceChildren(...pills, h('span', { class: 'pill' }, 'recorded on TSUBAME4.0'));
+    const mark = (i) => pills.forEach((p, j) => { p.className = 'step' + (j < i ? ' done' : j === i ? ' on' : ''); });
+    const all = rec.scf, chunk = Math.max(1, Math.ceil(all.length / 46));
+    let i = 0, shown = 0;
+    mark(0); $('#run-title').textContent = 'Norm of the orbital gradient, per iteration';
+    runTimer = setInterval(() => {
+      if (i < 6) { i++; if (i === 3) mark(1); if (i === 6) mark(2); return; }
+      shown = Math.min(all.length, shown + chunk);
+      const part = all.slice(0, shown);
+      chart($('#scf-chart'), { title: 'Self-consistent cycle convergence', xs: part.map((q) => q[0]), ys: part.map((q) => q[1]), log: true, x0: 1, x1: all.length, y0: 1e-6, y1: 1, goal: rec.gnrm_cv, goalLabel: 'criterion', xlabel: 'iterations', xfmt: (x) => String(Math.round(x)), tip: (x, y) => 'it. ' + x + ' · ' + y.toExponential(1) });
+      if (shown < all.length) return;
+      clearInterval(runTimer); mark(names.length); ui.ran = true;
+      const dl = h('dl', { class: 'kv' }), row = (k, val) => dl.append(h('dt', {}, k), h('dd', { class: 'num' }, val)), o = rec.orbitals;
+      row('Total energy', rec.energy.toFixed(6) + ' Ha');
+      row('Highest occupied level', o.down.length ? fr(o.up.at(-1), 2) + ' eV (↑), ' + fr(o.down.at(-1), 2) + ' eV (↓)' : fr(o.up.at(-1), 2) + ' eV');
+      row('Maximum force', rec.fmax.toExponential(1) + ' Ha/bohr'); row('Dipole moment', fr(rec.dipole, 2) + ' D');
+      row('Self-consistent iterations', String(rec.iters)); row('Wall time', duration(rec.wall) + ' on ' + rec.cores + ' cores'); row('Code', 'BigDFT ' + rec.version);
+      const lo = -16, hi = -2, xs = [], ys = [], lv = o.up.concat(o.down);
+      for (let e = lo; e <= hi; e += 0.1) { xs.push(e); ys.push(lv.reduce((sum, l) => sum + Math.exp(-((e - l) ** 2) / 0.125), 0)); }
+      const el = h('div', { class: 'chart' });
+      $('#results').replaceChildren(h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('p', { class: 'label' }, 'Results'), h('span', { class: 'pill' }, 'recorded run')), dl,
+        rec.warnings.length ? h('div', { class: 'notice' }, h('b', {}, 'Converged, with ' + rec.warnings.length + ' BigDFT warnings'), h('span', {}, [...new Set(rec.warnings)].join(' · '))) : '',
+        h('p', { class: 'label', style: 'margin-top:12px' }, 'Occupied states'), el,
+        h('p', { style: 'margin-top:10px' }, h('a', { class: 'btn small', href: '#study' }, 'See the whole study')));
+      chart(el, { title: 'Occupied states', h: 120, xs, ys, area: true, y0: 0, xlabel: 'eV', xfmt: (x) => fr(x, 0), yfmt: (y) => fr(y, 0), tip: (x, y) => fr(x, 1) + ' eV · ' + fr(y, 1) });
+    }, 70);
+  }
+
   function run() {
+    const match = recorded();
+    if (match) return runRecorded(match);
     const v = st.v, d = blueprint.derived(), sys = st.sys, rand = rng(sys.atoms.length * 7919 + Math.round(v.hgrid * 100));
     resetRun(); setTab('run');
     const outer = ['geopt', 'md', 'neb'].includes(v.action);
@@ -491,18 +569,18 @@
    * only when their evidence is packaged, files listed with their sha256. */
   const CAPSULE = {
     title: 'Benzene adsorption on graphene',
-    meta: 'One intention, 10 records, 3 calculations, container pinned by digest. Move the slider to relive the session.',
+    meta: 'An example in the Capsule-Maker format: a goal, typed records, the files behind them. Move the slider to relive the session.',
     steps: [
-      ['you', null, 'I want the adsorption energy of benzene on graphene.', () => {}, ['intention-01', 'context']],
+      ['you', null, 'I want the adsorption energy of benzene on graphene.', () => {}, ['context', 'verified']],
       ['agent', 'use_pack', 'BigDFT pack loaded: read-only memory, its tools, its container.', () => {}],
       ['agent', 'query_memory', 'Asked the memory about “physisorption on a surface”. Three facts kept, among them (Graphene) isA (Gapless system).', () => {}],
-      ['agent', 'set_parameters', 'PBE, mixing profile, Γ point only.', () => { blueprint.set('xc', 'PBE', 'agent'); blueprint.set('scf', 'mixing', 'agent'); blueprint.set('kpt', 1, 'agent'); }, ['proposal-01-1', 'superseded']],
-      ['you', null, 'Γ alone is not enough for a 12 Å sheet. Use a 2×1×2 mesh.', () => { blueprint.set('kpt', 2, 'you'); }, ['correction-01-1', 'verified']],
+      ['agent', 'set_parameters', 'PBE, mixing profile, Γ point only.', () => { blueprint.set('xc', 'PBE', 'agent'); blueprint.set('scf', 'mixing', 'agent'); blueprint.set('kpt', 1, 'agent'); }, ['decision', 'superseded']],
+      ['you', null, 'Γ alone is not enough for a 12 Å sheet. Use a 2×1×2 mesh.', () => { blueprint.set('kpt', 2, 'you'); }, ['correction', 'verified']],
       ['agent', 'convergence_study', 'Grid-spacing convergence from 0.50 to 0.35 bohr. Kept: 0.40.', () => { blueprint.set('hgrid', 0.4, 'agent'); ui.view.grid = true; }],
       ['agent', 'run_in_container', 'Three calculations: complex, sheet alone, molecule alone.', () => { ui.view.grid = false; blueprint.set('density', true, 'agent'); }],
-      ['agent', 'parse_bigdft_log', 'All three reached #FINAL with no warning. $E_{\\mathrm{ads}}=E_{\\mathrm{complex}}-E_{\\mathrm{sheet}}-E_{\\mathrm{molecule}}$', () => {}, ['result-01', 'verified']],
-      ['agent', 'declare_file', 'input.yaml, run.py and the benzene HOMO figure declared in the manifest with their sha256.', () => { ui.view.orbital = true; }, ['files', 'verified']],
-      ['you', null, 'Accepted. Without dispersion this is a lower bound; redo it once D3 handles surfaces.', () => {}, ['acceptance-01-1', 'verified']],
+      ['agent', 'parse_bigdft_log', 'All three reached #FINAL with no warning. $E_{\\mathrm{ads}}=E_{\\mathrm{complex}}-E_{\\mathrm{sheet}}-E_{\\mathrm{molecule}}$', () => {}, ['result', 'verified']],
+      ['agent', 'declare_file', 'input.yaml, run.py and the benzene HOMO figure declared in the manifest with their sha256.', () => { ui.view.orbital = true; }, ['evidence', 'verified']],
+      ['you', null, 'Accepted. Without dispersion this is a lower bound; redo it once D3 handles surfaces.', () => {}, ['question', 'unresolved']],
     ],
   };
   let capBase = null, capTimer = null;
@@ -521,7 +599,7 @@
     $('#cap-title').textContent = CAPSULE.title; $('#cap-meta').textContent = CAPSULE.meta;
     $('#cap-log').replaceChildren(...CAPSULE.steps.map(([who, tool, text, , rec]) => h('div', { class: 'msg' }, h('span', { class: 'who' + (who === 'agent' ? ' bot' : '') }, who === 'agent' ? 'Agent' : 'Researcher'), h('div', {}, tool ? h('code', {}, tool + ' ') : null, text, rec ? h('span', { class: 'rec ' + rec[1] }, rec[0] + ' · ' + rec[1]) : null))));
     typeset($('#cap-log'));
-    $('#cap-verify').addEventListener('click', () => { $('#cap-verify-out').textContent = 'Example: 10 records, 3 files. Every file matches its sha256 and every correction is quoted verbatim in its trace.'; });
+    $('#cap-verify').addEventListener('click', () => { $('#cap-verify-out').textContent = 'Example: 10 records, 3 files. Every file matches its sha256 and every verified record points to packaged evidence. No code was run: running the tests of a capsule is a separate act of trust.'; });
     $('#cap-range').addEventListener('input', (e) => { clearInterval(capTimer); capsuleGo(+e.target.value); });
     $('#cap-play').addEventListener('click', () => { clearInterval(capTimer); let k = 0; capsuleGo(0); capTimer = setInterval(() => { if (++k >= CAPSULE.steps.length) return clearInterval(capTimer); capsuleGo(k); }, 1500); });
     $('#cap-fork').addEventListener('click', () => { clearInterval(capTimer); capBase = null; for (const k in st.src) if (st.src[k] === 'agent') st.src[k] = 'you'; ui.brick = 'accuracy'; setTab('source'); refresh(); });
@@ -728,13 +806,14 @@
   }
 
   // --- routing and wiring ---------------------------------------------------------
-  const VIEWS = ['workshop', 'library', 'lab', 'compute', 'publish'];
+  const VIEWS = ['workshop', 'study', 'library', 'lab', 'compute', 'publish'];
   function route() {
     const name = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'workshop';
     VIEWS.forEach((n) => { $('#view-' + n).hidden = n !== name; });
     $$('.spaces a').forEach((a) => { if (a.getAttribute('href') === '#' + name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (name === 'publish') renderPublication();
     if (name === 'lab') typeset($('#view-lab'));
+    if (name === 'study') OND.studyView.refresh();
     if (name === 'library') renderGuides();
   }
 
@@ -743,7 +822,7 @@
     if (queued) return; queued = true;
     requestAnimationFrame(() => {
       queued = false;
-      renderRail(); renderStageMeta(); renderSource();
+      renderRail(); renderStageMeta(); renderSource(); renderPins();
       if (!ui.drag) renderInspector();
       syncStage();
       if (!$('#view-publish').hidden) renderPublication();
@@ -753,9 +832,10 @@
   blueprint.on(refresh);
   stage.onPick = (i) => { ui.sel = i; if (i != null) ui.brick = 'matter'; refresh(); syncStage(); };
   stage.onFrame = () => {
-    const pin = $('#pin'), show = st.sys && st.sys.id === 'si64' && !st.sys.edited && st.sys.atoms[17];
-    if (show) { const p = stage.project(st.sys.atoms[17].p); pin.style.left = p.x + 'px'; pin.style.top = p.y + 'px'; }
-    pin.hidden = !show;
+    for (const el of $('#pins').children) {
+      const p = stage.project(st.sys.atoms[el.note.i].p);
+      el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; el.hidden = !p.visible;
+    }
   };
   $('#viewbar').addEventListener('click', (e) => {
     const b = e.target.closest('.tog'); if (!b || b.disabled) return;
@@ -769,6 +849,10 @@
   });
   $('#depth').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.depth = +b.dataset.depth; renderInspector(); } });
   $('#launch').addEventListener('click', run);
+  $('#dryrun').addEventListener('click', dryRun);
+  $('#lab-note').addEventListener('click', () => { loadSystem('si64'); addNote(17, 'would a vacancy here change the gap?', 'Inès', true); location.hash = 'workshop'; });
+  let resizing = null;
+  window.addEventListener('resize', () => { clearTimeout(resizing); resizing = setTimeout(() => { if (!$('#view-study').hidden) OND.studyView.refresh(); }, 180); });
   $$('#dock .tab').forEach((t) => t.addEventListener('click', () => { setTab(t.dataset.tab); if (t.dataset.tab === 'capsule' && st.sys.id !== 'gr-bz') { capBase = null; capsuleGo(0); } }));
   $('#dock-toggle').addEventListener('click', (e) => { const closed = $('#dock').classList.toggle('closed'); e.target.textContent = closed ? 'Expand' : 'Collapse'; });
   $$('[data-capsule]').forEach((b) => b.addEventListener('click', openCapsule));
@@ -788,6 +872,8 @@
   new MutationObserver(themeColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   $('#role').addEventListener('click', () => { ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
+  OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
+  { const c = OND.study.capsule; $('#real-capsule-meta').replaceChildren(h('span', {}, c.records.length + ' records'), h('span', {}, c.inventory.files + ' files'), h('span', {}, 'extends a parent capsule')); }
   themeColors(); initCapsule(); initAgent(); buildGuides(); renderGuides(); renderGuide();
   loadSystem('c60');
   ui.view.orbital = true; // open on a characteristic picture: a frontier orbital of C60
