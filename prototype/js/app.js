@@ -37,7 +37,7 @@
     ['observables', 'Observables', 'What you want to look at in the end.', icon('<path d="M3 17h14M5.500 14V9M10 14V4M14.500 14v-7"/>')],
     ['machine', 'Machine', 'Where the calculation runs, and on what budget.', icon('<rect x="5" y="5" width="10" height="10" rx="1.500"/><path d="M8 2v3M12 2v3M8 15v3M12 15v3M2 8h3M2 12h3M15 8h3M15 12h3"/>')],
   ];
-  const SRC = { default: 'BigDFT default', adapted: 'Adapted', you: 'You', agent: 'Agent', paper: 'Paper' };
+  const SRC = { default: 'BigDFT default', adapted: 'Adapted', you: 'You', agent: 'Agent', paper: 'Paper', guide: 'Guide' };
   const BC = { free: 'isolated', surface: 'surface (x, z periodic)', periodic: 'periodic' };
   const ACTIONS = [['sp', 'Energy', 'Single point: energy and forces'], ['geopt', 'Relaxation', 'Find the equilibrium geometry'], ['md', 'Dynamics', 'Follow the motion of the atoms'], ['neb', 'Path', 'Barrier between two states'], ['tddft', 'Excitations', 'Absorption spectrum'], ['frag', 'Fragments', 'What binds the parts']];
 
@@ -183,8 +183,8 @@
         onchange: () => { ui.drag = false; refresh(); },
       }), out);
     }
-    const user = ['you', 'agent', 'paper'].includes(src);
-    return h('div', { class: 'ctl' },
+    const user = ['you', 'agent', 'paper', 'guide'].includes(src);
+    return h('div', { class: 'ctl', id: 'row-' + k },
       h('div', { class: 'ctl-head' }, h('b', {}, def.label), P[k][1] ? h('code', {}, P[k][1]) : null),
       body,
       def.help ? h('p', { style: 'font-size:12px;color:var(--fg-3)' }, def.help) : null,
@@ -194,7 +194,7 @@
           user ? h('button', { class: 'btn small', type: 'button', style: 'margin-top:4px', onclick: () => blueprint.reset(k) }, 'Back to the advice') : null)));
   }
 
-  function controls(id) {
+  function controls(id, depth = ui.depth) {
     const v = st.v, sys = st.sys, per = sys.bc !== 'free';
     switch (id) {
       case 'theory': return [
@@ -216,14 +216,14 @@
         { k: 'solvent', label: 'Implicit solvent', type: 'seg', opts: [['none', 'Vacuum'], ['water', 'Water'], ['ethanol', 'Ethanol'], ['mesitylene', 'Mesitylene']] },
         { k: 'efield', label: 'Electric field along y', type: 'range', min: -0.01, max: 0.01, step: 0.001, dec: 3, unit: 'Ha/bohr' },
         { k: 'scf', label: 'Self-consistency scheme', type: 'seg', opts: [['dirmin', 'Direct minimisation'], ['mixing', 'Density mixing']] },
-        (ui.depth > 0 || v.scf === 'mixing') && { k: 'tel', label: 'Electronic temperature', type: 'range', min: 0, max: 0.03, step: 0.001, dec: 3, unit: 'Ha' },
+        (depth > 0 || v.scf === 'mixing') && { k: 'tel', label: 'Electronic temperature', type: 'range', min: 0, max: 0.03, step: 0.001, dec: 3, unit: 'Ha' },
       ];
       case 'task': return [
         { k: 'action', label: 'What do you want to obtain?', type: 'cards', opts: ACTIONS },
         v.action === 'geopt' && { k: 'geoptMethod', label: 'Optimiser', type: 'seg', opts: [['FIRE', 'FIRE'], ['SQNM', 'SQNM'], ['LBFGS', 'L-BFGS'], ['DIIS', 'DIIS']] },
         v.action === 'geopt' && { k: 'geoptSteps', label: 'Maximum number of steps', type: 'step', min: 10, max: 500, step: 10 },
         v.action === 'geopt' && { k: 'forcemax', label: 'Stop at maximum force', type: 'range', min: 0, max: 0.02, step: 0.001, dec: 3, unit: 'Ha/bohr' },
-        v.action === 'geopt' && (ui.depth > 0 || v.biomode) && { k: 'biomode', label: 'Biomolecule mode', type: 'toggle' },
+        v.action === 'geopt' && (depth > 0 || v.biomode) && { k: 'biomode', label: 'Biomolecule mode', type: 'toggle' },
         v.action === 'md' && { k: 'mdSteps', label: 'Number of steps', type: 'step', min: 50, max: 5000, step: 50 },
         v.action === 'md' && { k: 'mdT', label: 'Temperature', type: 'range', min: 0, max: 1000, step: 10, dec: 0, unit: 'K' },
         v.action === 'md' && { k: 'mdDt', label: 'Time step', type: 'range', min: 5, max: 60, step: 1, dec: 0, unit: 'a.u.', help: '20.67 a.u. is 0.5 fs.' },
@@ -248,15 +248,32 @@
     return [];
   }
 
-  const EQ = {
-    theory: ['Electrons are described by the Kohn-Sham equations; the chosen functional sets $V_{xc}$.', '$$\\Big[-\\tfrac12\\nabla^2+V_{\\mathrm H}[\\rho]+V_{xc}[\\rho]+V_{\\mathrm{ext}}\\Big]\\psi_i=\\varepsilon_i\\,\\psi_i$$'],
-    accuracy: ['Each orbital is expanded on scaling functions $\\phi$ everywhere, and on 7 wavelets $\\psi^{\\nu}$ per point in the fine region.', '$$\\psi(\\mathbf r)=\\sum_{i}s_{i}\\,\\phi_{i}(\\mathbf r)+\\sum_{j}\\sum_{\\nu=1}^{7}d_{j}^{\\nu}\\,\\psi_{j}^{\\nu}(\\mathbf r)\\qquad N_{\\mathrm{dof}}=N_c+7N_f$$'],
-    environment: ['The implicit solvent enters through a permittivity $\\epsilon(\\mathbf r)$ in the generalised Poisson equation.', '$$\\nabla\\!\\cdot\\!\\big[\\epsilon(\\mathbf r)\\,\\nabla\\phi(\\mathbf r)\\big]=-4\\pi\\rho(\\mathbf r)$$'],
-    task: ['Relaxation and dynamics follow the forces on the nuclei.', '$$\\mathbf F_I=-\\frac{\\partial E}{\\partial \\mathbf R_I}\\qquad M_I\\ddot{\\mathbf R}_I=\\mathbf F_I$$'],
+  /* Equations, written once and reused by the inspector and the Publish space.
+   * Notation: Psi_i Kohn-Sham orbitals, phi scaling functions, psi^(nu) wavelets
+   * (Genovese et al., J. Chem. Phys. 129, 014109), Phi electrostatic potential,
+   * phi_alpha support functions and K the density kernel (Mohr et al., 2014). */
+  const TEX = {
+    ks: '\\Big[-\\tfrac12\\nabla^2+V_{\\mathrm H}[\\rho]+V_{xc}[\\rho]+V_{\\mathrm{ext}}\\Big]\\Psi_i=\\varepsilon_i\\,\\Psi_i',
+    density: '\\rho(\\mathbf r)=\\sum_i f_i\\,\\lvert\\Psi_i(\\mathbf r)\\rvert^2',
+    // two lines: the panel of a block is narrow, and so is a phone
+    expansion: '\\begin{aligned}\\Psi(\\mathbf r)={}&\\sum_{i_1,i_2,i_3}s_{i_1i_2i_3}\\,\\phi_{i_1i_2i_3}(\\mathbf r)\\\\&+\\sum_{j_1,j_2,j_3}\\sum_{\\nu=1}^{7}d^{(\\nu)}_{j_1j_2j_3}\\,\\psi^{(\\nu)}_{j_1j_2j_3}(\\mathbf r)\\end{aligned}',
+    dof: 'N_{\\mathrm{dof}}=N_c+7N_f',
+    poisson: '\\nabla\\!\\cdot\\!\\big[\\epsilon(\\mathbf r)\\,\\nabla\\Phi(\\mathbf r)\\big]=-4\\pi\\rho(\\mathbf r)',
+    forces: '\\mathbf F_I=-\\frac{\\partial E}{\\partial \\mathbf R_I}',
+    newton: 'M_I\\,\\ddot{\\mathbf R}_I=\\mathbf F_I',
+    kernel: '\\rho(\\mathbf r,\\mathbf r\')=\\sum_{\\alpha,\\beta}\\phi_\\alpha(\\mathbf r)\\,K^{\\alpha\\beta}\\,\\phi_\\beta(\\mathbf r\')',
   };
-  function typeset(el) {
+  const stack = (...lines) => '$$\\begin{gathered}' + lines.join('\\\\[6pt]') + '\\end{gathered}$$';
+  const EQ = {
+    theory: ['Electrons are described by the Kohn-Sham equations, solved self-consistently with the density; the chosen functional sets $V_{xc}$, and $f_i$ are the occupations.', stack(TEX.ks, TEX.density)],
+    accuracy: ['Each orbital is expanded on scaling functions $\\phi$ at every grid point, plus 7 wavelets $\\psi^{(\\nu)}$ per point of the fine region: $N_c$ coarse and $N_f$ fine points give the number of degrees of freedom.', stack(TEX.expansion, TEX.dof)],
+    environment: ['The implicit solvent enters through a position-dependent permittivity $\\epsilon(\\mathbf r)$ in the generalised Poisson equation for the electrostatic potential $\\Phi$ (atomic units).', '$$' + TEX.poisson + '$$'],
+    task: ['Relaxation and dynamics follow the forces on the nuclei, of mass $M_I$ at positions $\\mathbf R_I$.', stack(TEX.forces, TEX.newton)],
+  };
+  /* MathJax loads asynchronously; give it ten seconds, then leave the TeX as text. */
+  function typeset(el, tries = 0) {
     if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]).catch(() => {});
-    else setTimeout(() => typeset(el), 400);
+    else if (tries < 25) setTimeout(() => typeset(el, tries + 1), 400);
   }
 
   function schemaRow(vr) {
@@ -268,6 +285,44 @@
     return h('div', { class: 'vrow' }, h('code', {}, vr.p), field, h('small', {}, vr.c + (vr.r ? ' · from ' + vr.r[0] + ' to ' + vr.r[1] : '') + (vr.if ? ' · depends on ' + vr.if : '')));
   }
 
+  // --- notices: advice and checks, tied to the parameters they involve ----------
+  const blockLabel = (id) => BRICKS.find((b) => b[0] === id)[1];
+  /* Names of the controls that are only drawn in some situations. */
+  const NAMES = { action: 'Task', geoptMethod: 'Optimiser', geoptSteps: 'Maximum number of steps', forcemax: 'Stop at maximum force', biomode: 'Biomolecule mode', mdSteps: 'Number of steps', mdT: 'Temperature', mdDt: 'Time step', thermostat: 'Thermostat', nimg: 'Images along the path', tddft: 'Excitation approach', nvirt: 'Virtual states', mpol: 'Total magnetic moment', kpt: 'k-points (Monkhorst-Pack)', tel: 'Electronic temperature' };
+  const labelOf = (key) => { if (NAMES[key]) return NAMES[key]; const d = controls(P[key][2], 1).find((x) => x && x.k === key); return d ? d.label : P[key][1] || key; };
+
+  /* Open the block that owns a parameter, scroll to its control and flash it. */
+  function reveal(key) {
+    const block = P[key][2];
+    ui.brick = block; ui.query = '';
+    ui.depth = controls(block, 0).some((x) => x && x.k === key) ? (ui.depth === 2 ? 0 : ui.depth) : 1;
+    if (location.hash.slice(1) !== 'workshop' && location.hash) location.hash = 'workshop';
+    renderRail(); renderInspector();
+    const row = document.getElementById('row-' + key);
+    if (!row) return;
+    row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 2400);
+    const first = row.querySelector('button, input, select');
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function notice(level, title, body, keys, extra) {
+    const mark = (on) => keys.forEach((k) => { const r = document.getElementById('row-' + k); if (r) r.classList.toggle('hl', on); });
+    return h('div', { class: 'notice ' + level, onmouseenter: () => mark(true), onmouseleave: () => mark(false), onfocusin: () => mark(true), onfocusout: () => mark(false) },
+      h('b', {}, title), h('span', {}, body),
+      h('div', { class: 'notice-actions' }, extra || null, keys.map((k) => h('button', { class: 'btn small', type: 'button', onclick: () => reveal(k) },
+        'See parameter: ' + labelOf(k) + (P[k][2] === ui.brick ? '' : ' (' + blockLabel(P[k][2]) + ')')))));
+  }
+  /* Shown at the top of a block: advice on its parameters, and every check that
+   * involves one of them, even when the check is filed under another block. */
+  function notices() {
+    const out = [];
+    for (const a of st.advice) if (P[a.key][2] === ui.brick) out.push(notice('advice', 'The advice differs from your choice', a.reason, [a.key], h('button', { class: 'btn small cta', type: 'button', onclick: () => blueprint.reset(a.key) }, 'Follow the advice')));
+    for (const c of blueprint.checks()) if (c.level !== 'ok' && (c.block === ui.brick || c.keys.some((k) => P[k][2] === ui.brick))) out.push(notice(c.level, c.level === 'err' ? 'To fix' : 'Good to know', c.text, c.keys));
+    return out;
+  }
+
   function renderInspector() {
     const b = BRICKS.find((x) => x[0] === ui.brick), body = $('#insp-body'), sys = st.sys;
     $('#insp-title').textContent = b[1]; $('#insp-role').textContent = b[2];
@@ -277,10 +332,10 @@
       if (ui.brick === 'matter') {
         kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Starting point')),
           h('div', { class: 'cards' }, OND.chem.list.map(([id, name]) => h('button', { class: 'card', type: 'button', 'aria-pressed': String(sys.id === id), onclick: () => loadSystem(id) }, h('b', {}, name), h('span', {}, { h2o: 'molecule', c60: 'molecule, 60 atoms', 'gr-bz': 'surface, 72 atoms', si64: 'crystal, 64 atoms', ala20: 'biology, 203 atoms' }[id])))),
-          h('div', { class: 'chips' }, ['Import XYZ, PDB, CIF', 'Draw', 'Structure databases'].map((t) => h('span', { class: 'chip' }, t)))));
+          h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'Planned: import of XYZ, PDB and CIF files, drawing, structure databases.')));
         kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Boundary conditions'), h('code', {}, 'posinp.cell')),
-          seg([['free', 'Isolated'], ['surface', 'Surface'], ['periodic', 'Periodic']], sys.bc, () => {}),
-          h('p', { style: 'font-size:12px;color:var(--fg-3)' }, sys.bc === 'surface' ? 'Periodic along x and z, free along y: the BigDFT convention for surfaces. Cell ' + fr(sys.cell[0], 2) + ' × ∞ × ' + fr(sys.cell[2], 2) + ' Å.' : sys.bc === 'periodic' ? 'Orthorhombic cell, ' + sys.cell.map((c) => fr(c, 2)).join(' × ') + ' Å.' : 'No periodic image: the potential is solved with true free boundary conditions.')));
+          h('div', { class: 'seg readonly', role: 'img', 'aria-label': 'Boundary conditions: ' + BC[sys.bc] }, [['free', 'Isolated'], ['surface', 'Surface'], ['periodic', 'Periodic']].map(([val, label]) => h('span', { class: val === sys.bc ? 'on' : '' }, label))),
+          h('p', { style: 'font-size:12px;color:var(--fg-3)' }, sys.bc === 'surface' ? 'Periodic along x and z, free along y: the BigDFT convention for surfaces. Cell ' + fr(sys.cell[0], 2) + ' × ∞ × ' + fr(sys.cell[2], 2) + ' Å.' : sys.bc === 'periodic' ? 'Orthorhombic cell, ' + sys.cell.map((c) => fr(c, 2)).join(' × ') + ' Å.' : 'No periodic image: the potential is solved with true free boundary conditions.') , h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'Set by the cell of the structure, not chosen here.')));
         kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Edit')),
           h('p', { style: 'font-size:13px;color:var(--fg-2)' }, 'Click an atom in the scene to substitute or remove it. The blueprint adapts: try doping silicon with a phosphorus.'),
           ui.undo.length ? h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: undoEdit }, 'Undo last edit (' + ui.undo.length + ')')) : null));
@@ -291,10 +346,7 @@
           h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'BigDFT 1.9.1. Declared by the PyBigDFT pack and pinned by digest, never by tag: two runs months apart stay comparable.')));
         kids.push(...controls(ui.brick).filter(Boolean).map(ctl));
       }
-      const adv = st.advice.filter((a) => P[a.key][2] === ui.brick);
-      for (const a of adv) kids.push(h('div', { class: 'advice' }, h('b', {}, 'The advice differs from your choice'), h('span', {}, a.reason), h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => blueprint.reset(a.key) }, 'Follow the advice'))));
-      const mine = blueprint.checks().filter((c) => c.block === ui.brick && c.level !== 'ok');
-      for (const c of mine) kids.push(h('div', { class: 'advice', style: c.level === 'err' ? 'border-color:var(--err)' : '' }, h('b', {}, c.level === 'err' ? 'To fix' : 'Good to know'), h('span', {}, c.text)));
+      kids.unshift(...notices());
       if (EQ[ui.brick]) { const eq = h('div', { class: 'eq' }, h('p', {}, EQ[ui.brick][0]), h('div', {}, EQ[ui.brick][1])); kids.push(eq); setTimeout(() => typeset(eq), 0); }
       if (ui.depth === 1) {
         const rows = SCHEMA.filter((x) => x.b === ui.brick && x.t === 1);
@@ -369,6 +421,7 @@
     $$('#dock .tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     $$('#dock [data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== name; });
     $('#dock').classList.remove('closed'); $('#dock-toggle').textContent = 'Collapse';
+    $('#dock').classList.toggle('tall', name === 'guide'); // a tutorial needs room to be read
   }
   function run() {
     const v = st.v, d = blueprint.derived(), sys = st.sys, rand = rng(sys.atoms.length * 7919 + Math.round(v.hgrid * 100));
@@ -447,7 +500,7 @@
       ['you', null, 'Γ alone is not enough for a 12 Å sheet. Use a 2×1×2 mesh.', () => { blueprint.set('kpt', 2, 'you'); }, ['correction-01-1', 'verified']],
       ['agent', 'convergence_study', 'Grid-spacing convergence from 0.50 to 0.35 bohr. Kept: 0.40.', () => { blueprint.set('hgrid', 0.4, 'agent'); ui.view.grid = true; }],
       ['agent', 'run_in_container', 'Three calculations: complex, sheet alone, molecule alone.', () => { ui.view.grid = false; blueprint.set('density', true, 'agent'); }],
-      ['agent', 'parse_bigdft_log', 'All three reached #FINAL with no warning. Adsorption energy by difference.', () => {}, ['result-01', 'verified']],
+      ['agent', 'parse_bigdft_log', 'All three reached #FINAL with no warning. $E_{\\mathrm{ads}}=E_{\\mathrm{complex}}-E_{\\mathrm{sheet}}-E_{\\mathrm{molecule}}$', () => {}, ['result-01', 'verified']],
       ['agent', 'declare_file', 'input.yaml, run.py and the benzene HOMO figure declared in the manifest with their sha256.', () => { ui.view.orbital = true; }, ['files', 'verified']],
       ['you', null, 'Accepted. Without dispersion this is a lower bound; redo it once D3 handles surfaces.', () => {}, ['acceptance-01-1', 'verified']],
     ],
@@ -467,6 +520,7 @@
   function initCapsule() {
     $('#cap-title').textContent = CAPSULE.title; $('#cap-meta').textContent = CAPSULE.meta;
     $('#cap-log').replaceChildren(...CAPSULE.steps.map(([who, tool, text, , rec]) => h('div', { class: 'msg' }, h('span', { class: 'who' + (who === 'agent' ? ' bot' : '') }, who === 'agent' ? 'Agent' : 'Researcher'), h('div', {}, tool ? h('code', {}, tool + ' ') : null, text, rec ? h('span', { class: 'rec ' + rec[1] }, rec[0] + ' · ' + rec[1]) : null))));
+    typeset($('#cap-log'));
     $('#cap-verify').addEventListener('click', () => { $('#cap-verify-out').textContent = 'Example: 10 records, 3 files. Every file matches its sha256 and every correction is quoted verbatim in its trace.'; });
     $('#cap-range').addEventListener('input', (e) => { clearInterval(capTimer); capsuleGo(+e.target.value); });
     $('#cap-play').addEventListener('click', () => { clearInterval(capTimer); let k = 0; capsuleGo(0); capTimer = setInterval(() => { if (++k >= CAPSULE.steps.length) return clearInterval(capTimer); capsuleGo(k); }, 1500); });
@@ -529,18 +583,148 @@
     $('#methods').textContent = t;
     $('#refs').replaceChildren(...refs.map((k) => h('li', {}, REF[k])));
     const eq = $('#pub-eq');
-    eq.replaceChildren(h('div', {}, EQ.theory[1]), h('div', {}, EQ.accuracy[1].replace('\\qquad N_{\\mathrm{dof}}=N_c+7N_f', '')));
-    if (v.solvent !== 'none') eq.append(h('div', {}, EQ.environment[1]));
-    if (v.algo === 'linear') eq.append(h('div', {}, '$$\\rho(\\mathbf r,\\mathbf r\')=\\sum_{\\alpha\\beta}\\phi_\\alpha(\\mathbf r)\\,K^{\\alpha\\beta}\\,\\phi_\\beta(\\mathbf r\')$$'));
+    eq.replaceChildren(h('div', {}, '$$' + TEX.ks + '$$'), h('div', {}, '$$' + TEX.expansion + '$$'));
+    if (v.solvent !== 'none') eq.append(h('div', {}, '$$' + TEX.poisson + '$$'));
+    if (v.algo === 'linear') eq.append(h('div', {}, '$$' + TEX.kernel + '$$'));
     typeset(eq);
     const b = $('#fig-preset button[aria-pressed="true"]'), mm = +b.dataset.w, ratio = mm === 170 ? 0.5 : mm === 120 ? 1.25 : 0.75;
     const px = Math.round(mm / 25.4 * 600), w = Math.min(px, 1200);
-    $('#fig-img').src = stage.snapshot(w, Math.round(w * ratio), '#ffffff');
+    const shot = stage.snapshot(w, Math.round(w * ratio), '#ffffff');
+    $('#fig-img').hidden = !shot; $('#fig-none').hidden = !!shot;
+    if (shot) $('#fig-img').src = shot;
     $('#fig-size').textContent = fr(px) + ' × ' + fr(Math.round(px * ratio)) + ' px at 600 dpi';
   }
   function copy(text, btn) {
     const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 1400); };
     try { navigator.clipboard.writeText(text).then(done, () => { btn.textContent = 'Select the text'; }); } catch (e) { btn.textContent = 'Select the text'; }
+  }
+
+  // --- guided paths: Jupyter notebooks turned into steps ---------------------------
+  /* Browser storage keeps what an administrator added on this device only. In
+   * production the notebook goes to the platform, and to the pack's sources. */
+  const store = {
+    get(k, d) { try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : d; } catch (e) { return d; } },
+    set(k, val) { try { localStorage.setItem(k, JSON.stringify(val)); return true; } catch (e) { return false; } },
+  };
+  const guides = { list: [], imported: store.get('ond.guides', []), draft: null, error: '', cur: null, step: 0, applied: new Set() };
+  ui.admin = store.get('ond.admin', false) === true;
+  const LEVELS = ['Discovery', 'Intermediate', 'Advanced'];
+  const fmtMove = (m) => labelOf(m.key) + ' → ' + (m.value === true ? 'on' : m.key === 'action' ? ACTIONS.find((a) => a[0] === m.value)[1] : m.value);
+  const count = (g) => ({ steps: g.steps.filter((x) => !x.setup).length, moves: g.steps.reduce((n, x) => n + x.moves.length, 0), setup: g.steps.reduce((n, x) => n + x.codes.filter((c) => c.setup).length, 0) });
+
+  function buildGuides() {
+    const make = (g, builtin) => { try { const parsed = OND.notebook.parse(g.notebook, g.id); return Object.assign({ builtin }, g, parsed, { title: g.title || parsed.title }); } catch (e) { return null; } };
+    guides.list = (OND.guides || []).map((g) => make(g, true)).concat(guides.imported.map((g) => make(g, false))).filter(Boolean);
+  }
+
+  function readNotebook(file) {
+    if (!file) return;
+    guides.error = ''; guides.draft = null;
+    if (file.size > 8e6) { guides.error = 'This file is ' + fr(file.size / 1e6, 1) + ' MB. Notebooks over 8 MB usually embed large outputs: clear the outputs in Jupyter and try again.'; return renderGuides(); }
+    const reader = new FileReader();
+    reader.onerror = () => { guides.error = 'The file could not be read. Choose it again.'; renderGuides(); };
+    reader.onload = () => {
+      try {
+        let nb;
+        try { nb = JSON.parse(reader.result); } catch (e) { throw new Error('This file is not valid JSON, so it is not a Jupyter notebook (.ipynb).'); }
+        const parsed = OND.notebook.parse(nb, file.name.replace(/\.ipynb$/i, ''));
+        guides.draft = { id: 'nb-' + Date.now().toString(36), file: file.name, title: parsed.title, level: 'Discovery', minutes: Math.max(5, Math.round(parsed.steps.length * 3 / 5) * 5), summary: '', origin: 'Added by an administrator', notebook: OND.notebook.strip(nb), parsed };
+      } catch (e) { guides.error = e.message; }
+      renderGuides();
+    };
+    reader.readAsText(file);
+  }
+  function publishDraft() {
+    const d = guides.draft, entry = { id: d.id, title: d.title.trim() || d.parsed.title, level: d.level, minutes: d.minutes, summary: d.summary.trim() || 'Imported from ' + d.file + '.', origin: d.origin, notebook: d.notebook };
+    guides.imported.push(entry);
+    const saved = store.set('ond.guides', guides.imported);
+    guides.draft = null; guides.error = saved ? '' : 'Published for this session. This browser refused to store it, so it will not be there after a reload.';
+    buildGuides(); renderGuides();
+  }
+
+  function renderGuides() {
+    $('#role').textContent = ui.admin ? 'Admin view' : 'Member view';
+    $('#role').setAttribute('aria-pressed', String(ui.admin));
+    $('#guides-admin').replaceChildren(...(ui.admin
+      ? [h('input', { type: 'file', id: 'nb-file', accept: '.ipynb,application/json', hidden: true, onchange: (e) => { readNotebook(e.target.files[0]); e.target.value = ''; } }),
+        h('button', { class: 'btn small cta', type: 'button', onclick: () => $('#nb-file').click() }, 'Add a notebook (.ipynb)')]
+      : [h('span', { style: 'color:var(--fg-3);font-size:13px' }, 'each path is a Jupyter notebook')]));
+    const review = $('#guides-review'), d = guides.draft;
+    review.hidden = !(ui.admin && (d || guides.error));
+    if (!review.hidden) {
+      const kids = [];
+      if (guides.error) kids.push(h('div', { class: 'notice err' }, h('b', {}, 'Not imported'), h('span', {}, guides.error)));
+      if (d) {
+        const c = count(d.parsed), moves = d.parsed.steps.flatMap((x) => x.moves), kept = [...new Set(d.parsed.steps.flatMap((x) => x.kept))];
+        const field = (label, control) => h('label', { class: 'field' }, h('span', { class: 'label' }, label), control);
+        kids.push(h('p', { class: 'label' }, 'Import review · ' + d.file),
+          h('div', { class: 'fields' },
+            field('Title', h('input', { id: 'gd-title', type: 'text', value: d.title, oninput: (e) => { d.title = e.target.value; } })),
+            field('Level', h('select', { id: 'gd-level', onchange: (e) => { d.level = e.target.value; } }, LEVELS.map((l) => h('option', { value: l, selected: l === d.level }, l)))),
+            field('Minutes', h('input', { id: 'gd-minutes', type: 'number', min: 5, max: 240, step: 5, value: d.minutes, oninput: (e) => { d.minutes = Math.max(5, Math.min(240, +e.target.value || 5)); } })),
+            field('One-line summary', h('input', { id: 'gd-summary', type: 'text', value: d.summary, placeholder: 'What the learner will be able to do', oninput: (e) => { d.summary = e.target.value; } }))),
+          h('p', { class: 'label', style: 'margin-top:6px' }, 'What the importer understood'),
+          h('p', {}, c.steps + ' steps, cut at the headings of the notebook. ' + c.moves + ' PyBigDFT call' + (c.moves === 1 ? '' : 's') + ' become moves on the blueprint. ' + (c.setup ? c.setup + ' installation cell' + (c.setup === 1 ? '' : 's') + ' folded away: the workshop runs in the pack’s container. ' : '') + 'Outputs are ignored and nothing is executed.'),
+          moves.length ? h('div', { class: 'chips' }, [...new Set(moves.map(fmtMove))].slice(0, 12).map((t) => h('span', { class: 'chip' }, t))) : h('p', { style: 'color:var(--fg-3);font-size:13px' }, 'No call was recognised: the path will be read-only, with its code shown.'),
+          kept.length ? h('p', { style: 'color:var(--fg-3);font-size:13px' }, 'Kept as code, not replayed: ' + kept.slice(0, 10).join(', ') + (kept.length > 10 ? '…' : '') + '.') : null,
+          h('ol', { class: 'steps-preview' }, d.parsed.steps.filter((x) => !x.setup).slice(0, 14).map((x) => h('li', {}, x.title + (x.moves.length ? ' · ' + x.moves.length + ' move' + (x.moves.length > 1 ? 's' : '') : '')))),
+          h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+            h('button', { class: 'btn cta small', type: 'button', onclick: publishDraft }, 'Publish to the Library'),
+            h('button', { class: 'btn small', type: 'button', onclick: () => { guides.draft = null; guides.error = ''; renderGuides(); } }, 'Discard')));
+      }
+      review.replaceChildren(...kids);
+    }
+    $('#guides').replaceChildren(...guides.list.map((g) => {
+      const c = count(g);
+      return h('article', { class: 'tile' }, h('h3', {}, g.title), h('p', {}, g.summary),
+        h('div', { class: 'meta' }, h('span', {}, g.level), h('span', {}, g.minutes + ' min'), h('span', {}, c.steps + ' steps'), c.moves ? h('span', {}, c.moves + (c.moves === 1 ? ' move' : ' moves')) : null),
+        h('div', { class: 'foot' }, h('span', { class: 'chip' }, g.builtin ? 'BigDFT-school' : 'Added by admin'),
+          h('span', { style: 'display:flex;gap:6px' },
+            ui.admin && !g.builtin ? h('button', { class: 'btn small', type: 'button', onclick: () => { guides.imported = guides.imported.filter((x) => x.id !== g.id); store.set('ond.guides', guides.imported); if (guides.cur && guides.cur.id === g.id) guides.cur = null; buildGuides(); renderGuides(); renderGuide(); } }, 'Remove') : null,
+            h('button', { class: 'btn small', type: 'button', onclick: () => startGuide(g) }, 'Start'))));
+    }));
+  }
+
+  function startGuide(g) {
+    guides.cur = g; guides.applied = new Set();
+    guides.step = Math.max(0, g.steps.findIndex((x) => !x.setup));
+    location.hash = 'workshop'; setTab('guide'); renderGuide();
+  }
+  function renderGuide() {
+    const nav = $('#guide-nav'), box = $('#guide-step'), g = guides.cur;
+    if (!g) {
+      nav.replaceChildren(h('p', { class: 'label' }, 'Guided path'), h('p', { style: 'color:var(--fg-2);margin-top:8px' }, 'No path in progress. Guided paths are Jupyter notebooks: each step explains, and its PyBigDFT calls become moves on your blueprint.'),
+        h('p', { style: 'margin-top:10px' }, h('a', { class: 'btn small', href: '#library' }, 'Choose a path in the Library')));
+      box.replaceChildren();
+      return;
+    }
+    const s = g.steps[guides.step], go = (i) => { guides.step = Math.max(0, Math.min(g.steps.length - 1, i)); renderGuide(); };
+    nav.replaceChildren(h('p', { class: 'label' }, 'Guided path · ' + g.level),
+      h('h3', { class: 'serif', style: 'font-size:22px;margin:4px 0 6px' }, g.title),
+      h('p', { style: 'color:var(--fg-2);font-size:13px' }, 'Step ' + (guides.step + 1) + ' of ' + g.steps.length),
+      h('div', { style: 'display:flex;gap:8px;margin:10px 0' },
+        h('button', { class: 'btn small', type: 'button', disabled: guides.step === 0, onclick: () => go(guides.step - 1) }, 'Previous'),
+        h('button', { class: 'btn small cta', type: 'button', disabled: guides.step === g.steps.length - 1, onclick: () => go(guides.step + 1) }, 'Next')),
+      h('ol', { class: 'step-list' }, g.steps.map((x, i) => h('li', {}, h('button', { type: 'button', 'aria-current': i === guides.step ? 'step' : null, onclick: () => go(i) }, x.title + (x.setup ? ' (setup)' : ''))))));
+    const kids = [h('h3', {}, s.title)];
+    if (s.md) kids.push(h('div', { class: 'md', html: OND.notebook.markdown(s.md) }));
+    for (const c of s.codes) kids.push(c.setup
+      ? h('details', {}, h('summary', {}, 'Installation cell, not needed here: the workshop runs in the pack’s container'), h('pre', {}, c.src))
+      : h('pre', {}, c.src));
+    if (s.moves.length) {
+      kids.push(h('p', { class: 'label', style: 'margin-top:10px' }, 'Moves on your blueprint'));
+      s.moves.forEach((m, i) => {
+        const id = guides.step + ':' + i, done = guides.applied.has(id);
+        kids.push(h('div', { class: 'move' }, h('code', {}, m.call.length > 44 ? m.call.slice(0, 43) + '…' : m.call), h('span', {}, fmtMove(m)),
+          h('span', { style: 'display:flex;gap:6px' },
+            h('button', { class: 'btn small' + (done ? '' : ' cta'), type: 'button', onclick: () => { guides.applied.add(id); blueprint.set(m.key, m.value, 'guide'); renderGuide(); } }, done ? 'Applied' : 'Apply'),
+            h('button', { class: 'btn small', type: 'button', onclick: () => reveal(m.key) }, 'See parameter'))));
+      });
+    }
+    if (s.kept.length) kids.push(h('p', { style: 'color:var(--fg-3);font-size:12px;margin-top:8px' }, 'Shown as code, not replayed by the workshop: ' + s.kept.join(', ') + '.'));
+    box.replaceChildren(...kids);
+    box.scrollTop = 0;
+    typeset(box);
   }
 
   // --- routing and wiring ---------------------------------------------------------
@@ -551,6 +735,7 @@
     $$('.spaces a').forEach((a) => { if (a.getAttribute('href') === '#' + name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (name === 'publish') renderPublication();
     if (name === 'lab') typeset($('#view-lab'));
+    if (name === 'library') renderGuides();
   }
 
   let queued = false;
@@ -602,7 +787,8 @@
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeColors);
   new MutationObserver(themeColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-  themeColors(); initCapsule(); initAgent();
+  $('#role').addEventListener('click', () => { ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
+  themeColors(); initCapsule(); initAgent(); buildGuides(); renderGuides(); renderGuide();
   loadSystem('c60');
   ui.view.orbital = true; // open on a characteristic picture: a frontier orbital of C60
   refresh(); syncStage(true); route();

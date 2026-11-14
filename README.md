@@ -16,6 +16,7 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `ontology/workshop_layer.ttl` | Uninstantiated layer a BigDFT pack schema can merge |
 | `ontology/instances/bigdft-parameters.ttl` | Generated parameter graph, for pack-kit's `ttl_instances` loader |
 | `ontology/corpus/bigdft-variables.md` | Generated descriptions, one section per variable, for `markdown_sections` |
+| `guides/` | Guided paths: the Jupyter notebooks, a manifest, and how they are read |
 | `prototype/` | Immersive mock-up (single page, three.js, no build step) |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
 
@@ -34,6 +35,16 @@ python tools/diff_schema.py schema/bigdft-input.schema.json /tmp/new.json   # wh
 cp /tmp/new.json schema/bigdft-input.schema.json
 python tools/build_prototype_schema.py               # prototype/js/schema.js, fails if the curation is stale
 python tools/build_parameter_instances.py            # ontology/instances/ and ontology/corpus/
+```
+
+## Add a guided path
+
+In the mock-up, switch to "Admin view" and use "Add a notebook" in the Library. To ship one with the workshop:
+
+```bash
+python tools/build_guides.py --strip my-tutorial.ipynb > guides/notebooks/my-tutorial.ipynb
+# add an entry to guides/manifest.yaml (level, minutes, summary), then
+python tools/build_guides.py                         # prototype/js/guides.js
 ```
 
 Requires Python 3.10 or later and PyYAML.

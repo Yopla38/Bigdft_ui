@@ -95,7 +95,7 @@ h1,h2,h3,p{margin:0}
 .tog[aria-pressed="true"]{color:var(--fg);border-color:var(--accent)}
 .tog[aria-pressed="true"]::before{background:var(--accent);border-color:var(--accent)}
 .tog[disabled]{opacity:.4;cursor:not-allowed}
-.legend{position:absolute;right:14px;bottom:12px;font-size:12px;color:var(--fg-2);display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:6px 10px;border-radius:7px;border:1px solid var(--line)}
+.legend{position:absolute;right:14px;bottom:12px;max-width:calc(100% - 28px);font-size:12px;color:var(--fg-2);display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;background:color-mix(in srgb,var(--panel) 80%,transparent);padding:6px 10px;border-radius:7px;border:1px solid var(--line)}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .selcard{position:absolute;left:14px;bottom:12px;width:min(300px,calc(100% - 28px));background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px;display:grid;gap:9px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .selcard .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -106,7 +106,7 @@ h1,h2,h3,p{margin:0}
 .hint{position:absolute;left:18px;bottom:14px;font-size:12px;color:var(--fg-3)}
 
 .dock{border-top:1px solid var(--line);background:var(--panel);display:grid;grid-template-rows:auto minmax(0,1fr);height:238px}
-.dock.closed{height:auto}.dock.closed .dock-body{display:none}
+.dock.tall{height:min(52vh,470px)}.dock.closed{height:auto}.dock.closed .dock-body{display:none}
 .tabs{display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
 .tab{padding:5px 11px;border-radius:6px;color:var(--fg-2);font-weight:500;font-size:13px;white-space:nowrap}
 .tab[aria-selected="true"]{background:var(--raise);color:var(--fg)}
@@ -134,6 +134,21 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .cap > div{padding:10px 14px;min-width:0;overflow:auto}
 .cap > div + div{border-left:1px solid var(--line)}
 .cap input[type=range]{width:100%}
+.guide h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.guide pre,.guide details{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:8px 0;overflow-x:auto}
+.guide details pre{border:0;padding:6px 0 0;margin:0}.guide summary{cursor:pointer;color:var(--fg-3);font-size:12px}
+.md p{margin:0 0 8px;color:var(--fg-2);font-size:13px;max-width:70ch}.md ul,.md ol{margin:0 0 8px;padding-left:20px;color:var(--fg-2);font-size:13px}
+.md h4{margin:10px 0 4px;font-size:13px}.md code{color:var(--accent)}.md a{color:var(--accent)}
+.step-list{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+.step-list button{width:100%;text-align:left;padding:4px 8px;border-radius:6px;font-size:12px;color:var(--fg-2)}
+.step-list button:hover{background:var(--panel-2)}.step-list button[aria-current]{background:var(--raise);color:var(--fg);font-weight:500}
+.move{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.move code{grid-column:1/-1;color:var(--fg-3);overflow-wrap:anywhere}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.field{display:grid;gap:4px}.field input,.field select{padding:6px 8px;border-radius:7px;border:1px solid var(--line-2);background:var(--panel-2);min-width:0}
+.steps-preview{margin:0;padding-left:20px;font-size:13px;color:var(--fg-2);columns:2;column-gap:28px}
+button.pill{background:none}button.pill[aria-pressed="true"]{border-color:var(--accent);color:var(--fg)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
 .log{display:grid;gap:7px}
 .msg{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;font-size:13px;opacity:.38}
 .msg.seen{opacity:1}
@@ -160,7 +175,7 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .ctl-val output{font:500 13px var(--mono);min-width:86px;text-align:right}
 .prov{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--fg-2)}
 .src-chip{flex:none;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid currentColor;font-weight:600}
-.src-default{color:var(--fg-3)}.src-adapted{color:var(--accent)}.src-you{color:var(--fg)}.src-agent{color:var(--agent)}.src-paper{color:var(--pos)}
+.src-guide{color:var(--ok)}.src-default{color:var(--fg-3)}.src-adapted{color:var(--accent)}.src-you{color:var(--fg)}.src-agent{color:var(--agent)}.src-paper{color:var(--pos)}
 .trip{font:11px var(--mono);color:var(--fg-3);margin-top:3px;overflow-wrap:anywhere}
 .trip em{font-style:normal;color:var(--accent)}
 .stepper{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:8px}
@@ -175,9 +190,21 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .card:hover{background:var(--panel-2)}
 .card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .card b{font-weight:600;font-size:13px}.card span{font-size:12px;color:var(--fg-3)}
-.eq{margin-top:14px;padding:12px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);overflow-x:auto;display:grid;gap:8px}
-.eq p{font-size:12px;color:var(--fg-2)}
-.advice{margin-top:12px;padding:10px 12px;border-radius:9px;border:1px dashed var(--warn);display:grid;gap:6px;font-size:13px}
+.eq{margin-top:14px;padding:12px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);min-width:0}
+.eq > div,#pub-eq > div{overflow-x:auto;overflow-y:hidden;max-width:100%}
+.eq > div{font-size:12.5px}
+.eq p{font-size:12px;color:var(--fg-2);margin-bottom:8px}
+.notice{margin:10px 0 2px;padding:10px 12px;border-radius:9px;border:1px dashed var(--warn);display:grid;gap:6px;font-size:13px}
+.notice.err{border-color:var(--err);border-style:solid}.notice.advice{border-color:var(--accent)}
+.notice-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}.notice-actions .btn{white-space:normal;text-align:left}
+.ctl{transition:background-color .25s,box-shadow .25s}
+.ctl.hl,.ctl.flash{background:var(--accent-soft);box-shadow:-10px 0 0 var(--accent-soft),10px 0 0 var(--accent-soft)}
+.ctl.flash{animation:flash 1.2s ease-in-out 2}
+@keyframes flash{50%{background:transparent;box-shadow:-10px 0 0 transparent,10px 0 0 transparent}}
+.seg.readonly span{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;color:var(--fg-3)}
+.seg.readonly span.on{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line-2)}
+.seg.readonly{border-style:dashed}
+.stage-off{position:absolute;inset:auto 18px 50% 18px;text-align:center;color:var(--fg-2);margin:0}
 .vsearch{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel-2);margin:12px 0 4px}
 .vrow{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
 .vrow code{color:var(--accent);overflow-wrap:anywhere}
@@ -229,6 +256,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 .agent header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
 .agent header b{font-weight:600}.agent header small{color:var(--fg-3);display:block;font-size:12px}
 .agent-body{overflow-y:auto;padding:12px 14px;display:grid;gap:10px;align-content:start}
+.agent-body button.chip{padding:5px 10px;font-size:12px}
 .prop{border:1px solid var(--line-2);border-radius:10px;padding:10px;display:grid;gap:8px;font-size:13px}
 .diff{font:12px var(--mono);display:grid;gap:2px}
 .diff span{color:var(--fg-3)}.diff b{color:var(--agent);font-weight:500}
@@ -272,6 +300,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
       <span class="pill example" title="Numerical results shown here are examples">Mock-up</span>
       <span class="avatars" aria-label="3 people in this project"><i>IN</i><i>MA</i><i>+1</i></span>
       <span class="pill num">128 credits</span>
+      <button class="pill" id="role" type="button" aria-pressed="false" title="Switch between what a member and an administrator see">Member view</button>
       <button class="btn" id="agent-open" type="button">Agent</button>
     </div>
   </header>
@@ -314,6 +343,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
           <button class="tab" role="tab" data-tab="source" aria-selected="true" type="button">Source</button>
           <button class="tab" role="tab" data-tab="run" aria-selected="false" type="button">Run</button>
           <button class="tab" role="tab" data-tab="capsule" aria-selected="false" type="button">Capsule</button>
+          <button class="tab" role="tab" data-tab="guide" aria-selected="false" type="button">Guide</button>
           <span class="sp"></span>
           <button class="btn small" id="dock-toggle" type="button">Collapse</button>
         </div>
@@ -330,6 +360,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
             </div>
             <div id="results"></div>
           </div>
+          <div class="cap guide" data-panel="guide" hidden><div id="guide-nav"></div><div id="guide-step"></div></div>
           <div class="cap" data-panel="capsule" hidden>
             <div>
               <p class="label">Capsule</p>
@@ -400,15 +431,9 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
         </div>
       </section>
       <section class="sect">
-        <header><h2>Guided paths</h2><span style="color:var(--fg-3);font-size:13px">adapted from the BigDFT-school notebooks</span></header>
-        <div class="grid3">
-          <article class="tile"><h3>First calculation</h3><p>One molecule, one energy, reading the result.</p><div class="meta"><span>Discovery</span><span>10 min</span></div></article>
-          <article class="tile"><h3>The N₂ molecule</h3><p>Bond length, atomisation energy, spin of the isolated atoms.</p><div class="meta"><span>Discovery</span><span>20 min</span></div></article>
-          <article class="tile"><h3>Converging the grid</h3><p>Watch the energy settle as h decreases and the regions extend.</p><div class="meta"><span>Intermediate</span><span>30 min</span></div></article>
-          <article class="tile"><h3>Wavelets or Gaussians</h3><p>Compare a systematic basis with localised basis sets.</p><div class="meta"><span>Intermediate</span><span>30 min</span></div></article>
-          <article class="tile"><h3>Going linear scaling</h3><p>Support functions, density kernel, the first thousands of atoms.</p><div class="meta"><span>Advanced</span><span>45 min</span></div></article>
-          <article class="tile"><h3>Thinking in fragments</h3><p>Partition a large system and measure what binds its parts.</p><div class="meta"><span>Advanced</span><span>45 min</span></div></article>
-        </div>
+        <header><h2>Guided paths</h2><span id="guides-admin" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"></span></header>
+        <div class="tile" id="guides-review" hidden></div>
+        <div class="grid3" id="guides"></div>
       </section>
     </div>
   </section>
@@ -498,7 +523,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
             <button type="button" data-w="170" aria-pressed="false">2 columns · 170 mm</button>
             <button type="button" data-w="120" aria-pressed="false">Cover</button>
           </div>
-          <div class="fig-frame"><img id="fig-img" alt="Render of the current scene on a white background"></div>
+          <div class="fig-frame"><img id="fig-img" alt="Render of the current scene on a white background"><p id="fig-none" hidden style="color:#40504e;padding:40px 16px;text-align:center">The scene is not available on this device, so there is no figure to render.</p></div>
           <div class="meta"><span id="fig-size" class="num"></span><span>white background</span><span>PNG, SVG, PDF · glTF, POV-Ray · cube</span></div>
         </div>
         <div class="sect">
@@ -508,7 +533,7 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
           </div>
           <div class="tile">
             <div class="foot" style="margin:0"><p class="label">Equations of the blueprint</p></div>
-            <div id="pub-eq" style="overflow-x:auto;display:grid;gap:10px"></div>
+            <div id="pub-eq" style="display:grid;gap:10px;min-width:0"></div>
           </div>
           <div class="tile">
             <div class="foot" style="margin:0"><p class="label">References to cite</p><button class="btn small" id="copy-refs" type="button">Copy</button></div>
@@ -534,4 +559,6 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 <script src="js/stage.js"></script>
 <script src="js/blueprint.js"></script>
 <script src="js/schema.js"></script>
+<script src="js/notebook.js"></script>
+<script src="js/guides.js"></script>
 <script src="js/app.js"></script>

@@ -135,7 +135,8 @@ window.OND = window.OND || {};
       if (v.charge < 0) out.push(['crmult', 7, 'An anion has a more diffuse density: the coarse region must reach further.', ['Anion', 'extendsRegion', 'crmult = 7']]);
       if (sys.bc !== 'free') {
         const L = Math.min(...sys.cell.filter(Boolean));
-        out.push(['kpt', Math.max(1, Math.ceil(20 / L)), L.toFixed(1) + ' Å cell: the Brillouin zone must be sampled along the periodic directions.', ['Periodic system', 'sampledBy', 'Monkhorst-Pack mesh']]);
+        if (v.algo === 'linear') out.push(['kpt', 1, 'Linear-scaling mode works at the Γ point: the cell itself must be large enough.', ['Linear scaling', 'sampledAt', 'Γ point only']]);
+        else out.push(['kpt', Math.max(1, Math.ceil(20 / L)), L.toFixed(1) + ' Å cell: the Brillouin zone must be sampled along the periodic directions.', ['Periodic system', 'sampledBy', 'Monkhorst-Pack mesh']]);
       }
       if (has('semimetal')) {
         out.push(['scf', 'mixing', 'Without a gap, direct minimisation converges poorly: density mixing and empty states.', ['Gapless system', 'requires', 'mixing profile']]);
@@ -161,7 +162,7 @@ window.OND = window.OND || {};
       st.advice = [];
       for (let pass = 0; pass < 2; pass++) {
         for (const [key, value, reason, triplet] of rules()) {
-          const mine = ['you', 'agent', 'paper'].includes(st.src[key]);
+          const mine = ['you', 'agent', 'paper', 'guide'].includes(st.src[key]);
           if (!mine) { st.v[key] = value; st.src[key] = 'adapted'; st.why[key] = { reason, triplet }; }
           else if (pass && st.v[key] !== value) st.advice.push({ key, value, reason, triplet });
         }
@@ -188,22 +189,24 @@ window.OND = window.OND || {};
       };
     };
 
+    /* Each check names the parameters it involves (keys), so the interface can
+     * show it next to every one of them and lead the user to the others. */
     self.checks = function () {
       const sys = st.sys, v = st.v, d = self.derived(), out = [];
-      const add = (block, level, text) => out.push({ block, level, text });
+      const add = (block, level, text, keys) => out.push({ block, level, text, keys: keys || [] });
       add('matter', 'ok', sys.atoms.length + ' atoms, ' + d.ne + ' valence electrons, units written explicitly');
-      if (d.ne % 2 && v.nspin === 1) add('theory', 'err', 'Odd electron count without spin polarisation');
-      else if (v.nspin === 2 && (d.ne - v.mpol) % 2) add('theory', 'err', 'The magnetic moment must have the parity of the electron count');
+      if (d.ne % 2 && v.nspin === 1) add('theory', 'err', 'Odd electron count without spin polarisation', ['nspin', 'charge']);
+      else if (v.nspin === 2 && (d.ne - v.mpol) % 2) add('theory', 'err', 'The magnetic moment must have the parity of the electron count', ['mpol', 'charge']);
       else add('theory', 'ok', 'Spin and charge are consistent');
-      if (v.dispersion && sys.bc !== 'free') add('theory', 'warn', 'The D3 correction is only available with free boundary conditions');
-      else if (!v.dispersion && sys.traits.includes('van der Waals')) add('theory', 'warn', 'Physisorption without dispersion: D3 is not available with surface boundary conditions, the adsorption energy will be underestimated');
-      if (v.hgrid > 0.55) add('accuracy', 'warn', 'Coarse grid: energy poorly converged');
+      if (v.dispersion && sys.bc !== 'free') add('theory', 'warn', 'The D3 correction is only available with free boundary conditions', ['dispersion']);
+      else if (!v.dispersion && sys.traits.includes('van der Waals')) add('theory', 'warn', 'Physisorption without dispersion: D3 is not available with surface boundary conditions, the adsorption energy will be underestimated', ['dispersion']);
+      if (v.hgrid > 0.55) add('accuracy', 'warn', 'Coarse grid: energy poorly converged', ['hgrid']);
       else add('accuracy', 'ok', 'Grid: ' + fmtInt(d.dof) + ' degrees of freedom per orbital');
-      if (v.algo === 'linear' && v.kpt > 1) add('environment', 'err', 'Linear-scaling mode works at the Γ point only');
-      if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction');
-      if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system');
-      if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target');
-      if (d.mem > 64) add('machine', 'warn', 'High estimated memory for this target');
+      if (v.algo === 'linear' && v.kpt > 1) add('environment', 'err', 'Linear-scaling mode works at the Γ point only: choose the cubic algorithm or a single k-point', ['algo', 'kpt']);
+      if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction', ['efield']);
+      if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system: the Brillouin zone is not sampled', ['kpt']);
+      if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target', ['target', 'mpi', 'hgrid', 'kpt']);
+      if (d.mem > 64) add('machine', 'warn', 'High estimated memory for this target', ['hgrid', 'crmult']);
       else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB estimated');
       return out;
     };

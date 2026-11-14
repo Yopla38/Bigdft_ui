@@ -51,6 +51,26 @@ Not read: Capsule-Maker itself (I found no public repository; I know it through 
 
 The order is the order in which a physicist states the problem. Boundary conditions live in Matter because they are a property of the cell (`posinp.cell`); their consequences (k-points, field) live in Environment.
 
+### From one blueprint to a study (proposed)
+
+A blueprint is one calculation. Real work is rarely one calculation, and BigDFT's own tooling says so:
+
+- PyBigDFT has a `Datasets.Dataset` class for "series of calculations" and "ensemble calculations", with `append_run`, `fetch_results` and `seek_convergence`.
+- `read_orbitals_from_disk` restarts from the wavefunctions of an earlier run (in linear mode, from its support functions and kernel), and `connect_run_data(inp, log)` attaches the data of a previous logfile to a new input.
+- The `linear_fragments` profile is documented as needing "templates ready": a fragment calculation reuses the support functions of an earlier template run (`inputpsiid: linear_restart`).
+- All six BigDFT-school notebooks shipped as guided paths run more than one calculation. Three run BigDFT inside a loop (grid convergence, a rotation scan, linear-scaling parameters) and the N₂ tutorial chains five runs.
+- The PyBigDFT pack has a `Workflow` class in its ontology and tutorials on datasets and on AiiDA workflows; pack-kit's schema template lets a recipe be `composedOfStep` other recipes.
+
+So composition belongs in the product. I propose a **study**: blueprints snapped together by three kinds of typed link.
+
+| Link | What flows | Typical use |
+|---|---|---|
+| **Series** | one blueprint, one parameter swept | convergence in `hgrids` or k-points, a scan along a coordinate |
+| **Hand-over** | geometry, wavefunctions, support functions or density from one run to the next | relax then compute a spectrum; cubic run then virtual states; template then fragments; relaxed end points then a path |
+| **Combination** | several results into one derived quantity, written as a formula | $E_{\mathrm{ads}}=E_{\mathrm{complex}}-E_{\mathrm{sheet}}-E_{\mathrm{molecule}}$, atomisation and formation energies |
+
+A link is checked like a parameter: a wavefunction hand-over needs the same grid, a fragment template needs the same species. The study states its total cost before launch, re-runs only what a change invalidates downstream, and its execution is a chain of episodes (`followsEpisode`), so a capsule of a study replays as one. The mock-up does not show studies yet; its capsule already describes one (three calculations and a difference).
+
 ## 4. 311 parameters, three depths
 
 Nothing is copied by hand. `tools/extract_schema.py` reads the BigDFT source and writes `schema/bigdft-input.schema.json`. `schema/ui-tiers.yaml` holds only the product decision: for each variable, its block and its depth. Generation fails if a listed variable no longer exists upstream, so a BigDFT upgrade cannot leave an orphan control.
@@ -73,7 +93,9 @@ What does *not* become a button: the 49 `perf` variables (except acceleration an
 
 ## 5. Defaults that adapt, and say why
 
-Every value carries a provenance: **BigDFT default**, **Adapted**, **You**, **Agent**, **Paper**. An adapted value never overwrites a human choice: when the advice differs it is shown beside the value with a "Follow the advice" button.
+Every value carries a provenance: **BigDFT default**, **Adapted**, **You**, **Agent**, **Paper**, **Guide**. An adapted value never overwrites a human choice: when the advice differs it is shown beside the value with a "Follow the advice" button.
+
+Advice and consistency checks name the parameters they involve. A notice appears at the top of every block that owns one of those parameters, even when the cause sits in another block: choosing the linear algorithm with a k-point mesh shows the conflict in Accuracy, with a "See parameter" link to the k-points of Environment. Pointing at a notice highlights the controls concerned; following the link opens the block, scrolls to the control and flashes it.
 
 In the mock-up a dozen rules are hard-coded to show the behaviour. All are grounded in the code or its documentation:
 
@@ -106,7 +128,7 @@ Both Turtle files parse and cross-reference cleanly (checked with rdflib: no und
 ## 6. The five spaces
 
 1. **Workshop**: build, run, analyse. The heart.
-2. **Library**: capsules to replay, papers to rebuild, guided paths.
+2. **Library**: capsules to replay, papers to rebuild, guided paths. A guided path is a Jupyter notebook: an administrator adds one from the Library, reviews what the importer understood (steps cut at the headings, PyBigDFT calls turned into moves on the blueprint, installation cells folded away) and publishes it. The six paths shipped are the BigDFT-school notebooks, read by that same importer. Nothing in a notebook is executed.
 3. **Lab**: shared projects, comments anchored on an atom or a curve, live presence.
 4. **Compute**: execution targets, queue, credits, expertise offers.
 5. **Publish**: figure at journal size, methods paragraph and references written from the blueprint, equations in LaTeX.
@@ -197,9 +219,10 @@ Structuring choices:
 
 | Step | Content | Proof |
 |---|---|---|
-| 0, done | Schema extracted for the pinned version, curation, mock-up, workshop layer and parameter graph | this repository |
+| 0, done | Schema extracted for the pinned version, curation, mock-up, notebook importer and six guided paths, workshop layer and parameter graph | this repository |
 | 1 | Action layer, models generated from the schema, pinned PyBigDFT container, live convergence | a real H₂O calculation launched from the page |
 | 2 | Production scene: XYZ/PDB/CIF import, editing, `cube` reading, real results | density and orbitals of a real run in the scene |
+| 2b | Studies: series first (convergence), then hand-overs, then formula nodes | a grid-convergence series and an adsorption energy composed in the page |
 | 3 | Host `pack_pybigdft`: adviser reading its memory, Agent drawer on the wire protocol with approvals, the three renderers, panels embedded, capsules exported and replayed | a capsule replayed and verified end to end |
 | 4 | Projects, sharing, anchored comments, presence | two people on the same scene |
 | 5 | Credits, estimate calibrated on past runs, HPC through remotemanager, expertise offers | a billed calculation |
@@ -208,11 +231,11 @@ Structuring choices:
 
 ## 11. What the mock-up is, and is not
 
-Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic, the generated YAML and PyBigDFT, the bibliographic references.
+Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the bibliographic references.
 
-Simulated: execution (no calculation runs), result values, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves.
+Simulated: execution (no calculation runs), result values, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up.
 
-Verified: renders without error in Chromium, light and dark themes, desktop and phone widths; substitution → spin, paper → blueprint, capsule, run, agent approval and publish flows. Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated `input.yaml` has not been fed to a real BigDFT.
+Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated `input.yaml` has not been fed to a real BigDFT.
 
 ## 12. Questions to move forward
 

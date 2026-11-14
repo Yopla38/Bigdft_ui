@@ -318,6 +318,19 @@ window.OND = window.OND || {};
     return self;
   }
 
-  OND.Stage = Stage;
+  /* Without WebGL (or if three.js could not be loaded) the workshop still works:
+   * blocks, source and guides do not need the scene. */
+  function Fallback(host, reason) {
+    const note = document.createElement('p');
+    note.className = 'stage-off';
+    note.textContent = 'The 3D scene could not start (' + reason + '). Blocks, source and guided paths remain available.';
+    host.prepend(note);
+    const noop = () => {};
+    return { onPick: null, onFrame: null, setSystem: noop, setOptions: noop, setColors: noop, options: () => ({}), select: noop, setGrid: noop, setIso: noop, resetView: noop, project: () => ({ x: 0, y: 0, visible: false }), snapshot: () => '' };
+  }
+  OND.Stage = function (host) {
+    if (!window.THREE || !THREE.OrbitControls) return Fallback(host, '3D library not loaded');
+    try { return Stage(host); } catch (e) { return Fallback(host, 'WebGL unavailable'); }
+  };
   OND.stageUtil = { withImages, bounds };
 })(window.OND);
