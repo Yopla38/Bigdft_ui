@@ -143,6 +143,20 @@ def bibliography(root: Path) -> list[dict]:
     return list(seen.values())
 
 
+PIPELINE = [  # step, file in the capsule, what it does, how the capsule says to run it
+    ("Generate", "procedures/make_inputs.py", "Writes every BigDFT input with PyBigDFT: one function, loops for the series.",
+     "python procedures/make_inputs.py"),
+    ("Dry run", "procedures/dry_run.py", "Has BigDFT read every input and estimate memory, without any SCF step.",
+     "python procedures/dry_run.py bigdft/inputs work/dryrun"),
+    ("Run", "phase2/scripts/run_array_rst.sh", "One job per input; this variant first copies the wavefunctions of an earlier run.",
+     "qsub -t 1-N run_array_rst.sh <list>   # mpirun -np 20 bigdft -n <name>"),
+    ("Analyse", "phase2/analysis/summarize.py", "Reads the energies from the logs and applies the formulas.",
+     "python analysis/summarize.py"),
+    ("Test", "tests/test_phase2_evidence.py", "Recounts the packaged evidence. Run only after trusting the code.",
+     "capsule-maker verify <capsule> --trust-code"),
+]
+
+
 def capsule(directory: Path) -> dict | None:
     """What the Study space shows of the research capsule that carries this work.
 
@@ -174,6 +188,11 @@ def capsule(directory: Path) -> dict | None:
         "inventory": {"files": len(m["inventory"]), "bytes": sum(i["size"] for i in m["inventory"]), "roles": count(m["inventory"], "role")},
         "packages": m.get("dependencies", {}).get("packages", []),
         "records": records,
+        # The capsule's own pipeline, shown as it is: this code is what a relaunch runs.
+        "code": [
+            {"step": step, "path": path, "what": what, "command": command, "text": (directory / path).read_text()}
+            for step, path, what, command in PIPELINE if (directory / path).exists()
+        ],
     }
 
 

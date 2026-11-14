@@ -494,7 +494,8 @@
       $('#results').replaceChildren(h('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:center' }, h('p', { class: 'label' }, 'Results'), h('span', { class: 'pill' }, 'recorded run')), dl,
         rec.warnings.length ? h('div', { class: 'notice' }, h('b', {}, 'Converged, with ' + rec.warnings.length + ' BigDFT warnings'), h('span', {}, [...new Set(rec.warnings)].join(' · '))) : '',
         h('p', { class: 'label', style: 'margin-top:12px' }, 'Occupied states'), el,
-        h('p', { style: 'margin-top:10px' }, h('a', { class: 'btn small', href: '#study' }, 'See the whole study')));
+        h('p', { class: 'figmeta', style: 'margin-top:10px' }, 'This is the log recorded in the capsule, read back: no calculation was started. To compute again, relaunch the pipeline of the study.'),
+        h('p', { style: 'margin-top:8px' }, h('a', { class: 'btn small', href: '#study' }, 'See the study and its code')));
       chart(el, { title: 'Occupied states', h: 120, xs, ys, area: true, y0: 0, xlabel: 'eV', xfmt: (x) => fr(x, 0), yfmt: (y) => fr(y, 0), tip: (x, y) => fr(x, 1) + ' eV · ' + fr(y, 1) });
     }, 70);
   }
@@ -813,7 +814,7 @@
     $$('.spaces a').forEach((a) => { if (a.getAttribute('href') === '#' + name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (name === 'publish') renderPublication();
     if (name === 'lab') typeset($('#view-lab'));
-    if (name === 'study') OND.studyView.refresh();
+    if (name === 'study') { if ($('#study-mine').hidden) OND.studyView.refresh(); else OND.builder.render(); }
     if (name === 'library') renderGuides();
   }
 
@@ -873,6 +874,16 @@
 
   $('#role').addEventListener('click', () => { ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
   OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
+  /* The study a user builds starts from the blueprint of the workshop: its settings become the script's blueprint(). */
+  OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => l.startsWith('inp.')), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores' }) });
+  const studyMode = (mode) => {
+    $$('#study-mode button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    $('#study-real').hidden = mode !== 'real'; $('#study-mine').hidden = mode !== 'mine';
+    if (mode === 'mine') OND.builder.render(); else OND.studyView.refresh();
+  };
+  $('#study-mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) studyMode(b.dataset.mode); });
+  $('#mine-example').addEventListener('click', () => OND.builder.example());
+  $('#mine-reset').addEventListener('click', () => OND.builder.reset());
   { const c = OND.study.capsule; $('#real-capsule-meta').replaceChildren(h('span', {}, c.records.length + ' records'), h('span', {}, c.inventory.files + ' files'), h('span', {}, 'extends a parent capsule')); }
   themeColors(); initCapsule(); initAgent(); buildGuides(); renderGuides(); renderGuide();
   loadSystem('c60');

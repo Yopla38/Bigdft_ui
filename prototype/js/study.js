@@ -147,17 +147,19 @@ window.OND = window.OND || {};
     return d + 'L' + pts[pts.length - 1][0] + ' ' + pts[pts.length - 1][1];
   }
 
-  function renderBoard() {
-    const { h } = ctx, host = ctx.$('#study-board');
+  /* Draws any study: nodes placed on a (col, row) lattice, typed links, one selection.
+   * Used for the real study and for the one a user builds. */
+  function drawBoard(host, nodes, edges, sel, onSelect, statusOf) {
+    const { h } = ctx;
     const pos = (n) => ({ x: PAD + n.col * PX + (n.dx || 0), y: PAD + n.row * PY + (n.dy || 0) });
-    const W = PAD * 2 + 5 * PX + CW, H = PAD * 2 + 2 * PY + CH;
+    const W = PAD * 2 + Math.max(...nodes.map((n) => n.col)) * PX + CW, H = PAD * 2 + Math.max(...nodes.map((n) => n.row)) * PY + CH;
     const svgNS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('class', 'edges'); svg.setAttribute('aria-hidden', 'true');
     const head = (id, cls) => '<marker id="' + id + '" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="' + cls + '" d="M0 0L8 4L0 8z"/></marker>';
     svg.innerHTML = '<defs>' + head('arr', 'ah') + head('arr-on', 'ah on') + '</defs>';
-    const paths = EDGES.map(([a, b, type]) => { const p = document.createElementNS(svgNS, 'path'); p.setAttribute('class', 'edge ' + type); if (LINKS[type][1]) p.setAttribute('stroke-dasharray', LINKS[type][1]); p.dataset.a = a; p.dataset.b = b; svg.appendChild(p); return p; });
+    const paths = edges.map(([a, b, type]) => { const p = document.createElementNS(svgNS, 'path'); p.setAttribute('class', 'edge ' + type); if (LINKS[type][1]) p.setAttribute('stroke-dasharray', LINKS[type][1]); p.dataset.a = a; p.dataset.b = b; svg.appendChild(p); return p; });
     const route = () => paths.forEach((p) => {
-      const na = NODES.find((n) => n.id === p.dataset.a), nb = NODES.find((n) => n.id === p.dataset.b), A = pos(na), B = pos(nb);
+      const na = nodes.find((n) => n.id === p.dataset.a), nb = nodes.find((n) => n.id === p.dataset.b), A = pos(na), B = pos(nb);
       let d;
       if (Math.abs(A.x - B.x) < CW / 2) d = 'M' + (A.x + CW / 2) + ' ' + (A.y + CH) + 'L' + (B.x + CW / 2) + ' ' + (B.y - 3);            // same column: straight down
       else if (nb.col - na.col > 1 && !na.dx && !nb.dx && !na.dy && !nb.dy) {                                                           // skips a column: go round the blocks
@@ -167,12 +169,12 @@ window.OND = window.OND || {};
         const x0 = A.x + CW, y0 = A.y + CH / 2, x1 = B.x - 3, y1 = B.y + CH / 2, c = Math.max(14, (x1 - x0) * 0.55);
         d = 'M' + x0 + ' ' + y0 + 'C' + (x0 + c) + ' ' + y0 + ' ' + (x1 - c) + ' ' + y1 + ' ' + x1 + ' ' + y1;
       }
-      const on = na.id === selected || nb.id === selected;
+      const on = na.id === sel || nb.id === sel;
       p.setAttribute('d', d); p.classList.toggle('on', on); p.setAttribute('marker-end', on ? 'url(#arr-on)' : 'url(#arr)');
     });
-    const cards = NODES.map((n) => {
-      const [st, label] = status(n), p = pos(n);
-      const card = h('button', { class: 'node t-' + n.type + ' s-' + st, type: 'button', 'aria-pressed': String(n.id === selected), style: 'left:' + p.x + 'px;top:' + p.y + 'px' },
+    const cards = nodes.map((n) => {
+      const [st, label] = statusOf(n), p = pos(n);
+      const card = h('button', { class: 'node t-' + n.type + ' s-' + st, type: 'button', 'aria-pressed': String(n.id === sel), style: 'left:' + p.x + 'px;top:' + p.y + 'px' },
         h('b', {}, n.title),
         n.tex ? h('span', { class: 'node-tex' }, '$' + n.tex + '$') : h('span', { class: 'node-sub' }, n.sub),
         h('span', { class: 'node-foot' }, h('span', { class: 'node-pill s-' + st }, label), h('i', { class: 'node-ico', html: '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON[n.type] + '</svg>' })));
@@ -185,9 +187,9 @@ window.OND = window.OND || {};
         start.moved = true; n.dx = start.dx + mx; n.dy = start.dy + my;
         const q = pos(n); card.style.left = q.x + 'px'; card.style.top = q.y + 'px'; route();
       });
-      card.addEventListener('pointerup', () => { const moved = start && start.moved; start = null; if (!moved) select(n.id); });
+      card.addEventListener('pointerup', () => { const moved = start && start.moved; start = null; if (!moved) onSelect(n.id); });
       card.addEventListener('pointercancel', () => { start = null; });
-      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(n.id); } });
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(n.id); } });
       return card;
     });
     const canvas = h('div', { class: 'board-canvas', style: 'width:' + W + 'px;height:' + H + 'px' }, svg, cards);
@@ -197,6 +199,8 @@ window.OND = window.OND || {};
     route();
     ctx.typeset(canvas);
   }
+
+  const renderBoard = () => drawBoard(ctx.$('#study-board'), NODES, EDGES, selected, select, status);
 
   function select(id) { selected = id; renderBoard(); renderResults(); }
 
@@ -284,10 +288,26 @@ window.OND = window.OND || {};
       h('p', { class: 'figmeta' }, 'Inspecting, importing and verifying a capsule never run its code. Running its tests is a separate, explicit act of trust.'));
   }
 
+  // --- the capsule's own pipeline: the code a relaunch runs --------------------------
+  let codeTab = 0;
+  function renderPipeline() {
+    const { h } = ctx, code = S.capsule.code, cur = code[codeTab];
+    ctx.$('#study-code').replaceChildren(
+      h('p', {}, 'A capsule carries the code that produced its results. Relaunching the study means running these five steps again, in the pack’s container or on the cluster, not replaying numbers. The figures above are then redrawn from the new logs.'),
+      h('ol', { class: 'pipe' }, code.map((c, i) => h('li', {}, h('button', { type: 'button', 'aria-pressed': String(i === codeTab), onclick: () => { codeTab = i; renderPipeline(); } }, h('b', {}, c.step), h('span', {}, c.what), h('code', {}, c.command))))),
+      h('div', { class: 'codeview' }, h('div', { class: 'codehead' }, h('code', {}, cur.path), h('span', {}, cur.text.split('\n').length + ' lines, from the capsule, unchanged')), h('pre', {}, cur.text)),
+      h('div', { class: 'relaunch' },
+        h('div', {}, h('b', {}, 'Relaunch what is missing'), h('span', {}, 'Stages 03 and 07 (PBE0) were queued when the capsule was made: generate, dry run, run, analyse for those ' + S.stages.filter((x) => !x.done).reduce((n, x) => n + x.planned, 0) + ' inputs only. The wavefunctions of stages 02 and 06 are handed over, as the restart script does.')),
+        h('div', {}, h('b', {}, 'Relaunch everything'), h('span', {}, 'All ' + S.stages.reduce((n, x) => n + x.planned, 0) + ' inputs, to check that the capsule reproduces. The new energies are compared with the recorded ones; any difference is shown, never overwritten.')),
+        h('div', {}, h('b', {}, 'Change something, relaunch what follows'), h('span', {}, 'Open the study as an editable board, change a block, and only the blocks downstream are recomputed.'))),
+      h('p', { class: 'figmeta' }, 'Nothing is executed in this mock-up. In the workshop, “Run calculation” on the tetrapeptide shows the log recorded in the capsule; it is a reading, not a new calculation.'));
+  }
+
   OND.studyView = {
     /* Equations cannot be measured in a hidden view: the board is drawn when the space is shown. */
-    mount(context) { ctx = context; renderCapsule(); if (!ctx.$('#view-study').hidden) { renderBoard(); renderResults(); } },
-    refresh() { if (ctx) { renderBoard(); renderResults(); } },
+    mount(context) { ctx = context; renderCapsule(); renderPipeline(); if (!ctx.$('#view-study').hidden) { renderBoard(); renderResults(); } },
+    refresh() { if (ctx && !ctx.$('#study-real').hidden) { renderBoard(); renderResults(); } },
+    drawBoard,
     energies: { ET, prod },
   };
 })(window.OND);

@@ -74,6 +74,20 @@ A link is checked like a parameter: a wavefunction hand-over needs the same grid
 
 The **Study** space of the mock-up shows a real one: the ΔSCF triplet energy of the tetrapeptide 6a (77 atoms), computed with BigDFT 1.9.5 on TSUBAME4.0 and published with its logs in `BigDFT-group/capsule-maker`. Eleven blocks: a starting geometry, two grid series, single points, two relaxations (one set aside by the researcher), PBE0 stages still queued, and two formulas. The board is drawn natively (HTML cards, SVG links) rather than with Cytoscape.js, because a block has to carry live content: a status, a typeset formula, later a thumbnail. Cytoscape.js keeps its place for large graphs such as a memory.
 
+### A study is a script, and the board is how you write it
+
+The real capsule makes the point: its pipeline *is* code. `procedures/make_inputs.py` writes every input with PyBigDFT (one function, loops for the series, a relaxed geometry read back for the next stage); `procedures/dry_run.py` has BigDFT check them all; job scripts run them, one variant first copying the wavefunctions of an earlier run; `analysis/summarize.py` applies the formulas; a test recounts the evidence. The Study space shows these five steps with the capsule's own files, unchanged.
+
+So **relaunching** a study means running that code again, in the pack's container or on the cluster: only what is missing (the queued PBE0 stages), everything (to check that the capsule reproduces, new energies compared with the recorded ones), or what lies downstream of a change. What the workshop's Run tab does today for the tetrapeptide is a *reading* of the recorded log, and says so. Nothing is executed in the mock-up.
+
+For someone who does not write Python, the board is the editor. "Build your own" starts from the blueprint made in the workshop and offers three gestures on a block:
+
+1. **Vary a setting**: the block becomes a series (grid spacing, extent of the regions, functional).
+2. **Continue from it**: a new block that relaxes the geometry, computes another spin state, recomputes with a hybrid functional or computes excitations, taking the geometry and, where it applies, the wavefunctions.
+3. **Compare it** with another block: a formula on the energies, in eV, kJ/mol or hartree.
+
+Each gesture rewrites `study.py`, shown beside the board: a `blueprint()` function with the workshop's settings, one entry per run, a `run()` that dry-runs or runs in dependency order with the hand-over procedures the real capsule verified, and an `analyse()` with the formulas. The links are checked as parameters are: a difference between a series and a single run is refused (it would mix grids), and so is taking the wavefunctions of a series. The script has the same shape as the capsule's, so that a study built by hand and a study received in a capsule are the same object. Reading a capsule's script back into a board is the next step; it is not done.
+
 ### Results: a view is a description, code is the exception
 
 `tools/build_results.py` reads the BigDFT logfiles of that campaign and writes a small typed result set (40 single points, 4 relaxations). Every number of the Study space comes from it. Three ways to get a view, from no code to code:
@@ -252,7 +266,7 @@ Structuring choices:
 
 Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the whole Study space (structure, energies, convergence traces, orbitals, relaxations, warnings, capsule records, all read from published BigDFT logs), the bibliographic references.
 
-Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up.
+Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up. The pipeline script written by the study builder is valid Python but has not been run against BigDFT.
 
 Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated `input.yaml` has not been fed to a real BigDFT.
 

@@ -304,6 +304,28 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 .record p{color:var(--fg-2);margin-top:4px;max-width:92ch;overflow-wrap:anywhere}.record code{color:var(--accent)}
 .by{font-size:11px;color:var(--fg-3);margin-left:10px}
 
+#study-mode{margin-bottom:-6px}
+.study-pane{display:grid;gap:34px}
+.pipe{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;counter-reset:pipe}
+.pipe li{counter-increment:pipe;min-width:0}
+.pipe button,.pipe.plain li{width:100%;height:100%;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);display:grid;gap:4px;align-content:start}
+.pipe button:hover{background:var(--panel-2)}.pipe button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pipe b{font-size:13px;font-weight:600}.pipe b::before{content:counter(pipe) " · ";color:var(--fg-3);font-weight:400}
+.pipe span{font-size:12px;color:var(--fg-2)}.pipe code{font-size:11px;color:var(--fg-3);overflow-wrap:anywhere}
+.codeview{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.codehead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--fg-3)}
+.codehead code{color:var(--accent)}
+.codeview pre,pre.code{max-height:420px;overflow:auto;padding:12px;background:var(--panel-2);font-size:12px}
+.tile > .codehead{margin:-16px -16px 0;border-radius:12px 12px 0 0}.tile > pre.code{margin:0 -16px -16px;border-radius:0 0 12px 12px;max-height:560px}
+.relaunch{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.relaunch div{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:5px;align-content:start;font-size:13px;color:var(--fg-2)}
+.relaunch b{color:var(--fg);font-weight:600}
+.mine-cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
+#mine-next pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-x:auto}
+.vary{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.vary select,.vary input{padding:6px 8px;border-radius:7px;border:1px solid var(--line-2);background:var(--panel-2);min-width:0}.vary input{flex:1 1 140px}
+@media (max-width:900px){.mine-cols{grid-template-columns:minmax(0,1fr)}}
+
 /* ---------- companion ---------- */
 .agent{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100vw - 32px));max-height:min(70vh,560px);background:var(--panel-2);border:1px solid var(--line-2);border-radius:14px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:30}
 .agent header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -449,27 +471,58 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
   <!-- ================= STUDY ================= -->
   <section class="view board" id="view-study" hidden>
     <div class="board-in wide">
-      <header class="board-head">
-        <p class="label">Real study · BigDFT 1.9.5 on TSUBAME4.0 · logs published in BigDFT-group/capsule-maker</p>
-        <h1>Triplet energy of the tetrapeptide 6a</h1>
-        <p>Eight stages of calculations, linked: two grid series, hand-overs of geometry and wavefunctions, two formulas at the end. Select a block to see what it produced. Every number on this page is read from the BigDFT logs; none is typed by hand.</p>
-      </header>
-      <section class="sect">
-        <header><h2>Study board</h2>
-          <div class="edge-legend" aria-label="Kinds of link">
-            <span><svg width="34" height="8"><path d="M0 4H34" class="edge"/></svg>geometry</span>
-            <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="7 4"/></svg>wavefunctions</span>
-            <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="2 4"/></svg>choice of settings</span>
-          </div>
+      <div class="seg" id="study-mode" role="group" aria-label="Which study">
+        <button type="button" data-mode="real" aria-pressed="true">A real study</button>
+        <button type="button" data-mode="mine" aria-pressed="false">Build your own</button>
+      </div>
+
+      <div id="study-real" class="study-pane">
+        <header class="board-head">
+          <p class="label">Real study · BigDFT 1.9.5 on TSUBAME4.0 · logs published in BigDFT-group/capsule-maker</p>
+          <h1>Triplet energy of the tetrapeptide 6a</h1>
+          <p>Eight stages of calculations, linked: two grid series, hand-overs of geometry and wavefunctions, two formulas at the end. Select a block to see what it produced. Every number on this page is read from the BigDFT logs; none is typed by hand.</p>
         </header>
-        <div class="board-scroll" id="study-board"></div>
-        <p class="figmeta">Drag a block to rearrange the board. A dashed block was queued when the capsule was made; a faded one is a path the researcher set aside.</p>
-      </section>
-      <section class="sect" id="study-results"></section>
-      <section class="sect">
-        <header><h2>The capsule that carries this study</h2><span class="pill">Capsule-Maker format</span></header>
-        <div class="tile" id="study-capsule"></div>
-      </section>
+        <section class="sect">
+          <header><h2>Study board</h2>
+            <div class="edge-legend" aria-label="Kinds of link">
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge"/></svg>geometry</span>
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="7 4"/></svg>wavefunctions</span>
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="2 4"/></svg>choice of settings</span>
+            </div>
+          </header>
+          <div class="board-scroll" id="study-board"></div>
+          <p class="figmeta">Drag a block to rearrange the board. A dashed block was queued when the capsule was made; a faded one is a path the researcher set aside.</p>
+        </section>
+        <section class="sect" id="study-results"></section>
+        <section class="sect">
+          <header><h2>The code of this study</h2><span class="pill">from the capsule, unchanged</span></header>
+          <div class="tile" id="study-code"></div>
+        </section>
+        <section class="sect">
+          <header><h2>The capsule that carries this study</h2><span class="pill">Capsule-Maker format</span></header>
+          <div class="tile" id="study-capsule"></div>
+        </section>
+      </div>
+
+      <div id="study-mine" class="study-pane" hidden>
+        <header class="board-head">
+          <p class="label">Your study · starts from the blueprint of the workshop</p>
+          <h1>Build a pipeline without writing it</h1>
+          <p>Select a block and use one of three gestures: vary a setting, continue from it, compare it with another. The workshop checks each link and writes the pipeline as a PyBigDFT script, the same kind of script a capsule carries.</p>
+        </header>
+        <section class="sect">
+          <header><h2>Board</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="mine-example" type="button">Start from the example</button><button class="btn small" id="mine-reset" type="button">Start from one block</button></span></header>
+          <div class="board-scroll" id="mine-board"></div>
+        </section>
+        <div class="mine-cols">
+          <section class="tile" id="mine-next" aria-label="Selected block"></section>
+          <section class="tile"><div class="codehead"><code>study.py</code><span>written from the board, as you build</span></div><pre id="mine-code" class="code"></pre></section>
+        </div>
+        <section class="sect">
+          <header><h2>What running it will do</h2></header>
+          <div class="tile" id="mine-plan"></div>
+        </section>
+      </div>
     </div>
   </section>
 
@@ -645,4 +698,5 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 <script src="js/guides.js"></script>
 <script src="js/figure.js"></script>
 <script src="js/study.js"></script>
+<script src="js/builder.js"></script>
 <script src="js/app.js"></script>
