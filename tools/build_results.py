@@ -63,7 +63,7 @@ def scf(doc: dict) -> tuple[list, list | None]:
 
 
 def single_point(directory: Path) -> dict | None:
-    logs = sorted(directory.glob("log-*.yaml"))
+    logs = [directory] if directory.is_file() else sorted(directory.glob("log-*.yaml"))  # a run directory, or one log
     if not logs:
         return None
     doc = documents(logs[0])[0]
@@ -105,7 +105,7 @@ def single_point(directory: Path) -> dict | None:
 
 
 def relaxation(directory: Path) -> dict | None:
-    logs = sorted(directory.glob("log-*.yaml"))
+    logs = [directory] if directory.is_file() else sorted(directory.glob("log-*.yaml"))  # a run directory, or one log
     if not logs:
         return None
     docs = documents(logs[0])

@@ -36,7 +36,9 @@ The object is called a *blueprint*, not a recipe, on purpose: in aom-memory and 
 | Paper2Agent (arXiv 2509.06917) | Turns a paper and its code into a tested MCP server. See §7. |
 | WEAS, Mol\*, 3Dmol.js | See §8. |
 
-Not read: `Pack_pybigdft_HAPS`, which lives on a local machine this cloud session cannot reach, and the platform pack-kit was extracted from.
+Read since, in read-only mode: **`Yopla38/Pack_pybigdft_HAPS`**, the pack with its HAPS. It settles where a calculation runs (see "Two places" in §3): the pack's container prepares, dry-runs and analyses, with `bigdft` itself disabled there; the HAPS computes, and runs one fixed command, `bigdft -n NAME`, on input files only (`NAME.yaml`, `posinp.*`, structure files, `psppar.*`). Its agent tools are `haps_bigdft(names, directory, timeout)`, `haps_result`, `haps_cancel` and `haps_info`; a run comes back `[OK]`, `[FAILED (exit n)]`, `[TIMEOUT]` or `[HAPS …]`.
+
+Not read: the platform pack-kit was extracted from.
 
 ## 3. The seven blocks
 
@@ -86,7 +88,35 @@ For someone who does not write Python, the board is the editor. "Build your own"
 2. **Continue from it**: a new block that relaxes the geometry, computes another spin state, recomputes with a hybrid functional or computes excitations, taking the geometry and, where it applies, the wavefunctions.
 3. **Compare it** with another block: a formula on the energies, in eV, kJ/mol or hartree.
 
-Each gesture rewrites `study.py`, shown beside the board: a `blueprint()` function with the workshop's settings, one entry per run, a `run()` that dry-runs or runs in dependency order with the hand-over procedures the real capsule verified, and an `analyse()` with the formulas. The links are checked as parameters are: a difference between a series and a single run is refused (it would mix grids), and so is taking the wavefunctions of a series. The script has the same shape as the capsule's, so that a study built by hand and a study received in a capsule are the same object. Reading a capsule's script back into a board is the next step; it is not done.
+Each gesture rewrites `study.py`, shown beside the board. The links are checked as parameters are: a difference between a series and a single run is refused (it would mix grids), and so is continuing from what a series computed. The script has the same role as the capsule's, so that a study built by hand and a study received in a capsule are the same object. Reading a capsule's script back into a board is the next step; it is not done.
+
+### Two places: prepare here, compute on the HAPS
+
+`Pack_pybigdft_HAPS` answers the question of how a study is launched, and the generated script now follows it:
+
+| Where | What | With |
+|---|---|---|
+| The pack's container, on the user's side | write the inputs, dry-run each one, later read the logs and apply the formulas | PyBigDFT; `bigdft` is disabled there |
+| The HAPS | compute | one command, `bigdft -n NAME`, on input files only; one hour at most per run, two at a time |
+
+So `study.py` has two verbs. `python study.py prepare` writes `runs/NAME.yaml` for every run that is ready, dry-runs it with BigDFT, and prints three lists: ready for the HAPS, waiting for a relaxation, refused by the dry run. The names of the first list go to `haps_bigdft(names=[...], directory="runs")`. `python study.py analyse` reads the logs that came back. `prepare` is repeated after each wave, because what continues from a relaxation can only be written once its final geometry is back; runs whose log is already there are skipped, so the script resumes where it stopped.
+
+This also answers where user code may run, better than I had it. What crosses to the machine that computes is **data**: BigDFT reads it or refuses it. No Python of the user, of the agent or of the workshop ever executes there.
+
+One consequence to know: the HAPS takes no wavefunction files, so a block cannot restart from the wavefunctions of an earlier run. The builder offers geometry hand-over only. The real capsule of §3 did hand wavefunctions over, on TSUBAME; through this HAPS that study could not be replayed as it is.
+
+### What running it for real taught
+
+The example of "Build your own" is no longer a drawing. Its board (ground state and triplet state of water on three grids, their difference, a relaxation, a PBE0 single point at the relaxed geometry) was compiled to `study.py` by the builder, and that script was run with BigDFT 1.9.1 in the image the pack pins: `prepare`, then `bigdft -n NAME` for each name it printed, `prepare` again for the second wave, `analyse`. Inputs, logs and scripts are in `examples/water-study`; the page shows the script that ran, character for character, and what it gave. The HAPS service itself (`ebservice`, the buffers) was not in the loop: I ran its command, in its image.
+
+Four things came out that no amount of design would have found:
+
+1. **A hybrid functional was refused.** BigDFT registers no pseudopotential for PBE0 and stopped: *"The pseudopotential parameter file "psppar.O" is lacking, and no registered pseudo found"*. The dry run caught it, nothing was computed. The workshop and the builder now name the PBE pseudopotentials when the functional is hybrid; BigDFT accepts the input and warns that they were generated with another functional, which the page repeats. Checked by a real dry run for PBE0, B3LYP and HF.
+2. **"The dry run passed" was wrong once.** PyBigDFT returns a log object even when BigDFT refused the input. `prepare` now requires the memory estimate BigDFT prints at the end of a successful dry run.
+3. **A converged series can be meaningless.** With the default self-consistency criterion (10⁻⁴) the three triplet runs all report convergence, in 14 to 159 iterations, and the triplet energy comes out at 8.87, 8.93 and 7.08 eV for h = 0.50, 0.45 and 0.40 bohr. The highest occupied spin-up level sits at −0.94, −0.95 and −2.58 eV: the runs stopped on different electronic states. With a criterion of 10⁻⁵ they agree: 6.99, 7.08 and 7.08 eV. No single log shows the problem; the comparison across the series does. This is the argument for a study-level check, which the page now makes: it reads the series, says it cannot be read as it is, and points to the second attempt.
+4. **Asking for a GPU passes the dry run and fails at start** on a machine that has none (exit 34 on the pack's image). The workshop used to switch to the GPU target for any hybrid functional. It now does so only where exact exchange is expensive, and warns that a dry run cannot verify that choice.
+
+The workshop's own input was checked the same way: the `input.yaml` it writes for water was read and computed by BigDFT 1.9.1 (PBE: −17.218473 Ha in 11 iterations; PBE0: −17.212363 Ha). BigDFT counted 33,012 coarse and 680 fine grid points where the workshop estimated 33,072 and 711. The memory estimate is poor for so small a system (13 MB estimated, 117 MB reported): it was fitted on the tetrapeptide runs and misses a fixed part. In production that figure comes from BigDFT's dry run, not from the workshop.
 
 ### Results: a view is a description, code is the exception
 
@@ -216,7 +246,8 @@ flowchart LR
     A2A[A2A server]
     MEM[(Domain memory, AOM)]
     EXP[(Experience memory)]
-    CT[Pinned container<br/>PyBigDFT]
+    CT[Pinned container<br/>PyBigDFT: prepare,<br/>dry run, analyse]
+    HAPS[HAPS<br/>bigdft -n NAME<br/>on input files]
   end
   HPC[HPC through remotemanager]
   UI <--> API
@@ -228,6 +259,8 @@ flowchart LR
   A2A --> MEM
   A2A --> EXP
   API --> ORC --> CT
+  CT -- inputs --> HAPS
+  HAPS -- logs --> CT
   ORC --> HPC
   CT --> OBJ
   API <--> DB
@@ -264,16 +297,16 @@ Structuring choices:
 
 ## 11. What the mock-up is, and is not
 
-Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the whole Study space (structure, energies, convergence traces, orbitals, relaxations, warnings, capsule records, all read from published BigDFT logs), the bibliographic references.
+Real in the mock-up: the 311 variables and their tiering, the pack's container digest, the structures (built by exact geometry), the two-level wavelet grid, the adaptation and checking logic with its links between parameters, the notebook importer and the six guided paths, the generated YAML and PyBigDFT, the whole Study space (structure, energies, convergence traces, orbitals, relaxations, warnings, capsule records, all read from published BigDFT logs), the example of the study builder (its script, its two attempts and every number shown, from BigDFT 1.9.1 runs kept in `examples/water-study`), the bibliographic references.
 
-Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up. The pipeline script written by the study builder is valid Python but has not been run against BigDFT.
+Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up. The page itself still executes nothing: a study other than the example is written, checked and not run. The HAPS service was not exercised, only its command in its image.
 
-Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated `input.yaml` has not been fed to a real BigDFT.
+Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated inputs of the periodic and linear-scaling systems (only the water inputs were fed to BigDFT).
 
 ## 12. Questions to move forward
 
 1. **Existing platform.** pack-kit says it was extracted from a platform monorepo (FastAPI backend, React frontend, a runner with sidecars). Is the workshop to be built inside that platform, or beside it as a second host?
-2. **`Pack_pybigdft_HAPS`.** I could not reach `/home/yopla/PycharmProjects/Pack_pybigdft_HAPS`: this session runs in a cloud container. Push it to a repository I can read, or run a session on that machine, and I will wire the dry run and the real launch to its commands.
+2. **The HAPS and wavefunctions.** The HAPS takes input files only, so no restart from the wavefunctions of an earlier run (§3). Is that a rule to keep, with the builder limited to geometry hand-over, or should the archive accept wavefunction files as data? And does a HAPS with a GPU exist, or is the CPU image the only target for now?
 3. **Workshop layer.** Should `ontology/workshop_layer.ttl` be merged into `pack_pybigdft`'s schema, or kept as a separate layer loaded beside it?
 4. **Compute at launch.** The pack's Apptainer container alone, or a specific cluster from the start?
 5. **First audience.** Teaching, materials researchers, or biology? This sets the order of steps 2 to 4.

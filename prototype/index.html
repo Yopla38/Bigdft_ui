@@ -128,6 +128,8 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 .step{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--line-2);color:var(--fg-3)}
 .step.on{color:var(--fg);border-color:var(--accent)}.step.done{color:var(--ok);border-color:transparent;background:var(--raise)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;margin:0;font-size:13px}
+.outcomes{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:8px 0;font-size:13px}.outcomes dd{margin:0;color:var(--fg-2)}@media (max-width:640px){.outcomes{grid-template-columns:1fr}.outcomes dd{margin-bottom:6px}}
+.places{display:grid;gap:2px;margin:4px 0;font-size:13px}.places dt{color:var(--fg-3);font-size:12px;margin-top:6px}.places dd{margin:0;color:var(--fg-2)}
 .kv dt{color:var(--fg-3)}.kv dd{margin:0;text-align:right}
 .chart{position:relative;width:100%}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
@@ -198,7 +200,7 @@ button.pill{background:none}button.pill[aria-pressed="true"]{border-color:var(--
 .eq > div{font-size:12.5px}
 .eq p{font-size:12px;color:var(--fg-2);margin-bottom:8px}
 .notice{margin:10px 0 2px;padding:10px 12px;border-radius:9px;border:1px dashed var(--warn);display:grid;gap:6px;font-size:13px}
-.notice.err{border-color:var(--err);border-style:solid}.notice.advice{border-color:var(--accent)}
+.notice.err{border-color:var(--err);border-style:solid}.notice.ok{border-color:var(--ok);border-style:solid}.notice.advice{border-color:var(--accent)}
 .notice-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}.notice-actions .btn{white-space:normal;text-align:left}
 .ctl{transition:background-color .25s,box-shadow .25s}
 .ctl.hl,.ctl.flash{background:var(--accent-soft);box-shadow:-10px 0 0 var(--accent-soft),10px 0 0 var(--accent-soft)}
@@ -321,6 +323,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 .relaunch div{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:5px;align-content:start;font-size:13px;color:var(--fg-2)}
 .relaunch b{color:var(--fg);font-weight:600}
 .mine-cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
+#mine-results{display:grid;gap:14px;min-width:0}#mine-results .lede{color:var(--fg-2);max-width:74ch;font-size:15px}#mine-results .notice{margin:0;max-width:86ch}#mine-results td:last-child{white-space:normal;min-width:22ch;color:var(--fg-2)}
 #mine-next pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-x:auto}
 .vary{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .vary select,.vary input{padding:6px 8px;border-radius:7px;border:1px solid var(--line-2);background:var(--panel-2);min-width:0}.vary input{flex:1 1 140px}
@@ -506,12 +509,12 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 
       <div id="study-mine" class="study-pane" hidden>
         <header class="board-head">
-          <p class="label">Your study · starts from the blueprint of the workshop</p>
+          <p class="label" id="mine-origin">Your study · starts from the blueprint of the workshop</p>
           <h1>Build a pipeline without writing it</h1>
           <p>Select a block and use one of three gestures: vary a setting, continue from it, compare it with another. The workshop checks each link and writes the pipeline as a PyBigDFT script, the same kind of script a capsule carries.</p>
         </header>
         <section class="sect">
-          <header><h2>Board</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="mine-example" type="button">Start from the example</button><button class="btn small" id="mine-reset" type="button">Start from one block</button></span></header>
+          <header><h2>Board</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="mine-example" type="button">The example that was run</button><button class="btn small" id="mine-reset" type="button">Start from my blueprint</button></span></header>
           <div class="board-scroll" id="mine-board"></div>
         </section>
         <div class="mine-cols">
@@ -521,6 +524,10 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
         <section class="sect">
           <header><h2>What running it will do</h2></header>
           <div class="tile" id="mine-plan"></div>
+        </section>
+        <section class="sect" id="mine-ran" hidden>
+          <header><h2>What it gave</h2><span class="pill">BigDFT 1.9.1 · real logs</span></header>
+          <div id="mine-results"></div>
         </section>
       </div>
     </div>
@@ -614,7 +621,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
       <section class="sect">
         <header><h2>Where to run</h2><span class="pill example">Fictitious prices</span></header>
         <div class="grid3">
-          <article class="tile"><h3>CPU container</h3><p>Pinned BigDFT image, starts immediately. For learning and for systems up to a few hundred atoms.</p><p class="price">1 <small style="font-size:12px;color:var(--fg-3)">credit / core·hour</small></p></article>
+          <article class="tile"><h3>CPU container</h3><p>The HAPS of the PyBigDFT pack: BigDFT 1.9.1 in a pinned image, started on demand. It takes input files and runs one command on them, one hour at most. For learning and for systems up to a few hundred atoms.</p><p class="price">1 <small style="font-size:12px;color:var(--fg-3)">credit / core·hour</small></p></article>
           <article class="tile"><h3>GPU node</h3><p>Hybrid functionals and large systems: exact exchange and the Poisson solver are accelerated.</p><p class="price">6 <small style="font-size:12px;color:var(--fg-3)">credits / core·hour</small></p></article>
           <article class="tile"><h3>HPC partition</h3><p>Your allocation or a partner's, submitted through remotemanager. For thousands of atoms.</p><p class="price">0.6 <small style="font-size:12px;color:var(--fg-3)">credit / core·hour</small></p></article>
         </div>
@@ -630,6 +637,16 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
               <tr><td>k-point convergence (4)</td><td>CPU · 16 cores</td><td><span class="state ok">done</span></td><td class="num">4 / 4</td><td class="num" style="text-align:right">5.1</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="tile">
+          <p class="label">How a run comes back from the HAPS</p>
+          <dl class="outcomes">
+            <dt><code>[OK]</code></dt><dd>BigDFT finished; the log is back and is read.</dd>
+            <dt><code>[FAILED (exit n)]</code></dt><dd>BigDFT refused the input or stopped. Its own message is shown; the input is at fault, and the dry run should have said so.</dd>
+            <dt><code>[TIMEOUT]</code></dt><dd>The run reached its time limit. Nothing is wrong with the input: split it, or restart from the last geometry.</dd>
+            <dt><code>[HAPS …]</code></dt><dd>The service failed before or after BigDFT. The input is not at fault and no credit is taken.</dd>
+          </dl>
+          <p class="figmeta">These four outcomes are the ones the pack reports. The workshop never turns a service failure into a verdict on your calculation.</p>
         </div>
       </section>
       <section class="sect">
@@ -698,5 +715,6 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 <script src="js/guides.js"></script>
 <script src="js/figure.js"></script>
 <script src="js/study.js"></script>
+<script src="js/example.js"></script>
 <script src="js/builder.js"></script>
 <script src="js/app.js"></script>

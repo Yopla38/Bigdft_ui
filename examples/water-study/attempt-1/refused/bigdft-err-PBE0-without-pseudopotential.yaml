@@ -1,0 +1,8 @@
+ BIGDFT_INPUT_FILE_ERROR:
+   Id                                  : 32
+   Message                             : The input file is not correct
+   Action                              : Check the input file
+ Additional Info:
+   The pseudopotential parameter file "psppar.O" is lacking, and no registered pseudo found 
+   for "O"
+ Calling sequence of Main program (routines with * are not closed yet):

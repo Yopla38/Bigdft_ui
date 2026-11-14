@@ -18,6 +18,7 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `ontology/corpus/bigdft-variables.md` | Generated descriptions, one section per variable, for `markdown_sections` |
 | `guides/` | Guided paths: the Jupyter notebooks, a manifest, and how they are read |
 | `prototype/js/results.js` | Real results, extracted from the logs of a BigDFT campaign published in `BigDFT-group/capsule-maker` (MIT) |
+| `examples/water-study/` | A study built with the mock-up's builder and run with BigDFT 1.9.1: board, generated script, inputs, logs, two attempts |
 | `prototype/` | Immersive mock-up (single page, three.js, no build step) |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
 
@@ -44,6 +45,14 @@ python tools/build_parameter_instances.py            # ontology/instances/ and o
 git clone --depth 1 https://github.com/BigDFT-group/capsule-maker.git /tmp/capsule-maker
 python tools/build_results.py "/tmp/capsule-maker/Open-Scientific-Intelligence-Hackathon-2026/knowledge-capsule-artefacts-claude-opus-5.5/phase-2-growth/bigdft-6a-tsubame"
 ```
+
+## Regenerate the example study
+
+```bash
+python tools/build_example.py        # examples/water-study -> prototype/js/example.js
+```
+
+`examples/water-study/README.md` says how the runs themselves were made.
 
 ## Add a guided path
 

@@ -1,0 +1,10 @@
+dft:
+  hgrids: 0.45
+  ixc: PBE
+  rmult: [5.0, 8.0]
+posinp:
+  positions:
+  - O: [0.0, 0.0, 0.0]
+  - H: [0.757, 0.5859, 0.0]
+  - H: [-0.757, 0.5859, 0.0]
+  units: angstroem

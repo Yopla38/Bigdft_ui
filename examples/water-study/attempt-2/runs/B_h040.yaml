@@ -1,0 +1,17 @@
+dft:
+  gnrm_cv: 1.0e-05
+  hgrids: 0.4
+  itermax: 200
+  ixc: PBE
+  mpol: 2
+  nrepmax: 5
+  nspin: 2
+  rmult: [5.0, 8.0]
+lin_general: {rpnrm_cv: default}
+mix: {rpnrm_cv: default}
+posinp:
+  positions:
+  - O: [0.0, 0.0, 0.0]
+  - H: [0.757, 0.5859, 0.0]
+  - H: [-0.757, 0.5859, 0.0]
+  units: angstroem

@@ -205,11 +205,11 @@ window.OND = window.OND || {};
   function select(id) { selected = id; renderBoard(); renderResults(); }
 
   // --- results: figure cards --------------------------------------------------------
-  function figureCard(key, spec, tag) {
+  function figureCard(key, spec, tag, again = renderResults) {
     const { h } = ctx, st = fig[key] || (fig[key] = { preset: 'screen', data: false });
     const target = h('div', { class: 'figure' });
     const draw = () => OND.figure.render(target, spec, { preset: st.preset, panelHeight: spec.panels && spec.panels.length === 1 ? 230 : 200 });
-    const seg = h('div', { class: 'seg' }, [['screen', 'Screen'], ['col1', 'Journal, 1 column'], ['col2', 'Journal, 2 columns']].map(([v, l]) => h('button', { type: 'button', 'aria-pressed': String(st.preset === v), onclick: () => { st.preset = v; renderResults(); } }, l)));
+    const seg = h('div', { class: 'seg' }, [['screen', 'Screen'], ['col1', 'Journal, 1 column'], ['col2', 'Journal, 2 columns']].map(([v, l]) => h('button', { type: 'button', 'aria-pressed': String(st.preset === v), onclick: () => { st.preset = v; again(); } }, l)));
     const copy = h('button', { class: 'btn small', type: 'button', onclick: (e) => {
       const text = OND.figure.svgText(spec, { preset: st.preset === 'screen' ? 'col1' : st.preset });
       const done = (msg) => { e.target.textContent = msg; setTimeout(() => { e.target.textContent = 'Copy SVG'; }, 1800); };
@@ -217,7 +217,7 @@ window.OND = window.OND || {};
     } }, 'Copy SVG');
     const card = h('article', { class: 'figcard' },
       h('header', {}, h('div', {}, tag ? h('span', { class: 'pill' }, tag) : null, h('h3', {}, spec.title)),
-        h('div', { class: 'figtools' }, seg, h('button', { class: 'btn small', type: 'button', 'aria-pressed': String(st.data), onclick: () => { st.data = !st.data; renderResults(); } }, st.data ? 'Hide data' : 'Data'), copy)),
+        h('div', { class: 'figtools' }, seg, h('button', { class: 'btn small', type: 'button', 'aria-pressed': String(st.data), onclick: () => { st.data = !st.data; again(); } }, st.data ? 'Hide data' : 'Data'), copy)),
       target,
       h('p', { class: 'caption' }, spec.caption),
       st.preset !== 'screen' ? h('p', { class: 'figmeta' }, 'Drawn at ' + OND.figure.PRESETS[st.preset].mm + ' mm with 7 pt type, the size it will have in print. “Copy SVG” gives this exact drawing; PDF and 600 dpi PNG are made from it.') : null,
@@ -308,6 +308,7 @@ window.OND = window.OND || {};
     mount(context) { ctx = context; renderCapsule(); renderPipeline(); if (!ctx.$('#view-study').hidden) { renderBoard(); renderResults(); } },
     refresh() { if (ctx && !ctx.$('#study-real').hidden) { renderBoard(); renderResults(); } },
     drawBoard,
+    figureCard,
     energies: { ET, prod },
   };
 })(window.OND);

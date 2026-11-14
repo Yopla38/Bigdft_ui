@@ -1,0 +1,11 @@
+dft:
+  hgrids: 0.45
+  ixc: PBE
+  rmult: [5.0, 8.0]
+geopt: {betax: 4.0, forcemax: 0.0002, frac_fluct: 1.0, method: SQNM, ncount_cluster_x: 300}
+posinp:
+  positions:
+  - O: [0.0, 0.0, 0.0]
+  - H: [0.757, 0.5859, 0.0]
+  - H: [-0.757, 0.5859, 0.0]
+  units: angstroem

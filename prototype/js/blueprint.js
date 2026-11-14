@@ -88,6 +88,7 @@ window.OND = window.OND || {};
     target: ['cpu', 'perf.accel', 'machine'], mpi: [4, null, 'machine'], omp: [2, null, 'machine'],
   };
 
+  const HYBRID = ['PBE0', 'B3LYP', 'HF'], elements = (sys) => [...new Set(sys.atoms.map((a) => a.el))].sort();
   const TARGETS = {
     cpu: { label: 'CPU container', detail: 'PyBigDFT, pinned image', rate: 1, speed: 1 },
     gpu: { label: 'GPU node', detail: 'CUDA, accelerated exact exchange', rate: 6, speed: 5 },
@@ -151,7 +152,8 @@ window.OND = window.OND || {};
           out.push(['biomode', true, 'Enables the separate treatment of stretching modes.', ['SQNM', 'option', 'biomode']]);
         }
       }
-      if (['PBE0', 'B3LYP', 'HF'].includes(v.xc)) out.push(['target', 'gpu', 'Exact exchange dominates the cost: it is GPU-accelerated.', ['Hybrid functional', 'recommendedHardware', 'GPU']]);
+      // Only where it pays: on a few atoms exact exchange is cheap, and an input that asks for a GPU fails where there is none.
+      if (HYBRID.includes(v.xc) && n >= 20) out.push(['target', 'gpu', 'Exact exchange dominates the cost at this size: it is GPU-accelerated.', ['Hybrid functional', 'recommendedHardware', 'GPU']]);
       if (n > 100 || (sys.bc !== 'free' && v.kpt > 1)) { out.push(['mpi', 16, 'System size: more MPI processes.', ['Large system', 'recommendedResource', '16 processes']]); }
       return out;
     }
@@ -180,7 +182,7 @@ window.OND = window.OND || {};
       const ne = OND.chem.electrons(sys, v.charge), norb = Math.ceil(ne / 2) * (v.nspin === 2 ? 2 : 1);
       const dof = nc + 7 * nf, nk = sys.bc === 'free' ? 1 : Math.ceil(v.kpt ** (sys.bc === 'periodic' ? 3 : 2) / 2);
       const cores = v.mpi * v.omp, T = TARGETS[v.target];
-      const hybrid = ['PBE0', 'B3LYP', 'HF'].includes(v.xc) ? Math.max(4, norb / 6) : 1;
+      const hybrid = HYBRID.includes(v.xc) ? Math.max(4, norb / 6) : 1;
       const work = v.algo === 'linear' ? 9e-3 * sys.atoms.length * (dof / sys.atoms.length) : 2.2e-6 * norb * dof * nk * hybrid; // core-seconds per iteration, calibrated on the recorded 6a runs (2.0e-6 to 2.2e-6)
       const iters = Math.round(14 + 7 * Math.log10(1e-4 / v.gnrm)) + (v.scf === 'mixing' ? 18 : 0) + (v.solvent !== 'none' ? 4 : 0);
       const outer = { sp: 1, geopt: Math.min(v.geoptSteps, 28), md: v.mdSteps * 0.45, neb: v.nimg * 14, tddft: 1.6, frag: 1.3 }[v.action];
@@ -210,6 +212,7 @@ window.OND = window.OND || {};
       if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction', ['efield']);
       if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system: the Brillouin zone is not sampled', ['kpt']);
       if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target', ['target', 'mpi', 'hgrid', 'kpt']);
+      if (v.target === 'gpu') add('machine', 'warn', 'GPU acceleration is written in the input, and a dry run cannot verify it: on a machine without a GPU, BigDFT stops as it starts. The HAPS of the pack runs the CPU image', ['target']);
       if (d.mem > 16) add('machine', 'warn', 'High estimated memory per MPI task: use more tasks or a coarser grid', ['mpi', 'hgrid', 'crmult']);
       else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB per MPI task, estimated');
       return out;
@@ -227,6 +230,8 @@ window.OND = window.OND || {};
       put('dft', 'hgrids', v.hgrid, 'hgrid');
       put('dft', 'rmult', [v.crmult, v.frmult], 'crmult');
       put('dft', 'ixc', v.xc, 'xc');
+      // BigDFT registers no pseudopotential for a hybrid functional and refuses the input: name the PBE ones.
+      if (HYBRID.includes(v.xc)) for (const el of elements(sys)) put('psppar.' + el, 'Pseudopotential XC', 11);
       if (v.charge) put('dft', 'qcharge', v.charge);
       if (v.nspin !== 1) { put('dft', 'nspin', v.nspin, 'nspin'); put('dft', 'mpol', v.mpol, 'mpol'); }
       if (v.gnrm !== 1e-4) put('dft', 'gnrm_cv', v.gnrm);
@@ -269,12 +274,13 @@ window.OND = window.OND || {};
       : typeof x === 'boolean' ? (x ? 'Yes' : 'No')
       : typeof x === 'number' ? (Math.abs(x) < 1e-3 && x ? x.toExponential().replace(/^(-?\d+)e/, '$1.e') : String(x)) : String(x);
 
-    self.yaml = function () {
+    /* The input as lines for display (first atoms only), or complete with all = true. */
+    self.yaml = function (all) {
       const sys = st.sys, inp = self.input(), L = [];
       const line = (ind, k, val, c) => L.push({ ind, k, val, c });
       if (inp.imports.length) line(0, 'import', inp.imports.length > 1 ? '[' + inp.imports.join(', ') + ']' : inp.imports[0], 'profiles shipped with BigDFT');
       const tree = {};
-      for (const sec in inp.sections) { let node = tree; for (const part of sec.split('.')) node = node[part] = node[part] || {}; node.__ = inp.sections[sec]; }
+      for (const sec in inp.sections) { let node = tree; for (const part of (sec.startsWith('psppar.') ? [sec] : sec.split('.'))) node = node[part] = node[part] || {}; node.__ = inp.sections[sec]; }
       (function walk(node, ind) {
         for (const k in node) {
           if (k === '__') continue;
@@ -287,10 +293,13 @@ window.OND = window.OND || {};
       line(1, 'units', 'angstroem');
       if (sys.cell) line(1, 'cell', '[' + sys.cell.map((c) => (c ? c.toFixed(3) : '.inf')).join(', ') + ']', sys.bc === 'surface' ? 'surface: free along y' : 'periodic');
       line(1, 'positions', null);
-      sys.atoms.slice(0, 4).forEach((at) => L.push({ ind: 1, item: at.el, val: '[' + at.p.map((x, d) => (x + sys.origin[d]).toFixed(4)).join(', ') + ']' }));
-      if (sys.atoms.length > 4) L.push({ ind: 1, note: '… ' + (sys.atoms.length - 4) + ' more atoms' });
+      sys.atoms.slice(0, all ? sys.atoms.length : 4).forEach((at) => L.push({ ind: 1, item: at.el, val: '[' + at.p.map((x, d) => (x + sys.origin[d]).toFixed(4)).join(', ') + ']' }));
+      if (!all && sys.atoms.length > 4) L.push({ ind: 1, note: '… ' + (sys.atoms.length - 4) + ' more atoms' });
       return L;
     };
+
+    /* The complete input file, as text: what is sent to BigDFT. */
+    self.yamlText = () => self.yaml(true).map((l) => '  '.repeat(l.ind) + (l.item ? '- ' + l.item + ': ' + l.val : l.k + ':' + (l.val != null ? ' ' + l.val : '') + (l.c ? '  # ' + l.c : ''))).join('\n') + '\n';
 
     self.python = function () {
       const sys = st.sys, v = st.v, L = [], c = (s) => L.push(s);
@@ -300,6 +309,7 @@ window.OND = window.OND || {};
       c('inp.set_hgrid(' + v.hgrid + ')');
       c('inp.set_rmult(coarse=' + v.crmult.toFixed(1) + ', fine=' + v.frmult.toFixed(1) + ')');
       c('inp.set_xc("' + v.xc + '")');
+      if (HYBRID.includes(v.xc)) for (const el of elements(sys)) c('inp["psppar.' + el + '"] = {"Pseudopotential XC": 11}  # PBE pseudopotential: none is registered for ' + v.xc);
       if (v.charge && v.nspin === 2) { c('inp.charge(' + v.charge + ')'); c('inp.spin_polarize(mpol=' + v.mpol + ')'); }
       else if (v.charge) c('inp.charge(' + v.charge + ')');
       else if (v.nspin === 2) c('inp.spin_polarize(mpol=' + v.mpol + ')');
