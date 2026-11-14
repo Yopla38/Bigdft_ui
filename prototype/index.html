@@ -324,6 +324,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 .relaunch b{color:var(--fg);font-weight:600}
 .mine-cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;align-items:start}
 #mine-results{display:grid;gap:14px;min-width:0}#mine-results .lede{color:var(--fg-2);max-width:74ch;font-size:15px}#mine-results .notice{margin:0;max-width:86ch}#mine-results td:last-child{white-space:normal;min-width:22ch;color:var(--fg-2)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px;cursor:pointer}.check input{width:16px;height:16px;accent-color:var(--accent)}
 #mine-next pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-x:auto}
 .vary{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .vary select,.vary input{padding:6px 8px;border-radius:7px;border:1px solid var(--line-2);background:var(--panel-2);min-width:0}.vary input{flex:1 1 140px}
@@ -516,6 +517,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
         <section class="sect">
           <header><h2>Board</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="mine-example" type="button">The example that was run</button><button class="btn small" id="mine-reset" type="button">Start from my blueprint</button></span></header>
           <div class="board-scroll" id="mine-board"></div>
+          <p class="figmeta">A plain link hands the geometry over; a dashed one also hands over the wavefunctions. Drag a block to rearrange the board.</p>
         </section>
         <div class="mine-cols">
           <section class="tile" id="mine-next" aria-label="Selected block"></section>
@@ -709,6 +711,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 <script src="js/results.js"></script>
 <script src="js/chem.js"></script>
 <script src="js/stage.js"></script>
+<script src="js/targets.js"></script>
 <script src="js/blueprint.js"></script>
 <script src="js/schema.js"></script>
 <script src="js/notebook.js"></script>

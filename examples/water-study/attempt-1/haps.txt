@@ -1,0 +1,12 @@
+wave 1: ready ['A_h050', 'A_h045', 'A_h040', 'B_h050', 'B_h045', 'B_h040', 'D'], waiting ['E', 'F'], refused []
+[OK] bigdft -n A_h050, 3s | sent 1 files, 271 bytes packed | back 6 files, 78190 bytes
+[OK] bigdft -n A_h045, 3s | sent 1 files, 272 bytes packed | back 6 files, 78189 bytes
+[OK] bigdft -n A_h040, 4s | sent 1 files, 271 bytes packed | back 6 files, 78207 bytes
+[OK] bigdft -n B_h050, 6s | sent 1 files, 297 bytes packed | back 6 files, 85751 bytes
+[OK] bigdft -n B_h045, 6s | sent 1 files, 298 bytes packed | back 6 files, 81074 bytes
+[OK] bigdft -n B_h040, 69s | sent 1 files, 298 bytes packed | back 6 files, 171395 bytes
+[OK] bigdft -n D, 30s | sent 1 files, 356 bytes packed | back 29 files, 3256606 bytes
+wave 2: ready ['E', 'F'], waiting [], refused []
+[OK] bigdft -n E, 6s | sent 6 files, 1143942 bytes packed | back 6 files, 73795 bytes
+[OK] bigdft -n F, 9s | sent 1 files, 408 bytes packed | back 6 files, 81914 bytes
+wave 3: ready [], waiting [], refused []

@@ -1,0 +1,151 @@
+diff --git a/haps/README.md b/haps/README.md
+index e255e74..850017e 100644
+--- a/haps/README.md
++++ b/haps/README.md
+@@ -68,7 +68,7 @@ The signature, from `pybigdft.xml` — positional, the server checks only counts
+ | | names |
+ |---|---|
+ | arguments | `name` (`[A-Za-z0-9][A-Za-z0-9_-]{0,63}`), `timeout` |
+-| input buffers | `inputs.tar.gz` — flat: `NAME.yaml`, optionally `posinp.*`, `*.xyz`, `psppar.*`; anything else refused |
++| input buffers | `inputs.tar.gz` — `NAME.yaml`, optionally `posinp.*`, `*.xyz`, `psppar.*`, and `data-NAME/wavefunction-*` to restart from an earlier run; anything else refused |
+ | output buffers | `outputs.tar.gz` — `files/…` created or changed (log, forces, `data-NAME/`, `debug/`), `logs/stdout.log`, `logs/stderr.log` |
+ | results | `exit_code` (or `timeout`), `stdout_tail`, `stderr_tail` |
+ 
+diff --git a/haps/pybigdft_haps/inputs.py b/haps/pybigdft_haps/inputs.py
+index 21a75b9..4b7b64f 100644
+--- a/haps/pybigdft_haps/inputs.py
++++ b/haps/pybigdft_haps/inputs.py
+@@ -3,8 +3,10 @@
+ The HAPS runs ONE fixed command, `bigdft -n <name>`, on input DATA. Nothing the
+ submitter sends is ever executed as code: the name is checked against a strict
+ pattern and passed as an argv element (never through a shell), and the input
+-archive may only hold the files BigDFT reads — flat, no directories, no
+-scripts. What remains reachable is BigDFT's own input parser.
++archive may only hold the files BigDFT reads — no scripts, and no directory
++but the one BigDFT itself reads wavefunctions from, `data-<name>/`. What
++remains reachable is BigDFT's own readers: of its input, and of wavefunctions
++it wrote in an earlier run.
+ 
+ The MCP server uses :func:`select` to decide what to send; the runtime uses
+ :func:`check` to refuse what does not belong. The same function on both sides,
+@@ -23,6 +25,14 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+ _SIDE_FILES = re.compile(r"^(posinp\.(xyz|ascii|yaml)|psppar\.[A-Za-z]{1,3}|[A-Za-z0-9_-]+\.(xyz|ascii))$")
+ 
+ 
++# The wavefunctions of an earlier run, to restart from (`inputpsiid: 2`). BigDFT
++# reads them from data-<name>/ and nowhere else, one file per orbital, under the
++# names it writes them: wavefunction-k001-NR.bin.b000001 (binary) or
++# wavefunction-k001-NR.b000001 (text); N, U or D for the spin, R or I for the
++# real and imaginary parts.
++_WAVEFUNCTION = re.compile(r"^wavefunction-(k\d{3}-[NUD][RI]\.(bin\.)?b\d{6}|rhoij(\.bin)?)$")
++
++
+ class InputError(ValueError):
+     pass
+ 
+@@ -36,7 +46,10 @@ def check_name(name: str) -> str:
+ 
+ def allowed(member: str, name: str) -> bool:
+     """Whether an archive member may be an input of the run *name*."""
+-    if "/" in member or member.startswith("."):
++    folder, _, base = member.rpartition("/")
++    if folder:
++        return folder == f"data-{name}" and bool(_WAVEFUNCTION.match(base))
++    if member.startswith("."):
+         return False
+     return member == f"{name}.yaml" or bool(_SIDE_FILES.match(member))
+ 
+@@ -47,13 +60,18 @@ def check(members: list[str], name: str) -> None:
+     refused = [m for m in members if not allowed(m, name)]
+     if refused:
+         raise InputError(f"not a BigDFT input of {name!r}: {', '.join(sorted(refused))} "
+-                         f"(accepted: {name}.yaml, posinp.*, <x>.xyz, psppar.*)")
++                         f"(accepted: {name}.yaml, posinp.*, <x>.xyz, psppar.*, "
++                         f"data-{name}/wavefunction-*)")
+     if f"{name}.yaml" not in members:
+         raise InputError(f"{name}.yaml is missing: it is the input `bigdft -n {name}` reads")
+ 
+ 
+ def select(directory: Path, name: str) -> dict[str, Path]:
+-    """The files of *directory* to send for the run *name*: <name>.yaml and its side files."""
++    """The files of *directory* to send for the run *name*.
++
++    <name>.yaml, its side files and, if data-<name>/ holds some, the
++    wavefunctions the run restarts from.
++    """
+     check_name(name)
+     if not (directory / f"{name}.yaml").is_file():
+         raise InputError(f"{name}.yaml not found in {directory}: prepare it first "
+@@ -64,4 +82,10 @@ def select(directory: Path, name: str) -> dict[str, Path]:
+                 and (path.name == f"{name}.yaml" or not path.name.endswith(".yaml")
+                      or path.name.startswith("posinp.")):
+             selected[path.name] = path
++    data = directory / f"data-{name}"
++    if data.is_dir() and not data.is_symlink():
++        for path in sorted(data.iterdir()):
++            member = f"{data.name}/{path.name}"
++            if path.is_file() and not path.is_symlink() and allowed(member, name):
++                selected[member] = path
+     return selected
+diff --git a/haps/pybigdft_haps/mcp_server.py b/haps/pybigdft_haps/mcp_server.py
+index e84eeff..3f68926 100644
+--- a/haps/pybigdft_haps/mcp_server.py
++++ b/haps/pybigdft_haps/mcp_server.py
+@@ -212,7 +212,11 @@ async def haps_bigdft(names: list[str], directory: str = ".", timeout: int = 600
+     DIR/NAME.yaml (geometry included) and checks it without computing. Send
+     each run once its dry run is clean. The HAPS runs BigDFT 1.9.1 and nothing
+     else: no script, no command line — NAME.yaml (with posinp.*, *.xyz,
+-    psppar.* if present in DIR) is all that is sent.
++    psppar.* if present in DIR) is all that is sent, plus the wavefunctions
++    in DIR/data-NAME/ if the run restarts from an earlier one: copy
++    data-OTHER/wavefunction-* there and set `inputpsiid: 2`
++    (`inp.read_orbitals_from_disk()`). If they are missing BigDFT only warns
++    and starts from scratch: look for that warning in the log.
+ 
+     Several names run as parallel jobs. Each comes back as [OK],
+     [FAILED (exit n)] or [TIMEOUT], with the files it wrote copied back into
+diff --git a/haps/tests/test_offline.py b/haps/tests/test_offline.py
+index 94ea02d..061ae14 100644
+--- a/haps/tests/test_offline.py
++++ b/haps/tests/test_offline.py
+@@ -129,3 +129,40 @@ def test_select_sends_the_run_and_its_side_files(tmp_path):
+     assert sorted(inputs.select(tmp_path, "N2")) == ["N2.yaml", "posinp.xyz", "psppar.N"]
+     with pytest.raises(inputs.InputError):
+         inputs.select(tmp_path, "CO")
++
++
++def test_inputs_accept_the_wavefunctions_of_the_run_and_nothing_else_in_a_directory():
++    wf = ["data-N2/wavefunction-k001-NR.bin.b000001", "data-N2/wavefunction-k001-UR.b000012",
++          "data-N2/wavefunction-k002-DI.bin.b000003", "data-N2/wavefunction-rhoij.bin"]
++    inputs.check(["N2.yaml", *wf], "N2")
++    for bad in ("data-CO/wavefunction-k001-NR.bin.b000001",      # another run's directory
++                "data-N2/run.py", "data-N2/time-N2.yaml", "data-N2/N2.yaml",
++                "data-N2/sub/wavefunction-k001-NR.bin.b000001",
++                "data-N2/../wavefunction-k001-NR.bin.b000001",
++                "data-N2/wavefunction-k001-NR.bin.b000001.sh",
++                "wavefunction-k001-NR.bin.b000001"):               # not where BigDFT reads it
++        with pytest.raises(inputs.InputError):
++            inputs.check(["N2.yaml", bad], "N2")
++
++
++def test_select_sends_the_wavefunctions_to_restart_from(tmp_path):
++    (tmp_path / "N2.yaml").write_text("x")
++    for folder in ("data-N2", "data-CO"):
++        (tmp_path / folder).mkdir()
++        for f in ("wavefunction-k001-NR.bin.b000001", "time-N2.yaml", "notes.txt"):
++            (tmp_path / folder / f).write_text("x")
++    selected = inputs.select(tmp_path, "N2")
++    assert sorted(selected) == ["N2.yaml", "data-N2/wavefunction-k001-NR.bin.b000001"]
++    inputs.check(list(selected), "N2")
++
++
++def test_wavefunctions_travel_and_land_in_their_directory(tmp_path):
++    src, dst = tmp_path / "src", tmp_path / "dst"
++    (src / "data-N2").mkdir(parents=True)
++    dst.mkdir()
++    (src / "N2.yaml").write_text("x")
++    (src / "data-N2" / "wavefunction-k001-NR.bin.b000001").write_bytes(b"\x00\x01")
++    data = archive.pack(inputs.select(src, "N2"))
++    inputs.check(archive.members(data), "N2")
++    archive.unpack(data, dst)
++    assert (dst / "data-N2" / "wavefunction-k001-NR.bin.b000001").read_bytes() == b"\x00\x01"

@@ -360,11 +360,15 @@
         if (ui.brick === 'machine') kids.push(h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Container'), h('code', {}, 'pack.container')),
           h('code', { style: 'overflow-wrap:anywhere' }, 'bigdft/runtime@sha256:6f16f65f5b33…'),
           h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'BigDFT 1.9.1. Declared by the PyBigDFT pack and pinned by digest, never by tag: two runs months apart stay comparable.')),
-          h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Two places'), h('code', {}, 'pack · HAPS')),
-            h('dl', { class: 'places' },
-              h('dt', {}, 'Prepare, dry run, analyse'), h('dd', {}, 'In the container of the pack, with PyBigDFT. BigDFT itself cannot be started there.'),
-              h('dt', {}, 'Compute'), h('dd', {}, 'On the HAPS. It receives input files only and runs one command, ', h('code', {}, 'bigdft -n NAME'), '. One hour at most per run, two runs at a time.')),
-            h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'Your Python never reaches the machine that computes: what crosses is data, and BigDFT reads it or refuses it.')));
+          (() => {
+            const t = blueprint.TARGETS[st.v.target], hours = t.limits.max_timeout_s / 3600;
+            return h('div', { class: 'ctl' }, h('div', { class: 'ctl-head' }, h('b', {}, 'Two places'), h('code', {}, 'config/haps.yaml')),
+              h('dl', { class: 'places' },
+                h('dt', {}, 'Prepare, dry run, analyse'), h('dd', {}, 'In the container of the pack, with PyBigDFT. BigDFT itself cannot be started there.'),
+                h('dt', {}, 'Compute · ' + t.label + (t.example ? ' (example, no such service yet)' : '')), h('dd', {}, 'On a HAPS. It receives files and runs one command, ', h('code', {}, 'bigdft -n NAME'), '. ' + (hours >= 1 ? fr(hours, 0) + (hours > 1 ? ' hours' : ' hour') : fr(t.limits.max_timeout_s / 60, 0) + ' minutes') + ' at most per run, ' + t.limits.max_parallel + ' at a time. ' + (t.accepts.wavefunctions ? 'It accepts the wavefunctions of an earlier run.' : 'It does not accept wavefunction files.')),
+                h('dt', {}, 'Address'), h('dd', {}, h('code', { style: 'overflow-wrap:anywhere' }, t.ebservice_url))),
+              h('p', { style: 'font-size:12px;color:var(--fg-3)' }, 'Your Python never reaches the machine that computes: what crosses is data, and BigDFT reads it or refuses it.'));
+          })());
         kids.push(...controls(ui.brick).filter(Boolean).map(ctl));
       }
       kids.unshift(...notices());
@@ -880,7 +884,7 @@
   $('#role').addEventListener('click', () => { ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
   OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
   /* The study a user builds starts from the blueprint of the workshop: its settings become the script's blueprint(). */
-  OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => /^inp[.[]/.test(l)), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores' }) });
+  OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => /^inp[.[]/.test(l)), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores', haps: blueprint.TARGETS[st.v.target] }) });
   const studyMode = (mode) => {
     $$('#study-mode button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
     $('#study-real').hidden = mode !== 'real'; $('#study-mine').hidden = mode !== 'mine';

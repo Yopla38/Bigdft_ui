@@ -4,8 +4,8 @@
 ``examples/water-study`` holds a study written by the builder of the prototype
 (``blocks.json`` is its board, ``attempt-N/study.py`` the script it generated)
 and executed with the BigDFT 1.9.1 image the PyBigDFT pack pins: every input
-dry-run by the script itself, then computed with the one command a HAPS runs,
-``bigdft -n NAME``. Two attempts are kept, because the first one teaches
+dry-run by the script itself, then handed to ``drive.py``, which applies the pack's own rule on what a run
+may receive and runs the one command of a HAPS, ``bigdft -n NAME``. Two attempts are kept, because the first one teaches
 something: with the default convergence criterion the triplet runs stop on
 different electronic states.
 
@@ -60,6 +60,11 @@ def attempt(directory: Path, label: str) -> dict:
             relax[name] = {k: rel[k] for k in ("method", "forcemax", "steps", "energy", "fmax")}
             relax[name].update(converged=bool(said), iterations=int(said.group(1)) if said else None, evaluations=len(rel["steps"]))
             runs[name].update(energy=rel["energy"], wall=walltime(log.read_text()), evaluations=len(rel["steps"]))
+    # what crossed to the machine that computes, and what came back (written by drive.py)
+    for line in (directory / "haps.txt").read_text().splitlines():
+        m = re.match(r"\[(.+?)\] bigdft -n (\S+), (\d+)s \| sent (\d+) files, (\d+) bytes packed \| back (\d+) files, (\d+) bytes", line)
+        if m and m.group(2) in runs:
+            runs[m.group(2)].update(outcome=m.group(1), sent=[int(m.group(4)), int(m.group(5))], back=[int(m.group(6)), int(m.group(7))])
     energies = {n: (relax[n]["energy"] if n in relax else r["energy"]) for n, r in runs.items()}
     gaps = {n[2:]: (energies[n] - energies["A" + n[1:]]) * HA_EV for n in energies if n.startswith("B_")}
     return {"id": directory.name, "label": label, "script": script, "base": [line.strip() for line in body.splitlines() if line.strip()],

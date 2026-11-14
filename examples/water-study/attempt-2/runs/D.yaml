@@ -6,6 +6,7 @@ dft:
 geopt: {betax: 4.0, forcemax: 0.0002, frac_fluct: 1.0, method: SQNM, ncount_cluster_x: 300}
 lin_general: {rpnrm_cv: default}
 mix: {rpnrm_cv: default}
+output: {orbitals: binary}
 posinp:
   positions:
   - O: [0.0, 0.0, 0.0]

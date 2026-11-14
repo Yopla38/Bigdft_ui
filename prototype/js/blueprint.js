@@ -85,15 +85,12 @@ window.OND = window.OND || {};
     tddft: ['TDA', 'tddft.tddft_approach', 'task'], nvirt: [8, 'dft.nvirt', 'task'],
     density: [false, 'dft.output_denspot', 'observables'], nplot: [0, 'dft.nplot', 'observables'], dos: [true, null, 'observables'],
     dipole: [false, 'lin_general.calc_dipole', 'observables'], charges: [false, 'lin_general.charge_multipoles', 'observables'],
-    target: ['cpu', 'perf.accel', 'machine'], mpi: [4, null, 'machine'], omp: [2, null, 'machine'],
+    target: [OND.targets.default, 'perf.accel', 'machine'], mpi: [4, null, 'machine'], omp: [2, null, 'machine'],
   };
 
   const HYBRID = ['PBE0', 'B3LYP', 'HF'], elements = (sys) => [...new Set(sys.atoms.map((a) => a.el))].sort();
-  const TARGETS = {
-    cpu: { label: 'CPU container', detail: 'PyBigDFT, pinned image', rate: 1, speed: 1 },
-    gpu: { label: 'GPU node', detail: 'CUDA, accelerated exact exchange', rate: 6, speed: 5 },
-    hpc: { label: 'HPC partition', detail: 'through remotemanager', rate: 0.6, speed: 1 },
-  };
+  /* The machines a run can be sent to: the HAPS listed in config/haps.yaml (bundled as OND.targets). */
+  const TARGETS = Object.fromEntries(Object.entries(OND.targets.haps).map(([id, t]) => [id, Object.assign({}, t, { rate: t.estimate.credits_per_core_hour, speed: t.estimate.relative_speed })]));
 
   function Blueprint() {
     const st = { v: {}, src: {}, why: {}, expert: {}, sys: null, advice: [], vol: null };
@@ -212,7 +209,7 @@ window.OND = window.OND || {};
       if (v.efield && sys.bc === 'periodic') add('environment', 'err', 'No electric field along a periodic direction', ['efield']);
       if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system: the Brillouin zone is not sampled', ['kpt']);
       if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target', ['target', 'mpi', 'hgrid', 'kpt']);
-      if (v.target === 'gpu') add('machine', 'warn', 'GPU acceleration is written in the input, and a dry run cannot verify it: on a machine without a GPU, BigDFT stops as it starts. The HAPS of the pack runs the CPU image', ['target']);
+      if (TARGETS[v.target].gpu) add('machine', 'warn', 'GPU acceleration is written in the input, and a dry run cannot verify it: on a machine without a GPU, BigDFT stops as it starts', ['target']);
       if (d.mem > 16) add('machine', 'warn', 'High estimated memory per MPI task: use more tasks or a coarser grid', ['mpi', 'hgrid', 'crmult']);
       else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB per MPI task, estimated');
       return out;
@@ -261,7 +258,7 @@ window.OND = window.OND || {};
         put('psolver.environment', 'fact_rigid', P[0]); put('psolver.environment', 'delta', P[1]);
         put('psolver.environment', 'gammaS', P[2]); put('psolver.environment', 'alphaS', P[3]); put('psolver.environment', 'betaV', 0.0);
       }
-      if (v.target === 'gpu') { put('perf', 'accel', 'OCLGPU', 'target'); put('psolver.setup', 'accel', 'CUDA'); }
+      if (TARGETS[v.target].gpu) { put('perf', 'accel', 'OCLGPU', 'target'); put('psolver.setup', 'accel', 'CUDA'); }
       for (const path in st.expert) {
         const cut = path.lastIndexOf('.');
         put(path.slice(0, cut), path.slice(cut + 1), st.expert[path]);
@@ -328,7 +325,7 @@ window.OND = window.OND || {};
       if (v.nplot) c('inp.write_cubefiles_around_fermi_level(nplot=' + v.nplot + ')');
       if (v.dipole) c('inp.calculate_dipole()');
       if (v.charges) c('inp.calculate_multipoles()');
-      if (v.target === 'gpu') c('inp.use_gpu_acceleration()');
+      if (TARGETS[v.target].gpu) c('inp.use_gpu_acceleration()');
       for (const path in st.expert) c('inp' + path.split('.').map((p) => '["' + p + '"]').join('') + ' = ' + JSON.stringify(st.expert[path]));
       c('');
       c('code = Calculators.SystemCalculator(omp=' + v.omp + ', mpi_run="mpirun -np ' + v.mpi + '")');

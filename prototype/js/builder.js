@@ -17,8 +17,9 @@ window.OND = window.OND || {};
     xc: { label: 'Functional', values: 'LDA, PBE, PBE0', call: (x) => 'inp.set_xc(' + x + ')', loop: 'xc', parse: (s) => String(s).trim().toUpperCase(), ok: (x) => ['LDA', 'PBE', 'PBE0', 'B3LYP', 'HF'].includes(x) },
   };
   /* What can follow a block: [title, changes written in PyBigDFT, what is handed over, the gesture].
-   * Only the geometry is handed over: the HAPS of the pack accepts BigDFT input files and nothing
-   * else, so the wavefunctions of an earlier run cannot be sent back as a starting point. */
+   * The geometry is always handed over. The wavefunctions can be too: they are files BigDFT writes
+   * in data-NAME/, copied on the user's side into the data- folder of the run that restarts from them
+   * and sent to the HAPS with its input, as data. */
   const NEXT = {
     relax: ['Relaxation', ['inp.optimize_geometry(method="SQNM", nsteps=300, forcemax=2.0e-4)'], ['geometry'], 'Relax the geometry'],
     triplet: ['Triplet state', ['inp.spin_polarize(mpol=2)', 'inp["dft"].update(itermax=200, nrepmax=5)  # a triplet needs more iterations and restarts'], ['geometry'], 'Compute another spin state'],
@@ -40,7 +41,7 @@ window.OND = window.OND || {};
   const EX = () => OND.example;
   const sig = (bs) => JSON.stringify(bs.map((b) => Object.assign({}, b, b.sweep ? { sweep: { key: b.sweep.key, values: b.sweep.values } } : {})));
   const ran = () => mode === 'example' && sig(blocks) === sig(EX().blocks);
-  const origin = () => (mode === 'example' ? { system: EX().system, lines: EX().attempts[attempt].base, example: true } : ctx.base());
+  const origin = () => (mode === 'example' ? { system: EX().system, lines: EX().attempts[attempt].base, example: true, haps: OND.targets.haps[OND.targets.default] } : ctx.base());
 
   function example() {
     blocks = JSON.parse(JSON.stringify(EX().blocks));
@@ -51,14 +52,17 @@ window.OND = window.OND || {};
   /* The relaxation whose final geometry a block starts from, through any number of "same structure as" links. */
   const geometryOf = (b) => (!b.from ? null : isRelax(get(b.from)) ? b.from : geometryOf(get(b.from)));
   /* A block is prepared in the wave after the relaxation it waits for has come back. */
-  const wave = (b) => (geometryOf(b) ? 1 + wave(get(geometryOf(b))) : 1);
+  const takesWf = (b) => !!(b.from && b.takes && b.takes.includes('wavefunctions'));
+  const givesWf = (b) => blocks.some((x) => x.from === b.id && takesWf(x));
+  const wave = (b) => Math.max(1, geometryOf(b) ? 1 + wave(get(geometryOf(b))) : 1, takesWf(b) ? 1 + wave(get(b.from)) : 1);
 
   // --- checks: a link is checked like a parameter -----------------------------------
   function problems() {
-    const out = [];
+    const out = [], haps = origin().haps;
     for (const b of blocks) {
+      if (takesWf(b) && !haps.accepts.wavefunctions) out.push([b.id, 'Block ' + b.id + ' restarts from wavefunctions, and the HAPS “' + haps.label + '” does not accept wavefunction files (config/haps.yaml). Untick the restart, or choose another target in the Machine block.']);
       // Starting from the same structure as a series is fine; taking something a series computed is ambiguous.
-      if (b.from && get(b.from).sweep && (b.takes.includes('wavefunctions') || isRelax(get(b.from)))) out.push([b.id, 'Block ' + b.id + ' takes what ' + b.from + ' computed, but ' + b.from + ' is a series: which member? Continue from a single run, or remove the series on ' + b.from + '.']);
+      if (b.from && get(b.from).sweep && (takesWf(b) || isRelax(get(b.from)))) out.push([b.id, 'Block ' + b.id + ' takes what ' + b.from + ' computed, but ' + b.from + ' is a series: which member? Continue from a single run, or remove the series on ' + b.from + '.']);
       if (b.kind === 'formula') {
         const A = get(b.a), B = get(b.b);
         if (A.sweep && B.sweep && (A.sweep.key !== B.sweep.key || A.sweep.values.join() !== B.sweep.values.join())) out.push([b.id, 'The two series compared in ' + b.id + ' do not vary the same values.']);
@@ -80,21 +84,24 @@ window.OND = window.OND || {};
       '    python study.py prepare   # writes runs/NAME.yaml for every run that is ready, and dry-runs it',
       '    #   -> send the names it prints to the HAPS: haps_bigdft(names=[...], directory="runs")',
       '    python study.py analyse   # reads the logs the HAPS sent back',
-      'Repeat `prepare` after each wave: what continues from a relaxation is ready once its log is back.', '"""');
-    L.push('import sys', 'from pathlib import Path', '', 'import yaml', 'from BigDFT.Calculators import SystemCalculator', 'from BigDFT.Inputfiles import Inputfile', 'from BigDFT.Logfiles import Logfile', '');
+      'Repeat `prepare` after each wave: what continues from an earlier run is ready once that run is back.', '"""');
+    const wf = blocks.some(takesWf);
+    L.push(...(wf ? ['import shutil'] : []), 'import sys', 'from pathlib import Path', '', 'import yaml', 'from BigDFT.Calculators import SystemCalculator', 'from BigDFT.Inputfiles import Inputfile', 'from BigDFT.Logfiles import Logfile', '');
     L.push('HA_EV, HA_KJ = 27.211386245988, 2625.4996394799', 'RUNS = "runs"', 'STRUCTURE = yaml.safe_load(Path("structure.yaml").read_text())  # ' + base.system + ', written by the Matter block', 'ELEMENTS = sorted({e for p in STRUCTURE["positions"] for e in p})', '', '');
     L.push('def blueprint():', '    """The settings of the workshop blueprint this study starts from."""', '    inp = Inputfile()');
     for (const l of base.lines) L.push('    ' + l);
     L.push('    return inp', '', '', 'def relaxed(name):', '    """Final geometry of a relaxation, as BigDFT wrote it."""', '    pos = yaml.safe_load(Path(RUNS, f"final_{name}.yaml").read_text())["positions"]', '    return {"units": "angstroem", "positions": [{e: v} for p in pos for e, v in p.items() if e != "force"]}', '', '',
       'def energy(name):', '    """Final energy of a run; None if it is not back yet or if BigDFT refused it."""', '    path = Path(RUNS, f"log-{name}.yaml")', '    if not path.exists():', '        return None', '    try:', '        log = Logfile(str(path))', '        return (log if len(log) == 0 else log[len(log) - 1]).energy  # a relaxation logs every step: keep the last', '    except Exception:', '        return None', '', '');
-    L.push('def inputs():', '    """One entry per run: its input and, if any, the relaxation its geometry comes from."""', '    runs = {}');
+    L.push('def inputs():', '    """One entry per run: its input and, if any, the earlier run its geometry' + (wf ? ' or its wavefunctions come' : ' comes') + ' from."""', '    runs = {}');
     for (const b of order) {
-      const sw = b.sweep && SWEEPS[b.sweep.key], at = geometryOf(b), geo = at ? ', geometry="' + at + '"' : '';
-      L.push('', '    # ' + b.id + ': ' + b.title + (b.from ? (isRelax(get(b.from)) ? ', at the relaxed geometry of ' : ', same structure as ') + b.from : '') + (sw ? ', varied over ' + sw.label.toLowerCase() : ''));
+      const sw = b.sweep && SWEEPS[b.sweep.key], at = geometryOf(b), geo = (at ? ', geometry="' + at + '"' : '') + (takesWf(b) ? ', wavefunctions="' + b.from + '"' : '');
+      L.push('', '    # ' + b.id + ': ' + b.title + (b.from ? (isRelax(get(b.from)) ? ', at the relaxed geometry of ' : ', same structure as ') + b.from : '') + (takesWf(b) ? ', restarted from its wavefunctions' : '') + (sw ? ', varied over ' + sw.label.toLowerCase() : ''));
       const ind = sw ? '        ' : '    ';
       if (sw) L.push('    for ' + sw.loop + ' in (' + b.sweep.values.map((x) => (b.sweep.key === 'rmult' ? '(' + x.join(', ') + ')' : b.sweep.key === 'xc' ? '"' + x + '"' : x.toFixed(2))).join(', ') + '):');
       L.push(ind + 'inp = blueprint()');
       for (const c of b.changes) L.push(ind + c);
+      if (givesWf(b)) L.push(ind + 'inp.write_orbitals_on_disk()  # ' + blocks.filter((x) => x.from === b.id && takesWf(x)).map((x) => x.id).join(' and ') + ' restart' + (blocks.filter((x) => x.from === b.id && takesWf(x)).length > 1 ? '' : 's') + ' from them');
+      if (takesWf(b)) L.push(ind + 'inp.read_orbitals_from_disk()');
       if (sw) L.push(ind + sw.call(sw.loop));
       L.push(ind + 'runs[' + (sw ? '"' + b.id + '" + ' + SUFFIX[b.sweep.key] : '"' + b.id + '"') + '] = dict(input=inp' + geo + ')');
     }
@@ -102,12 +109,14 @@ window.OND = window.OND || {};
     L.push('def prepare():', '    code = SystemCalculator(omp="1", dry_run=True, verbose=False)', '    ready, waiting, refused = [], [], []', '    for name, r in inputs().items():',
       '        if energy(name) is not None:', '            continue  # already computed',
       '        if r.get("geometry") and not Path(RUNS, f"final_{r[\'geometry\']}.yaml").exists():', '            waiting.append(name)  # its relaxation is not back yet', '            continue',
+      ...(wf ? ['        if r.get("wavefunctions"):', '            found = sorted(Path(RUNS, f"data-{r[\'wavefunctions\']}").glob("wavefunction-*"))', '            if not found:', '                waiting.append(name)  # the run it restarts from is not back yet', '                continue',
+        '            Path(RUNS, f"data-{name}").mkdir(exist_ok=True)  # where BigDFT reads them; sent to the HAPS with the input', '            for path in found:', '                shutil.copy2(path, Path(RUNS, f"data-{name}", path.name))'] : []),
       '        posinp = relaxed(r["geometry"]) if r.get("geometry") else STRUCTURE',
       '        log = code.run(name=name, input=r["input"], posinp=posinp, run_dir=RUNS)  # writes runs/NAME.yaml, no SCF',
       '        memory = log.log.get("Estimated Memory Peak (MB)")', '        if memory is None:  # BigDFT refused the input: its reason is in runs/log-NAME.yaml',
       '            refused.append(name)', '            continue',
       '        print(f"{name}: dry run passed, memory peak {memory} MB")', '        ready.append(name)',
-      '    print("ready for the HAPS:", ready)', '    print("waiting for a relaxation:", waiting)', '    print("refused by the dry run:", refused)', '    return 1 if refused else 0', '', '');
+      '    print("ready for the HAPS:", ready)', '    print("waiting for an earlier run:", waiting)', '    print("refused by the dry run:", refused)', '    return 1 if refused else 0', '', '');
     L.push('def analyse():', '    E = {name: energy(name) for name in inputs()}', '    E = {name: e for name, e in E.items() if e is not None}', '    out = {}');
     for (const f of formulas) {
       const A = get(f.a), B = get(f.b), u = UNITS[f.unit];
@@ -140,7 +149,7 @@ window.OND = window.OND || {};
     const depth = (b) => (col[b.id] != null ? col[b.id] : (col[b.id] = upstream(b).length ? 1 + Math.max(...upstream(b).map((u) => depth(get(u)))) : 0));
     return blocks.map((b) => { const c = depth(b), r = rows[c] = (rows[c] == null ? 0 : rows[c] + 1); return { id: b.id, col: c, row: r, type: b.kind === 'formula' ? 'formula' : b.changes.some((x) => x.includes('optimize_geometry')) ? 'relax' : b.sweep ? 'series' : 'run', title: b.id + ' · ' + b.title, sub: b.kind === 'formula' ? null : b.sweep ? SWEEPS[b.sweep.key].label + ', ' + members(b) + ' values' : b.from ? 'continues ' + b.from : 'from your blueprint', tex: b.kind === 'formula' ? 'E(' + b.a + ')-E(' + b.b + ')' : null, block: b }; });
   }
-  const edges = () => blocks.flatMap((b) => (b.kind === 'formula' ? [[b.a, b.id, 'energies'], [b.b, b.id, 'energies']] : b.from ? [[b.from, b.id, b.takes.includes('wavefunctions') ? 'wavefunctions' : 'geometry']] : []));
+  const edges = () => blocks.flatMap((b) => (b.kind === 'formula' ? [[b.a, b.id, 'energies'], [b.b, b.id, 'energies']] : b.from ? [[b.from, b.id, takesWf(b) ? 'wavefunctions' : 'geometry']] : []));
   const statusOf = (bad) => (n) => (bad.some((p) => p[0] === n.id) ? ['partial', 'to fix'] : n.block.kind === 'formula' ? ['draft', n.block.unit] : ['draft', members(n.block) + (members(n.block) > 1 ? ' runs' : ' run')]);
 
   function render() {
@@ -151,8 +160,11 @@ window.OND = window.OND || {};
     if (b.kind === 'formula') {
       kids.push(h('p', {}, 'Energy of ' + b.a + ' minus energy of ' + b.b + '.'), h('div', { class: 'field' }, h('span', { class: 'label' }, 'Unit'), h('div', { class: 'seg' }, Object.keys(UNITS).map((u) => h('button', { type: 'button', 'aria-pressed': String(b.unit === u), onclick: () => { b.unit = u; render(); } }, u)))));
     } else {
-      kids.push(h('p', {}, !b.from ? (base.example ? 'Uses the blueprint of the example: ' : 'Uses the blueprint of the workshop: ') + base.system + '.' : isRelax(get(b.from)) ? 'Takes the relaxed ' + b.takes.join(' and the ') + ' of ' + b.from + '.' : b.takes.includes('wavefunctions') ? 'Same structure as ' + b.from + ', and restarts from its wavefunctions.' : 'Same structure as ' + b.from + '.'),
+      const src = b.from && get(b.from);
+      kids.push(h('p', {}, !b.from ? (base.example ? 'Uses the blueprint of the example: ' : 'Uses the blueprint of the workshop: ') + base.system + '.' : (isRelax(src) ? 'Takes the relaxed geometry of ' + b.from : 'Same structure as ' + b.from) + (takesWf(b) ? ', and restarts from its wavefunctions.' : '.')),
         b.changes.length ? h('pre', {}, b.changes.join('\n')) : null);
+      if (src) kids.push(h('label', { class: 'check' }, h('input', { type: 'checkbox', id: 'mine-wf', checked: takesWf(b), onchange: (e) => { b.takes = e.target.checked ? ['geometry', 'wavefunctions'] : ['geometry']; render(); } }), h('span', {}, 'Restart from the wavefunctions of ' + b.from)),
+        takesWf(b) ? h('p', { class: 'figmeta' }, b.from + ' writes them on disk, one file per orbital. They are copied beside this run and sent to the HAPS with its input.') : null);
       // gesture 1: vary
       const cur = b.sweep, key = cur ? cur.key : 'hgrid';
       kids.push(h('p', { class: 'label', style: 'margin-top:8px' }, '1 · Vary a setting'),
@@ -165,7 +177,7 @@ window.OND = window.OND || {};
           cur ? h('button', { class: 'btn small', type: 'button', onclick: () => { b.sweep = null; render(); } }, 'Single run') : null));
       // gesture 2: continue
       kids.push(h('p', { class: 'label', style: 'margin-top:8px' }, '2 · Continue from it'),
-        h('div', { class: 'chips' }, Object.entries(NEXT).map(([k, n]) => h('button', { class: 'chip', type: 'button', onclick: () => { const id = nextId(); if (!id) return; blocks.push({ id, kind: 'run', title: n[0], from: b.id, takes: n[2], changes: n[1] }); sel = id; render(); } }, n[3]))));
+        h('div', { class: 'chips' }, Object.entries(NEXT).map(([k, n]) => h('button', { class: 'chip', type: 'button', onclick: () => { const id = nextId(); if (!id) return; blocks.push({ id, kind: 'run', title: n[0], from: b.id, takes: n[2].slice(), changes: n[1] }); sel = id; render(); } }, n[3]))));
       // gesture 3: compare
       const others = blocks.filter((x) => x.kind !== 'formula' && x.id !== b.id);
       if (others.length) kids.push(h('p', { class: 'label', style: 'margin-top:8px' }, '3 · Compare it'),
@@ -184,7 +196,7 @@ window.OND = window.OND || {};
       h('ol', { class: 'pipe plain' },
         h('li', {}, h('b', {}, 'Prepare'), h('span', {}, n + ' input' + (n > 1 ? 's' : '') + ' written with PyBigDFT from the blueprint and the changes of each block, in the container of the pack. BigDFT itself cannot be started there.')),
         h('li', {}, h('b', {}, 'Dry run'), h('span', {}, 'BigDFT reads each input and estimates its memory, without computing. An input it refuses is never sent.')),
-        h('li', {}, h('b', {}, 'Compute'), h('span', {}, 'On the HAPS, which receives input files only and runs one command on each, ', h('code', {}, 'bigdft -n NAME'), ': two at a time, one hour at most per run.' + (waves > 1 ? ' ' + waves + ' waves: a relaxation must come back before what continues from it is prepared.' : '') + (base.cost ? ' One blueprint run is estimated at ' + base.cost + '.' : ''))),
+        h('li', {}, h('b', {}, 'Compute'), h('span', {}, 'On the HAPS, which receives files only and runs one command on each, ', h('code', {}, 'bigdft -n NAME'), ': ' + base.haps.limits.max_parallel + ' at a time, ' + Math.round(base.haps.limits.max_timeout_s / 60) + ' minutes at most per run (' + base.haps.label + ').' + (waves > 1 ? ' ' + waves + ' waves: an earlier run must come back before what continues from it is prepared.' : '') + (blocks.some(takesWf) ? ' Wavefunctions travel as files, in the data folder of the run that reads them.' : '') + (base.cost ? ' One blueprint run is estimated at ' + base.cost + '.' : ''))),
         h('li', {}, h('b', {}, 'Analyse'), h('span', {}, 'Back in the container: ' + nf + ' formula' + (nf === 1 ? '' : 's') + ' applied to the energies read from the logs, figures drawn from the kind of each block.'))),
       bad.length ? h('div', { class: 'notice err' }, h('b', {}, 'The study cannot start'), h('span', {}, bad.map((p) => p[1]).join(' '))) : h('p', { style: 'color:var(--ok);font-size:13px' }, 'The study is consistent: ' + blocks.length + ' blocks, ' + n + ' run' + (n > 1 ? 's' : '') + '.'),
       done ? h('p', { class: 'figmeta' }, 'This board has been run as it stands, twice. What it gave is below.')
@@ -238,7 +250,10 @@ window.OND = window.OND || {};
     else out.push(['ok', 'The series C is consistent', 'The triplet runs are on the same electronic state (highest occupied spin-up level at ' + list(lev, 2) + ' eV). The triplet energy is ' + fx(g[2], 3) + ' eV on the finest grid and moves by ' + fx(Math.abs(g[1] - g[2]) * 1000, 1) + ' meV between h = 0.45 and 0.40 bohr. The coarsest grid took ' + a.runs.B_h050.iters + ' iterations to get there, for ' + EX().attempts[0].runs.B_h050.iters + ' when it stopped early in the first attempt.']);
     if (r.fmax > r.forcemax) out.push(['warn', 'Relaxation D: look at the last force', 'BigDFT reports the relaxation converged, after ' + r.evaluations + ' force evaluations. The last force it printed is ' + sci(r.fmax) + ' Ha/bohr, above the ' + sci(r.forcemax) + ' asked: read the trace below before using this geometry for forces or vibrations.']);
     else out.push(['ok', 'Relaxation D converged', r.evaluations + ' force evaluations, largest force ' + sci(r.fmax) + ' Ha/bohr for ' + sci(r.forcemax) + ' asked.']);
-    out.push(['advice', 'E was refused once, before anything was computed', 'The first dry run of the PBE0 block answered: “' + EX().refused + '”. BigDFT registers no pseudopotential for a hybrid functional, so nothing was sent to compute. The block now names the PBE pseudopotentials; BigDFT accepts the input and writes in the log: “' + a.runs.E.warnings[0] + '”.']);
+    const E = a.runs.E, F = a.runs.F, mb = (n) => fx(n / 1048576, 1) + ' MB';
+    if (E.warnings.some((w) => /Missing wavefunction/.test(w))) out.push(['warn', 'E did not restart', 'BigDFT found no wavefunction file beside the input of E and started from scratch; it only warns. The HAPS did not let them through.']);
+    else out.push(['ok', 'E restarted from the wavefunctions of D', E.iters + ' iterations, for ' + F.iters + ' from scratch in F, and the same energy to ' + sci(Math.abs(E.energy - F.energy)) + ' Ha. The ' + (E.sent[0] - 1) + ' wavefunction files of D went to the HAPS with the input of E: ' + mb(E.sent[1]) + ' packed, where F sent ' + F.sent[1] + ' bytes.']);
+    out.push(['advice', 'PBE0 was refused once, before anything was computed', 'The first dry run of a PBE0 block answered: “' + EX().refused + '”. BigDFT registers no pseudopotential for a hybrid functional, so nothing was sent to compute. The blocks now name the PBE pseudopotentials; BigDFT accepts the input and writes in the log: “' + E.warnings.find((w) => /PSP/.test(w)) + '”.']);
     return out;
   }
 
@@ -253,16 +268,16 @@ window.OND = window.OND || {};
     }
     const a = EX().attempts[attempt], order = blocks.filter((b) => b.kind !== 'formula').flatMap((b) => (b.sweep ? b.sweep.values.map((x) => b.id + '_' + hk(x)) : [b.id]));
     const total = order.reduce((s, k) => s + a.runs[k].wall, 0);
-    const row = (k) => { const r = a.runs[k]; return h('tr', {}, h('td', {}, h('code', {}, k)), h('td', {}, 'exit 0'), h('td', { class: 'num' }, r.evaluations ? r.evaluations + ' × SCF' : String(r.iters)), h('td', { class: 'num' }, r.energy.toFixed(6).replace('-', '−')), h('td', { class: 'num' }, fx(r.wall, 1)), h('td', { class: 'num' }, String(r.mem)), h('td', {}, r.warnings.length ? r.warnings.join(' · ') : '—')); };
+    const row = (k) => { const r = a.runs[k]; return h('tr', {}, h('td', {}, h('code', {}, k)), h('td', {}, '[' + r.outcome + ']'), h('td', { class: 'num' }, r.sent[0] + (r.sent[1] > 4096 ? ' · ' + fx(r.sent[1] / 1048576, 1) + ' MB' : '')), h('td', { class: 'num' }, r.evaluations ? r.evaluations + ' × SCF' : String(r.iters)), h('td', { class: 'num' }, r.energy.toFixed(6).replace('-', '−')), h('td', { class: 'num' }, fx(r.wall, 1)), h('td', { class: 'num' }, String(r.mem)), h('td', {}, r.warnings.length ? r.warnings.join(' · ') : '—')); };
     host.replaceChildren(
-      h('p', { class: 'lede' }, 'The script above wrote the eight inputs and dry-ran them. Each was then computed with ', h('code', {}, 'bigdft -n NAME'), ', the one command a HAPS runs, in the image the pack pins. The HAPS service itself was not in the loop. Every number below is read from those logs.'),
+      h('p', { class: 'lede' }, 'The script above wrote the ' + order.length + ' inputs and dry-ran them. Each then went through the rule of the pack on what a run may receive, with the change that lets wavefunction files through, and was computed with ', h('code', {}, 'bigdft -n NAME'), ', the one command a HAPS runs, in the image the pack pins. The HAPS service itself was not in the loop. Every number below is read from those logs.'),
       h('div', { class: 'seg', role: 'group', 'aria-label': 'Which attempt' }, EX().attempts.map((x, i) => h('button', { type: 'button', 'aria-pressed': String(i === attempt), onclick: () => { attempt = i; render(); } }, x.label))),
       h('p', { class: 'figmeta' }, attempt ? 'One line of the blueprint differs from the first attempt: ' : 'The blueprint leaves the self-consistency criterion at its default. ', attempt ? h('code', {}, a.base[a.base.length - 1]) : null),
       ...findings(a).map(([level, title, text, go]) => h('div', { class: 'notice ' + level }, h('b', {}, title), h('span', {}, text), go ? h('div', { class: 'notice-actions' }, h('button', { class: 'btn small', type: 'button', onclick: () => { attempt = go[1]; render(); } }, go[0])) : null)),
       OND.studyView.figureCard('mine-gap', gapFigure(), 'C · formula over two series', render),
       OND.studyView.figureCard('mine-relax-' + attempt, relaxFigure(a), 'D · relaxation', render),
       h('div', { class: 'tile' }, h('p', { class: 'label' }, 'Runs of this attempt'),
-        h('div', { class: 'scroll-x' }, h('table', {}, h('thead', {}, h('tr', {}, ['Run', 'BigDFT', 'SCF iterations', 'Energy (Ha)', 'Wall time (s)', 'Memory peak (MB)', 'Warnings in the log'].map((c) => h('th', {}, c)))), h('tbody', {}, order.map(row)))),
+        h('div', { class: 'scroll-x' }, h('table', {}, h('thead', {}, h('tr', {}, ['Run', 'Outcome', 'Files sent', 'SCF iterations', 'Energy (Ha)', 'Wall time (s)', 'Memory peak (MB)', 'Warnings in the log'].map((c) => h('th', {}, c)))), h('tbody', {}, order.map(row)))),
         h('p', { class: 'figmeta' }, order.length + ' runs, ' + fx(total, 0) + ' s in all on 4 threads. Image ', h('code', {}, EX().image.slice(0, 37) + '…'), ', BigDFT ' + a.runs.A_h040.version + '. Inputs, logs and script: ', h('code', {}, 'examples/water-study/' + a.id), ' in the repository.')));
   }
 

@@ -1,0 +1,68 @@
+# Where calculations run.
+#
+# A HAPS is a service a server starts: it receives the input files of a run and
+# executes BigDFT on them. This file is the only place where an address is
+# written. The workshop reads it to offer the targets of the Machine block, to
+# state their limits before a run leaves, and to know what each one accepts.
+#
+# No secret is written here. `credentials` names the environment variables that
+# hold them, as haps.toml of the pack does (HAPS_<SECTION>_<KEY>).
+#
+# `estimate` is only used by the mock-up to show a time and a cost before a
+# run. Its values are fictitious.
+
+default: cpu
+
+haps:
+  cpu:
+    label: CPU container
+    detail: HAPS of the PyBigDFT pack
+    # The local stack of the pack (`./serve_local.sh`). Change these three lines
+    # to point at a deployment: nothing else depends on where the services are.
+    ebservice_url: http://127.0.0.1:8100/api/v1
+    ebuffer_url: http://127.0.0.1:8101/api/v1
+    mcp_url: http://127.0.0.1:8790/mcp
+    application: {name: bigdft, mime_type: application/x-bigdft}
+    credentials: {username: HAPS_USER_USERNAME, password: HAPS_USER_PASSWORD}
+    image: bigdft/runtime@sha256:6f16f65f5b33ffe83e53d3c228c21a1e8eb97d0b426f4fad0c805d0bc0540336
+    bigdft: 1.9.1
+    gpu: false
+    limits: {max_timeout_s: 3600, max_parallel: 2, output_reserve_mb: 1024, buffer_lifespan_s: 3600}
+    accepts:
+      # data-NAME/wavefunction-* beside NAME.yaml, to restart from an earlier run.
+      # True with docs/patches/haps-wavefunctions.patch applied to the pack; the
+      # pack as published refuses them, and this must then be false.
+      wavefunctions: true
+    estimate: {credits_per_core_hour: 1, relative_speed: 1}
+
+  gpu:
+    example: true                 # no such service exists yet: placeholder addresses
+    label: GPU node
+    detail: CUDA, accelerated exact exchange
+    ebservice_url: https://haps-gpu.example.org/ebservice/api/v1
+    ebuffer_url: https://haps-gpu.example.org/ebuffer/api/v1
+    mcp_url: https://haps-gpu.example.org/mcp
+    application: {name: bigdft, mime_type: application/x-bigdft}
+    credentials: {username: HAPS_GPU_USERNAME, password: HAPS_GPU_PASSWORD}
+    image: null                   # an image built with CUDA; the CPU image stops at start if asked for a GPU
+    bigdft: 1.9.1
+    gpu: true
+    limits: {max_timeout_s: 14400, max_parallel: 1, output_reserve_mb: 8192, buffer_lifespan_s: 3600}
+    accepts: {wavefunctions: true}
+    estimate: {credits_per_core_hour: 6, relative_speed: 5}
+
+  hpc:
+    example: true                 # a HAPS whose runtime submits to a cluster queue
+    label: HPC partition
+    detail: a HAPS in front of a cluster queue
+    ebservice_url: https://haps-hpc.example.org/ebservice/api/v1
+    ebuffer_url: https://haps-hpc.example.org/ebuffer/api/v1
+    mcp_url: https://haps-hpc.example.org/mcp
+    application: {name: bigdft, mime_type: application/x-bigdft}
+    credentials: {username: HAPS_HPC_USERNAME, password: HAPS_HPC_PASSWORD}
+    image: null
+    bigdft: 1.9.1
+    gpu: false
+    limits: {max_timeout_s: 86400, max_parallel: 8, output_reserve_mb: 65536, buffer_lifespan_s: 3600}
+    accepts: {wavefunctions: true}
+    estimate: {credits_per_core_hour: 0.6, relative_speed: 1}

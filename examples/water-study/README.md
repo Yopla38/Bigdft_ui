@@ -10,34 +10,45 @@ builder to `study.py`, and run with BigDFT 1.9.1 in the image the PyBigDFT pack 
 | B | Triplet state, same grids | `B_h050`, `B_h045`, `B_h040` |
 | C | Triplet energy, E(B) − E(A), in eV | formula |
 | D | SQNM relaxation of the ground state | `D` |
-| E | PBE0 single point at the relaxed geometry of D | `E` |
+| E | PBE0 single point at the relaxed geometry of D, restarted from the wavefunctions of D | `E` |
+| F | The same from scratch, to compare | `F` |
 
 `blocks.json` is the board. Each attempt holds the script the builder wrote, the structure,
-every input (`runs/NAME.yaml`), every log (`runs/log-NAME.yaml`), the relaxed geometry and
-the output of `python study.py analyse`.
+every input (`runs/NAME.yaml`), every log (`runs/log-NAME.yaml`), the relaxed geometry,
+the output of `python study.py analyse`, and `haps.txt`: what was sent for each run and
+what came back. The wavefunction files themselves are not kept (3 MB per attempt).
 
 | | Criterion | Triplet energy at h = 0.50, 0.45, 0.40 bohr |
 |---|---|---|
 | `attempt-1` | default, 10⁻⁴ | 8.874, 8.930, 7.078 eV: the triplet runs stopped on different electronic states |
 | `attempt-2` | 10⁻⁵ | 6.989, 7.077, 7.078 eV |
 
-`attempt-1/refused/` keeps what BigDFT wrote when the first version of block E asked for
-PBE0 without naming a pseudopotential.
+In both attempts E reaches the energy of F to better than 10⁻⁹ Ha in fewer iterations
+(8 for 11, then 11 for 13). Its input archive holds six files, 1.1 MB packed: `E.yaml` and
+the wavefunctions of D.
+
+`attempt-1/refused/` keeps what BigDFT wrote when the first version of the PBE0 block named
+no pseudopotential.
 
 ## How it was run
 
-The script follows the pack: prepare and dry-run in the container, compute with the one
-command a HAPS runs, analyse in the container. `drive.sh` stands in for the HAPS: it runs
-`bigdft -n NAME` on each name `prepare` prints, wave after wave. The HAPS service itself
-was not used.
+The script follows the pack: prepare and dry-run in the container, compute on the HAPS,
+analyse in the container. `drive.py` stands in for the HAPS. For each name `prepare`
+prints, it uses the pack's own modules to select the files of the run, pack them, check the
+archive and unpack it in a fresh directory; runs `bigdft -n NAME` there in the pinned
+image; and copies back what the run created or changed. The service itself (ebservice, the
+buffers) is not exercised.
 
 ```bash
-docker run --rm -v "$PWD/attempt-2:/work" -w /work \
-  bigdft/runtime@sha256:6f16f65f5b33ffe83e53d3c228c21a1e8eb97d0b426f4fad0c805d0bc0540336 \
-  bash /work/drive.sh          # copy drive.sh beside study.py first; remove runs/ to start over
+python examples/water-study/drive.py examples/water-study/attempt-2 \
+    --pack /path/to/Pack_pybigdft_HAPS/haps      # remove runs/ and haps.txt to start over
 ```
 
-With the pack, the same study is `python study.py prepare`, then
+These runs used the pack with `docs/patches/haps-wavefunctions.patch` applied. With the pack
+as published the wavefunctions are not selected: E starts from scratch, and BigDFT says so
+in its log ("Missing wavefunction files, switch to normal input guess").
+
+With the real service, the same study is `python study.py prepare`, then
 `haps_bigdft(names=[...], directory="runs")` on the names it prints, repeated until nothing
 is waiting, then `python study.py analyse`.
 

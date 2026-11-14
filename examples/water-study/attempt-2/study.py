@@ -6,8 +6,9 @@ with PyBigDFT. On the HAPS: compute, `bigdft -n NAME` on each prepared NAME.yaml
     python study.py prepare   # writes runs/NAME.yaml for every run that is ready, and dry-runs it
     #   -> send the names it prints to the HAPS: haps_bigdft(names=[...], directory="runs")
     python study.py analyse   # reads the logs the HAPS sent back
-Repeat `prepare` after each wave: what continues from a relaxation is ready once its log is back.
+Repeat `prepare` after each wave: what continues from an earlier run is ready once that run is back.
 """
+import shutil
 import sys
 from pathlib import Path
 
@@ -51,7 +52,7 @@ def energy(name):
 
 
 def inputs():
-    """One entry per run: its input and, if any, the relaxation its geometry comes from."""
+    """One entry per run: its input and, if any, the earlier run its geometry or its wavefunctions come from."""
     runs = {}
 
     # A: Ground state, varied over grid spacing
@@ -71,14 +72,23 @@ def inputs():
     # D: Relaxation, same structure as A
     inp = blueprint()
     inp.optimize_geometry(method="SQNM", nsteps=300, forcemax=2.0e-4)
+    inp.write_orbitals_on_disk()  # E restarts from them
     runs["D"] = dict(input=inp)
 
-    # E: PBE0 single point, at the relaxed geometry of D
+    # E: PBE0 single point, at the relaxed geometry of D, restarted from its wavefunctions
     inp = blueprint()
     inp.set_xc("PBE0")
     for el in ELEMENTS:  # no pseudopotential is registered for a hybrid functional
         inp["psppar." + el] = {"Pseudopotential XC": 11}  # use the PBE ones
-    runs["E"] = dict(input=inp, geometry="D")
+    inp.read_orbitals_from_disk()
+    runs["E"] = dict(input=inp, geometry="D", wavefunctions="D")
+
+    # F: PBE0, from scratch, at the relaxed geometry of D
+    inp = blueprint()
+    inp.set_xc("PBE0")
+    for el in ELEMENTS:  # no pseudopotential is registered for a hybrid functional
+        inp["psppar." + el] = {"Pseudopotential XC": 11}  # use the PBE ones
+    runs["F"] = dict(input=inp, geometry="D")
     return runs
 
 
@@ -91,6 +101,14 @@ def prepare():
         if r.get("geometry") and not Path(RUNS, f"final_{r['geometry']}.yaml").exists():
             waiting.append(name)  # its relaxation is not back yet
             continue
+        if r.get("wavefunctions"):
+            found = sorted(Path(RUNS, f"data-{r['wavefunctions']}").glob("wavefunction-*"))
+            if not found:
+                waiting.append(name)  # the run it restarts from is not back yet
+                continue
+            Path(RUNS, f"data-{name}").mkdir(exist_ok=True)  # where BigDFT reads them; sent to the HAPS with the input
+            for path in found:
+                shutil.copy2(path, Path(RUNS, f"data-{name}", path.name))
         posinp = relaxed(r["geometry"]) if r.get("geometry") else STRUCTURE
         log = code.run(name=name, input=r["input"], posinp=posinp, run_dir=RUNS)  # writes runs/NAME.yaml, no SCF
         memory = log.log.get("Estimated Memory Peak (MB)")
@@ -100,7 +118,7 @@ def prepare():
         print(f"{name}: dry run passed, memory peak {memory} MB")
         ready.append(name)
     print("ready for the HAPS:", ready)
-    print("waiting for a relaxation:", waiting)
+    print("waiting for an earlier run:", waiting)
     print("refused by the dry run:", refused)
     return 1 if refused else 0
 
