@@ -1,12 +1,15 @@
 """Load the PyBigDFT API graph into this pack's memory. No LLM.
 
+    python fetchers/pybigdft_api.py --add-layer  once: add the layer to the pack's schema
     python fetchers/pybigdft_api.py --list       what the file holds, by class
     python fetchers/pybigdft_api.py --dry-run    show what would be written, touch nothing
     python fetchers/pybigdft_api.py              load data/pybigdft-api.ttl into the memory
     python fetchers/pybigdft_api.py --prune      also drop what is no longer in the file
 
-Copy this file into the pack's fetchers/ and data/pybigdft-api.ttl into its
-data/. The pack's ontology/schema.ttl must contain ontology/api_layer.ttl.
+Copy this file into the pack's fetchers/, data/pybigdft-api.ttl into its data/
+and ontology/api_layer.ttl into its ontology/. Then `--add-layer`, once: the
+graph uses classes and predicates (PythonClass, Pitfall, shownIn, ...) that the
+pack's schema does not have yet, and that option appends them to it.
 
 What it is
 ----------
@@ -69,6 +72,7 @@ CODE = "hasCode"
 #: What the layer must have brought into the pack's schema.
 REQUIRED_CLASSES = ("PythonClass", "Attribute", "Parameter", "Pitfall", "Function", "Module", "CodeSnippet")
 REQUIRED_PREDICATES = (DESCRIPTION, CODE, "definedIn", "methodOf", "shownIn", "hasSignature", "avoids")
+LAYER_MARK = "── PyBigDFT API layer (ontology/api_layer.ttl) ──"
 ARTIFACT_IRI = re.compile(r":(\w+):(sha256_[0-9a-f]+)$")
 
 
@@ -109,6 +113,27 @@ def import_memory_tools():
                      f"{sys.executable}. Tried: {', '.join(map(str, candidates)) or 'nothing found'}.")
 
 
+def add_layer(schema: Path, layer: Path) -> int:
+    """Append the API layer to the pack's schema, once. Keeps a copy of the schema."""
+    if not layer.exists():
+        raise SystemExit(f"{layer} not found. Copy ontology/api_layer.ttl of for_pybigdft_pack into the "
+                         "pack's ontology/, or give its path: --add-layer /path/to/api_layer.ttl")
+    text = schema.read_text(encoding="utf-8")
+    if LAYER_MARK in text:
+        print(f"{schema} already holds the API layer: nothing to do.")
+        return 0
+    backup = schema.with_name(schema.name + ".before_api_layer")
+    if not backup.exists():
+        backup.write_text(text, encoding="utf-8")
+    schema.write_text(text.rstrip("\n") + f"\n\n\n# {LAYER_MARK}\n# Appended by fetchers/pybigdft_api.py --add-layer.\n\n"
+                      + layer.read_text(encoding="utf-8"), encoding="utf-8")
+    from rdflib import Graph
+
+    Graph().parse(str(schema), format="turtle")          # fail here rather than in the agent
+    print(f"API layer added to {schema}\n(the schema as it was: {backup.name})")
+    return 0
+
+
 # --------------------------------------------------------------------------- reading
 
 class Schema:
@@ -122,8 +147,15 @@ class Schema:
         missing = [c for c in REQUIRED_CLASSES if c not in self.classes.values()]
         missing += [p for p in REQUIRED_PREDICATES if p not in self.predicates.values()]
         if missing:
-            raise SystemExit(f"{path} does not declare {', '.join(missing)}.\n"
-                             "Paste ontology/api_layer.ttl (below its @prefix lines) at the end of that file.")
+            raise SystemExit(
+                f"The schema of this pack does not know the vocabulary of the API graph yet.\n"
+                f"  schema  : {path}\n"
+                f"  missing : {', '.join(missing)}\n\n"
+                f"The graph describes PyBigDFT with classes and predicates of its own. They are in\n"
+                f"ontology/api_layer.ttl and have to be added to the schema, once:\n\n"
+                f"    python fetchers/pybigdft_api.py --add-layer\n\n"
+                f"That appends the layer at the end of the schema (a copy of the schema is kept beside it)\n"
+                f"and changes nothing of what is already there. Then run this command again.")
 
     def class_of(self, graph, node) -> str | None:
         from rdflib import RDF
@@ -375,6 +407,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ttl", help=f"the instance file (default: {DEFAULT_TTL.relative_to(PACK)})")
     parser.add_argument("--db", help="the memory database (default: MEMORY_DB of config.yaml)")
     parser.add_argument("--ontology", help="the schema (default: MEMORY_ONTOLOGY of config.yaml)")
+    parser.add_argument("--add-layer", nargs="?", const=str(PACK / "ontology" / "api_layer.ttl"), metavar="LAYER",
+                        help="append ontology/api_layer.ttl to the schema, once, and stop")
     parser.add_argument("--dry-run", action="store_true", help="show a sample of what would be written, touch nothing")
     parser.add_argument("--list", action="store_true", dest="list_only", help="the individuals of the file, by class")
     parser.add_argument("--force", action="store_true", help="rewrite individuals unchanged since the last run")
@@ -390,7 +424,10 @@ def main(argv: list[str] | None = None) -> int:
     env = {} if (args.db and args.ontology) else memory_env()
     os.environ.update(env)
     db = args.db or env["MEMORY_DB"]
-    schema = Schema(Path(args.ontology or env.get("MEMORY_ONTOLOGY") or PACK / "ontology" / "schema.ttl"))
+    schema_path = Path(args.ontology or env.get("MEMORY_ONTOLOGY") or PACK / "ontology" / "schema.ttl")
+    if args.add_layer:
+        return add_layer(schema_path, Path(args.add_layer))
+    schema = Schema(schema_path)
     ttl = Path(args.ttl) if args.ttl else DEFAULT_TTL
     if not ttl.exists():
         raise SystemExit(f"instance file not found: {ttl}")

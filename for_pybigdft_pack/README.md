@@ -41,19 +41,26 @@ build/<version>/*.json     what was read from the image, kept to compare version
 
 ## Put it in the pack
 
-Three files to copy, one schema to extend, one command.
+Three files to copy, then three commands.
 
 ```bash
 PACK=/path/to/Pack_pybigdft_HAPS
 mkdir -p $PACK/data
 cp data/pybigdft-api.ttl      $PACK/data/
 cp fetchers/pybigdft_api.py   $PACK/fetchers/
-# paste ontology/api_layer.ttl, without its @prefix lines, at the end of $PACK/ontology/schema.ttl
+cp ontology/api_layer.ttl     $PACK/ontology/
 
 cd $PACK
+python fetchers/pybigdft_api.py --add-layer   # once: adds the layer to ontology/schema.ttl
 python fetchers/pybigdft_api.py --dry-run     # shows a sample, writes nothing
 python fetchers/pybigdft_api.py               # writes into the MEMORY_DB of config.yaml
 ```
+
+`--add-layer` is needed because the graph uses classes and predicates the pack's
+schema does not have (PythonClass, Parameter, Pitfall, shownIn, hasSignature…).
+It appends `ontology/api_layer.ttl` at the end of `ontology/schema.ttl`, keeps
+the schema as it was in `schema.ttl.before_api_layer`, and touches nothing that
+is already there. Without it the loader stops and says so.
 
 Use the Python the pack runs under (the one with `aom_ingest`). The loader calls
 no model: only the local sentence-transformer that embeds labels and summaries,

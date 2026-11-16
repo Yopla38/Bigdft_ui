@@ -1,8 +1,9 @@
 # =============================================================
 #  api_layer.ttl — the classes and predicates of the PyBigDFT API graph.
 #
-#  Paste everything below the @prefix lines at the end of the pack's
-#  ontology/schema.ttl. It uses the pack's own namespace and reuses its
+#  To be appended to the pack's ontology/schema.ttl, which
+#  `python fetchers/pybigdft_api.py --add-layer` does. Repeating the
+#  @prefix lines there is valid Turtle. It uses the pack's own namespace and reuses its
 #  classes Library, Module, Function, CodeSnippet and Workflow, and its
 #  predicates belongsTo and demonstrates; nothing existing is redefined.
 #
