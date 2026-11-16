@@ -313,14 +313,19 @@ window.OND = window.OND || {};
       if (v.gnrm !== 1e-4) c('inp.set_scf_convergence(gnrm=' + v.gnrm.toExponential() + ')');
       if (v.dispersion) c('inp.set_dispersion_correction()');
       if (v.efield) c('inp.apply_electric_field([0, ' + v.efield + ', 0])');
-      if (sys.bc !== 'free' && v.kpt > 1) c('inp.set_kpt_mesh("mpgrid", ngkpt=' + JSON.stringify(sys.bc === 'surface' ? [v.kpt, 1, v.kpt] : [v.kpt, v.kpt, v.kpt]).replace(/,/g, ', ') + ')');
+      if (sys.bc !== 'free' && v.kpt > 1) c('inp["kpt"] = {"method": "mpgrid", "ngkpt": ' + JSON.stringify(sys.bc === 'surface' ? [v.kpt, 1, v.kpt] : [v.kpt, v.kpt, v.kpt]).replace(/,/g, ', ') + '}  # PyBigDFT 0.9 has no action for the k-points');
       if (v.tel && v.scf !== 'mixing') c('inp.set_electronic_temperature(kT=' + v.tel + ')');
-      if (v.solvent !== 'none') c('inp.set_implicit_solvent(solvent="' + v.solvent + '")');
+      if (v.solvent !== 'none') {
+        // PyBigDFT 0.9: the action takes no solvent name; it switches the cavity on, the parameters are keys.
+        const P = { water: [1.18, 0.625, 72.0, -60.5], ethanol: [1.26, 0.625, 22.1, -26.1], mesitylene: [1.22, 0.5, 28.8, -40.8] }[v.solvent];
+        c('inp.set_implicit_solvent()');
+        c('inp["psolver"]["environment"].update(' + (v.solvent !== 'water' ? 'epsilon=' + { ethanol: 24.852, mesitylene: 2.265 }[v.solvent] + ', ' : '') + 'fact_rigid=' + P[0] + ', delta=' + P[1] + ', gammaS=' + P[2] + ', alphaS=' + P[3] + ', betaV=0.0)  # ' + v.solvent);
+      }
       if (v.action === 'geopt') c('inp.optimize_geometry(method="' + v.geoptMethod + '", nsteps=' + v.geoptSteps + (v.forcemax ? ', forcemax=' + v.forcemax : '') + ')');
       if (v.action === 'geopt' && v.biomode) c('inp["geopt"]["biomode"] = True');
       if (v.action === 'neb') c('inp.optimize_geometry(method="NEB")');
       if (v.action === 'md') c('inp["md"] = {"mdsteps": ' + v.mdSteps + ', "temperature": ' + v.mdT + ', "timestep": ' + v.mdDt + (v.thermostat !== 'none' ? ', "thermostat": "' + v.thermostat + '"' : '') + '}');
-      if (v.action === 'tddft') { c('inp.extract_virtual_states(nvirt=' + v.nvirt + ')'); c('inp.calculate_coupling_matrix(tda=' + (v.tddft === 'TDA' ? 'True' : 'False') + ')'); }
+      if (v.action === 'tddft') { c('inp.extract_virtual_states(nvirt=' + v.nvirt + ')'); c('inp.calculate_tddft_coupling_matrix(tda=' + (v.tddft === 'TDA' ? 'True' : 'False') + ')'); }
       if (v.density) c('inp.write_density_on_disk()');
       if (v.nplot) c('inp.write_cubefiles_around_fermi_level(nplot=' + v.nplot + ')');
       if (v.dipole) c('inp.calculate_dipole()');

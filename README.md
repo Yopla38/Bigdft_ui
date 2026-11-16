@@ -20,6 +20,7 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `prototype/js/results.js` | Real results, extracted from the logs of a BigDFT campaign published in `BigDFT-group/capsule-maker` (MIT) |
 | `config/haps.yaml` | Where calculations run: addresses, limits and capabilities of each HAPS. The only place an address is written |
 | `docs/patches/` | Changes proposed for repositories this work may read but not write, tested on a copy |
+| `for_pybigdft_pack/` | For the PyBigDFT pack's agent: the installed API as an instantiated graph, 41 snippets executed in the pack's image, 24 pitfalls, the loader, and one command to rebuild it for a new version. See its README |
 | `examples/water-study/` | A study built with the mock-up's builder and run with BigDFT 1.9.1: board, generated script, inputs, logs, two attempts |
 | `prototype/` | Immersive mock-up (single page, three.js, no build step) |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |

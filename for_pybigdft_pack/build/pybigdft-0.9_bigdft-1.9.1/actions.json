@@ -1,0 +1,1067 @@
+[
+ {
+  "doc": "Include a cdft constraint into the SCF cycle.\n\nUseful for Linear scaling formalism.\n\nArgs:\n    constraint (BigDFT.CDFT.CDFTConstraint): the instantiated constraint\n    homo_per_fragment (dict):\n        integer representing the orbital id of the homo of any of the\n        fragments included in the constraint.",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "add_cdft_constraint",
+  "parameters": [
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "constraint",
+    "required": false
+   },
+   {
+    "default": "{}",
+    "kind": "positional_or_keyword",
+    "name": "homo_per_fragment",
+    "required": false
+   }
+  ],
+  "signature": "(constraint=None, homo_per_fragment={})",
+  "summary": "Include a cdft constraint into the SCF cycle.",
+  "writes": null
+ },
+ {
+  "call": "inp.add_empty_scf_orbitals(norbs=10)",
+  "doc": "Insert ``norbs`` empty orbitals in the scf procedure\n\nArgs:\n   norbs (int): Number of empty orbitals\n\nWarning:\n   In linear scaling case, this is only meaningful for the direct\n   minimization approach.",
+  "error": null,
+  "is_method": true,
+  "name": "add_empty_scf_orbitals",
+  "parameters": [
+   {
+    "default": "10",
+    "kind": "positional_or_keyword",
+    "name": "norbs",
+    "required": false
+   }
+  ],
+  "signature": "(norbs=10)",
+  "summary": "Insert ``norbs`` empty orbitals in the scf procedure",
+  "writes": {
+   "lin_general.extra_states": 10,
+   "mix.norbsempty": 10
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.apply_electric_field(elecfield=[0, 0, 0.001])",
+  "doc": "Apply an external electric field on the system\n\nArgs:\n   electric (list, float): Values of the Electric Field in the three\n     directions. Might also be a scalar.",
+  "error": null,
+  "is_method": true,
+  "name": "apply_electric_field",
+  "parameters": [
+   {
+    "default": "[0, 0, 0.001]",
+    "kind": "positional_or_keyword",
+    "name": "elecfield",
+    "required": false
+   }
+  ],
+  "signature": "(elecfield=[0, 0, 0.001])",
+  "summary": "Apply an external electric field on the system",
+  "writes": {
+   "dft.elecfield": [
+    0,
+    0,
+    0.001
+   ]
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.calculate_dipole()",
+  "doc": "Extract the dipole moment from the total charge density.\n\nNote:\n  This function is useful for the linear scaling setup as the cubic\n  scaling approach always calculates the charge density multipoles.",
+  "error": null,
+  "is_method": true,
+  "name": "calculate_dipole",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Extract the dipole moment from the total charge density.",
+  "writes": {
+   "lin_general.calc_dipole": true
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.calculate_multipoles(yes=True)",
+  "doc": "Calculate the multipoles on the atoms based on SF.\n\nArgs:\n    yes (bool): switch off the calculation if False.",
+  "error": null,
+  "is_method": true,
+  "name": "calculate_multipoles",
+  "parameters": [
+   {
+    "default": "True",
+    "kind": "positional_or_keyword",
+    "name": "yes",
+    "required": false
+   }
+  ],
+  "signature": "(yes=True)",
+  "summary": "Calculate the multipoles on the atoms based on SF.",
+  "writes": {
+   "lin_general.charge_multipoles": 11
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.calculate_pdos()",
+  "doc": "Calculate the Partial Density of states.\n\nCalculate the data needed for Projected DoS on the set of\nLCAO input wavefunction in\nthe case of the Cubic-Scaling algorithm and onto the Support Functions\nin the case of the linear scaling.",
+  "error": null,
+  "is_method": true,
+  "name": "calculate_pdos",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Calculate the Partial Density of states.",
+  "writes": {
+   "dft.inputpsiid": 10
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.calculate_tddft_coupling_matrix(tda=False, rpa=True, fxc=True)",
+  "doc": "Perform a Casida TDDFT coupling matrix extraction.\n\nArgs:\n   tda (bool): when ``True``, Tamm-Dancoff approximation is used for the\n     extraction of the coupling matrix\n   rpa (bool): when ``False``, the calculation of the RPA term (the linear\n     response of the hartree potential) is switched off\n   fxc (bool): when ``False``, the calculation of the fxc term (the linear\n     response of the XC operator) is switched off.\n\nNote:\n   The arguments ``fxc`` and ``rpa`` should not be simultaneously\n   ``False``.\n\nWarning:\n   Presently the LR-TDDFT casida fxc is only available for LDA\n   functionals in ABINIT flavour.",
+  "error": null,
+  "is_method": true,
+  "name": "calculate_tddft_coupling_matrix",
+  "parameters": [
+   {
+    "default": "False",
+    "kind": "positional_or_keyword",
+    "name": "tda",
+    "required": false
+   },
+   {
+    "default": "True",
+    "kind": "positional_or_keyword",
+    "name": "rpa",
+    "required": false
+   },
+   {
+    "default": "True",
+    "kind": "positional_or_keyword",
+    "name": "fxc",
+    "required": false
+   }
+  ],
+  "signature": "(tda=False, rpa=True, fxc=True)",
+  "summary": "Perform a Casida TDDFT coupling matrix extraction.",
+  "writes": {
+   "output.coupling_matrix": "complete",
+   "tddft.tddft_approach": "full"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.change_data_directory(name='')",
+  "doc": "Modify the name of the ``data-`` directory.\nUseful to grab the orbitals from another directory than the run name\n\nArgs:\n   name (str): the name of the run",
+  "error": null,
+  "is_method": true,
+  "name": "change_data_directory",
+  "parameters": [
+   {
+    "default": "''",
+    "kind": "positional_or_keyword",
+    "name": "name",
+    "required": false
+   }
+  ],
+  "signature": "(name='')",
+  "summary": "Modify the name of the ``data-`` directory. Useful to grab the orbitals from another directory than the run name",
+  "writes": {
+   "radical": ""
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.charge(charge=-1)",
+  "doc": "Charge the system\n\nArguments:\n    charge (int,float): value of the charge in units of *e* (the electron\n      has charge -1). Also accept floating point numbers.",
+  "error": null,
+  "is_method": true,
+  "name": "charge",
+  "parameters": [
+   {
+    "default": "-1",
+    "kind": "positional_or_keyword",
+    "name": "charge",
+    "required": false
+   }
+  ],
+  "signature": "(charge=-1)",
+  "summary": "Charge the system",
+  "writes": {
+   "dft.qcharge": -1
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.charge_and_polarize()",
+  "doc": "Charge the system by removing one electron. Assume that the original\n  system is closed shell, thus polarize.",
+  "error": null,
+  "is_method": true,
+  "name": "charge_and_polarize",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Charge the system by removing one electron. Assume that the original system is closed shell, thus polarize.",
+  "writes": {
+   "dft.mpol": 1,
+   "dft.nspin": 2,
+   "dft.qcharge": 1
+  },
+  "writes_posinp": false
+ },
+ {
+  "doc": "Associate the data of the run of a given logfile to the input\nby retrieving the data directory name of the logfile.\n\nArgs:\n   log (Logfile): instance of a Logfile class",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "connect_run_data",
+  "parameters": [
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "log",
+    "required": false
+   }
+  ],
+  "signature": "(log=None)",
+  "summary": "Associate the data of the run of a given logfile to the input by retrieving the data directory name of the logfile.",
+  "writes": null
+ },
+ {
+  "call": "inp.extract_virtual_states(nvirt=8, davidson=False, norbv=None, itermax_virt=150)",
+  "doc": "Extract a given number of empty states **after** the scf cycle.\n\nArgs:\n   davidson (bool): If set to ``True`` activates davidson calculation,\n       otherwise Trace Minimization of the Hamiltonian is employed.\n   norbv (int): Defines the total size of the virtual subspace,\n       which may be larger than nvirt.",
+  "error": null,
+  "is_method": true,
+  "name": "extract_virtual_states",
+  "parameters": [
+   {
+    "default": "8",
+    "kind": "positional_or_keyword",
+    "name": "nvirt",
+    "required": false
+   },
+   {
+    "default": "False",
+    "kind": "positional_or_keyword",
+    "name": "davidson",
+    "required": false
+   },
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "norbv",
+    "required": false
+   },
+   {
+    "default": "150",
+    "kind": "positional_or_keyword",
+    "name": "itermax_virt",
+    "required": false
+   }
+  ],
+  "signature": "(nvirt=8, davidson=False, norbv=None, itermax_virt=150)",
+  "summary": "Extract a given number of empty states **after** the scf cycle.",
+  "writes": {
+   "dft.itermax_virt": 150,
+   "dft.norbv": -8,
+   "dft.nvirt": 8
+  },
+  "writes_posinp": false
+ },
+ {
+  "doc": "Load a profile or list of profiles.\n\nArgs:\n   profile (str): profile to be loaded, if a single profile is employed.\n   profiles (list): profiles list to be loaded in subsequent order.",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "load",
+  "parameters": [
+   {
+    "default": "''",
+    "kind": "positional_or_keyword",
+    "name": "profile",
+    "required": false
+   },
+   {
+    "default": "[]",
+    "kind": "positional_or_keyword",
+    "name": "profiles",
+    "required": false
+   }
+  ],
+  "signature": "(profile='', profiles=[])",
+  "summary": "Load a profile or list of profiles.",
+  "writes": null
+ },
+ {
+  "call": "inp.optimize_coefficients(nit=1, gnrm=1e-05)",
+  "doc": "Methods for scf of the kernel coefficients.\n\nArgs:\n    nit (int): number of scf iterations\n    gnrm (float): convergence criterion on the residue",
+  "error": null,
+  "is_method": true,
+  "name": "optimize_coefficients",
+  "parameters": [
+   {
+    "default": "1",
+    "kind": "positional_or_keyword",
+    "name": "nit",
+    "required": false
+   },
+   {
+    "default": "1e-05",
+    "kind": "positional_or_keyword",
+    "name": "gnrm",
+    "required": false
+   }
+  ],
+  "signature": "(nit=1, gnrm=1e-05)",
+  "summary": "Methods for scf of the kernel coefficients.",
+  "writes": {
+   "lin_kernel.gnrm_cv_coeff": 1e-05,
+   "lin_kernel.nstep": 1
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.optimize_geometry(method='FIRE', nsteps=50, betax=4.0, frac_fluct=1.0, forcemax=0)",
+  "doc": "Optimize the geometry of the system\n\nArgs:\n   nsteps (int): maximum number of atomic steps.\n   method (str): Geometry optimizer. Available keys:\n\n      * SDCG:   A combination of Steepest Descent and Conjugate Gradient\n\n      * VSSD:   Variable Stepsize Steepest Descent method\n\n      * LBFGS:  Limited-memory BFGS\n\n      * BFGS:   Broyden-Fletcher-Goldfarb-Shanno\n\n      * PBFGS:  Same as BFGS with an initial Hessian from a force field\n\n      * DIIS:   Direct inversion of iterative subspace\n\n      * FIRE:   Fast Inertial Relaxation Engine, described by Bitzek et al.\n\n      * SQNM:   Stabilized quasi-Newton minimzer\n   betax (float): the step size for the optimization method.\n      This stepsize is system dependent and it has therefore to be\n      determined for each system.\n   frac_fluct (float): Fraction of force fluctuations. Stop if\n      fmax < forces_fluct*frac_fluct.\n   forcemax (float): Max forces criterion when stop.",
+  "error": null,
+  "is_method": true,
+  "name": "optimize_geometry",
+  "parameters": [
+   {
+    "default": "'FIRE'",
+    "kind": "positional_or_keyword",
+    "name": "method",
+    "required": false
+   },
+   {
+    "default": "50",
+    "kind": "positional_or_keyword",
+    "name": "nsteps",
+    "required": false
+   },
+   {
+    "default": "4.0",
+    "kind": "positional_or_keyword",
+    "name": "betax",
+    "required": false
+   },
+   {
+    "default": "1.0",
+    "kind": "positional_or_keyword",
+    "name": "frac_fluct",
+    "required": false
+   },
+   {
+    "default": "0",
+    "kind": "positional_or_keyword",
+    "name": "forcemax",
+    "required": false
+   }
+  ],
+  "signature": "(method='FIRE', nsteps=50, betax=4.0, frac_fluct=1.0, forcemax=0)",
+  "summary": "Optimize the geometry of the system",
+  "writes": {
+   "geopt.betax": 4.0,
+   "geopt.forcemax": 0,
+   "geopt.frac_fluct": 1.0,
+   "geopt.method": "FIRE",
+   "geopt.ncount_cluster_x": 50
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.optimize_kernel(method='DIAG', dynamic_convergence=True, nit=5, rpnrm=1e-10, alphamix=0.5)",
+  "doc": "Methods for scf of the density kernel.\n\nStrategies for the optimization of the kernel.\n\nArgs:\n    dynamic_convergence (bool): if False, the threshold for the\n         convergence of the kernel are not dynamically adjusted\n    nit (int): number of scf iterations\n    rpnrm (float): convergence criterion, change in density/potential\n    method (str): optimization method ('DIRMIN', 'DIAG', 'NTPOLY', 'FOE')\n    alphamix (float): mixing parameter",
+  "error": null,
+  "is_method": true,
+  "name": "optimize_kernel",
+  "parameters": [
+   {
+    "default": "'DIAG'",
+    "kind": "positional_or_keyword",
+    "name": "method",
+    "required": false
+   },
+   {
+    "default": "True",
+    "kind": "positional_or_keyword",
+    "name": "dynamic_convergence",
+    "required": false
+   },
+   {
+    "default": "5",
+    "kind": "positional_or_keyword",
+    "name": "nit",
+    "required": false
+   },
+   {
+    "default": "1e-10",
+    "kind": "positional_or_keyword",
+    "name": "rpnrm",
+    "required": false
+   },
+   {
+    "default": "0.5",
+    "kind": "positional_or_keyword",
+    "name": "alphamix",
+    "required": false
+   }
+  ],
+  "signature": "(method='DIAG', dynamic_convergence=True, nit=5, rpnrm=1e-10, alphamix=0.5)",
+  "summary": "Methods for scf of the density kernel.",
+  "writes": {
+   "lin_kernel.alphamix": 0.5,
+   "lin_kernel.linear_method": "DIAG",
+   "lin_kernel.nit": 5,
+   "lin_kernel.rpnrm_cv": 1e-10
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.optimize_support_functions(nit=1, gnrm=1e-06, diis_history=0)",
+  "doc": "Methods for scf of the Support functions.\n\nArgs:\n    nit (int): number of scf iterations\n    gnrm (float): convergence criterion on the residue",
+  "error": null,
+  "is_method": true,
+  "name": "optimize_support_functions",
+  "parameters": [
+   {
+    "default": "1",
+    "kind": "positional_or_keyword",
+    "name": "nit",
+    "required": false
+   },
+   {
+    "default": "1e-06",
+    "kind": "positional_or_keyword",
+    "name": "gnrm",
+    "required": false
+   },
+   {
+    "default": "0",
+    "kind": "positional_or_keyword",
+    "name": "diis_history",
+    "required": false
+   }
+  ],
+  "signature": "(nit=1, gnrm=1e-06, diis_history=0)",
+  "summary": "Methods for scf of the Support functions.",
+  "writes": {
+   "lin_basis.gnrm_cv": 1e-06,
+   "lin_basis.idsx": 0,
+   "lin_basis.nit": 1
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.read_orbitals_from_disk(mode='cubic')",
+  "doc": "Read the orbitals from data directory, if available.\n\nArgs:\n    mode (str): can be 'cubic' or 'linear'. In the first case,\n        orbitals are read as KS objects, whereas in the\n        second kernel (or coeffs) and support functions are\n        expressed.",
+  "error": null,
+  "is_method": true,
+  "name": "read_orbitals_from_disk",
+  "parameters": [
+   {
+    "default": "'cubic'",
+    "kind": "positional_or_keyword",
+    "name": "mode",
+    "required": false
+   }
+  ],
+  "signature": "(mode='cubic')",
+  "summary": "Read the orbitals from data directory, if available.",
+  "writes": {
+   "dft.inputpsiid": 2
+  },
+  "writes_posinp": false
+ },
+ {
+  "doc": "Remove action from the input dictionary.\n\nRemove an action from the input file, thereby restoring the **default**\nvalue, as if the action were not specified.\n\nArgs:\n   inp (dict): dictionary to remove the action from.\n   action (func): one of the actions of this module. It does not need to be\n   specified before, in which case it produces no effect.\n\nExample:\n   >>> from Calculators import SystemCalculator as C\n   >>> code=C()\n   >>> inp={}\n   >>> set_xc(inp,'PBE')\n   >>> write_orbitals_on_disk(inp)\n   >>> log=code.run(input=inp) # perform calculations\n   >>> remove(inp, write_orbitals_on_disk) #remove the action\n   >>> read_orbitals_from_disk(inp)\n   >>> # this will restart the scf from the previous orbitals\n   >>> log2=code.run(input=inp)",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "remove",
+  "parameters": [
+   {
+    "default": null,
+    "kind": "positional_or_keyword",
+    "name": "action",
+    "required": true
+   }
+  ],
+  "signature": "(action)",
+  "summary": "Remove action from the input dictionary.",
+  "writes": null
+ },
+ {
+  "call": "inp.set_atomic_positions(posinp=None)",
+  "doc": "Insert the atomic positions as a part of the input dictionary",
+  "error": null,
+  "is_method": true,
+  "name": "set_atomic_positions",
+  "parameters": [
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "posinp",
+    "required": false
+   }
+  ],
+  "signature": "(posinp=None)",
+  "summary": "Insert the atomic positions as a part of the input dictionary",
+  "writes": {},
+  "writes_posinp": true
+ },
+ {
+  "call": "inp.set_dispersion_correction()",
+  "doc": "Add Grimme's D3 correction to the energy and the forces\n\nWarning:\n    Only works with Free Boundary conditions",
+  "error": null,
+  "is_method": true,
+  "name": "set_dispersion_correction",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Add Grimme's D3 correction to the energy and the forces",
+  "writes": {
+   "dft.dispersion": 5
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_electronic_temperature(kT=0.001, T=0)",
+  "doc": "Define the electronic temperature, in AU (``kT``) or K (``T``)",
+  "error": null,
+  "is_method": true,
+  "name": "set_electronic_temperature",
+  "parameters": [
+   {
+    "default": "0.001",
+    "kind": "positional_or_keyword",
+    "name": "kT",
+    "required": false
+   },
+   {
+    "default": "0",
+    "kind": "positional_or_keyword",
+    "name": "T",
+    "required": false
+   }
+  ],
+  "signature": "(kT=0.001, T=0)",
+  "summary": "Define the electronic temperature, in AU (``kT``) or K (``T``)",
+  "writes": {
+   "mix.tel": 0.001
+  },
+  "writes_posinp": false
+ },
+ {
+  "doc": "Set the external potential to which the system is submitted outside the QM\nregion\n\nArgs:\n   mm_pot (dict): dictionary of the external potential which contains the\n      information on the counter-ions",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "set_external_potential",
+  "parameters": [
+   {
+    "default": null,
+    "kind": "positional_or_keyword",
+    "name": "mm_pot",
+    "required": true
+   }
+  ],
+  "signature": "(mm_pot)",
+  "summary": "Set the external potential to which the system is submitted outside the QM region",
+  "writes": null
+ },
+ {
+  "call": "inp.set_hgrid(hgrids=0.4)",
+  "doc": "Set the wavelet grid spacing.\n\nArgs:\n   hgrid (float,list): list of the grid spacings in the three directions.\n   It might also be a scalar, which implies the same spacing",
+  "error": null,
+  "is_method": true,
+  "name": "set_hgrid",
+  "parameters": [
+   {
+    "default": "0.4",
+    "kind": "positional_or_keyword",
+    "name": "hgrids",
+    "required": false
+   }
+  ],
+  "signature": "(hgrids=0.4)",
+  "summary": "Set the wavelet grid spacing.",
+  "writes": {
+   "dft.hgrids": 0.4
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_implicit_solvent(itermax=20, minres=0.0001)",
+  "doc": "Add an acqueous implicit solvent around the system with the\n    soft-sphere cavity method\n\nArgs:\n   itermax(int): maximum number of iteration of the\n       Generalized Poisson Solver\n   minres(float): minimum residue of the CG method to achieve\n       GPS convergence",
+  "error": null,
+  "is_method": true,
+  "name": "set_implicit_solvent",
+  "parameters": [
+   {
+    "default": "20",
+    "kind": "positional_or_keyword",
+    "name": "itermax",
+    "required": false
+   },
+   {
+    "default": "0.0001",
+    "kind": "positional_or_keyword",
+    "name": "minres",
+    "required": false
+   }
+  ],
+  "signature": "(itermax=20, minres=0.0001)",
+  "summary": "Add an acqueous implicit solvent around the system with the soft-sphere cavity method",
+  "writes": {
+   "psolver.environment.cavity": "soft-sphere",
+   "psolver.environment.itermax": 20,
+   "psolver.environment.minres": 0.0001
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_kernel_guess(mode='kernel')",
+  "doc": "Method for guessing the kernel at restart.\n\nArgs:\n    mode (str): Guessing method. Can be:\n       * kernel\n       * coefficients\n       * random\n       * diag\n       * weight\n       * ao\n       * full_kernel\n       * full_coefficients",
+  "error": null,
+  "is_method": true,
+  "name": "set_kernel_guess",
+  "parameters": [
+   {
+    "default": "'kernel'",
+    "kind": "positional_or_keyword",
+    "name": "mode",
+    "required": false
+   }
+  ],
+  "signature": "(mode='kernel')",
+  "summary": "Method for guessing the kernel at restart.",
+  "writes": {
+   "lin_general.kernel_restart_mode": "kernel"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_linear_scaling()",
+  "doc": "Activates the linear scaling mode",
+  "error": null,
+  "is_method": true,
+  "name": "set_linear_scaling",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Activates the linear scaling mode",
+  "writes": {
+   "dft.inputpsiid": "linear"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_mesh_sizes(ngrids=64)",
+  "doc": "Constrain the number of grid points in each direction.\nThis is useful when performing periodic system calculations with variable\ncells which need to be compared each other. In this way the number of\ndegrees of freedom is kept constant throughout the various simuilations.\n\nArgs:\n   ngrids (int,list): list of the number of mesh points in each direction.\n     Might be a scalar.",
+  "error": null,
+  "is_method": true,
+  "name": "set_mesh_sizes",
+  "parameters": [
+   {
+    "default": "64",
+    "kind": "positional_or_keyword",
+    "name": "ngrids",
+    "required": false
+   }
+  ],
+  "signature": "(ngrids=64)",
+  "summary": "Constrain the number of grid points in each direction. This is useful when performing periodic system calculations with variable cells which need to be compared each other. In this way the number of degrees of freedom is kept constant throughout the various simuilations.",
+  "writes": {
+   "dft.ngrids": 64
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_orbital_occupancy(avg={}, up={}, down={}, kpoint=1)",
+  "doc": "Control the occupation number of the KS orbitals.\n\nWith this funtionality one can fix the value of the occupation numbers of\nthe KS orbitals.\n\nArgs:\n   avg (dict): dictionary of the form {i: f} where i is an integer stating\n       the non-default value of the occupation number, for spin averaged\n       occupancy\n   up (dict): same as `avg` but for the up spin channel\n   down (dict): same as `avg` but for the down spin channel\n   kpoint (int): label of the kpoint associated to the occupancy",
+  "error": null,
+  "is_method": true,
+  "name": "set_orbital_occupancy",
+  "parameters": [
+   {
+    "default": "{}",
+    "kind": "positional_or_keyword",
+    "name": "avg",
+    "required": false
+   },
+   {
+    "default": "{}",
+    "kind": "positional_or_keyword",
+    "name": "up",
+    "required": false
+   },
+   {
+    "default": "{}",
+    "kind": "positional_or_keyword",
+    "name": "down",
+    "required": false
+   },
+   {
+    "default": "1",
+    "kind": "positional_or_keyword",
+    "name": "kpoint",
+    "required": false
+   }
+  ],
+  "signature": "(avg={}, up={}, down={}, kpoint=1)",
+  "summary": "Control the occupation number of the KS orbitals.",
+  "writes": {
+   "occupation": "{'K point 1': {}}"
+  },
+  "writes_posinp": false
+ },
+ {
+  "doc": "Employs all the \"psppar.*\" files of the given directory as pseudopotentials\n\nArgs:\n   directory (str): path of the psppar directory",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "set_psp_directory",
+  "parameters": [
+   {
+    "default": "'.'",
+    "kind": "positional_or_keyword",
+    "name": "directory",
+    "required": false
+   }
+  ],
+  "signature": "(directory='.')",
+  "summary": "Employs all the \"psppar.*\" files of the given directory as pseudopotentials",
+  "writes": null
+ },
+ {
+  "doc": "Employ the given PSP file for the provided element\n\nArgs:\n   filename (str): the path of the psp file\n   element(str): the element symbol for the PSP.\n       Employs the psp name if absent",
+  "error": "not called: it is not a setting of a calculation",
+  "is_method": true,
+  "name": "set_psp_file",
+  "parameters": [
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "filename",
+    "required": false
+   },
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "element",
+    "required": false
+   }
+  ],
+  "signature": "(filename=None, element=None)",
+  "summary": "Employ the given PSP file for the provided element",
+  "writes": null
+ },
+ {
+  "call": "inp.set_random_inputguess()",
+  "doc": "Input orbitals are initialized as random coefficients",
+  "error": null,
+  "is_method": true,
+  "name": "set_random_inputguess",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Input orbitals are initialized as random coefficients",
+  "writes": {
+   "dft.inputpsiid": -2
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_rmult(rmult=None, coarse=5.0, fine=8.0)",
+  "doc": "Set the wavelet grid extension by modifying the multiplicative radii.\n\nArgs:\n   rmult (float,list): list of two values that have to be used for the\n     coarse and the fine resolution grid. It may also be a scalar.\n   coarse (float): if the argument ``rmult`` is not provided it sets the\n     coarse radius multiplier\n   fine (float): if the argument ``rmult`` is not provided it sets the fine\n     radius multiplier",
+  "error": null,
+  "is_method": true,
+  "name": "set_rmult",
+  "parameters": [
+   {
+    "default": "None",
+    "kind": "positional_or_keyword",
+    "name": "rmult",
+    "required": false
+   },
+   {
+    "default": "5.0",
+    "kind": "positional_or_keyword",
+    "name": "coarse",
+    "required": false
+   },
+   {
+    "default": "8.0",
+    "kind": "positional_or_keyword",
+    "name": "fine",
+    "required": false
+   }
+  ],
+  "signature": "(rmult=None, coarse=5.0, fine=8.0)",
+  "summary": "Set the wavelet grid extension by modifying the multiplicative radii.",
+  "writes": {
+   "dft.rmult": [
+    5.0,
+    8.0
+   ]
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_scf_convergence(gnrm='default', rpnrm='default')",
+  "doc": "Set the tolerance acceptance level for stopping the self-consistent\niterations. Useful both for LS and CS\n\nArgs:\n   gnrm (float): the tolerance level for the CS inner loop\n   rpnrm (float): residue for the density/or potential norm. Useful both\n       for CS and LS",
+  "error": null,
+  "is_method": true,
+  "name": "set_scf_convergence",
+  "parameters": [
+   {
+    "default": "'default'",
+    "kind": "positional_or_keyword",
+    "name": "gnrm",
+    "required": false
+   },
+   {
+    "default": "'default'",
+    "kind": "positional_or_keyword",
+    "name": "rpnrm",
+    "required": false
+   }
+  ],
+  "signature": "(gnrm='default', rpnrm='default')",
+  "summary": "Set the tolerance acceptance level for stopping the self-consistent iterations. Useful both for LS and CS",
+  "writes": {
+   "dft.gnrm_cv": "default",
+   "lin_general.rpnrm_cv": "default",
+   "mix.rpnrm_cv": "default"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_scf_iterations(nit=[50, 1])",
+  "doc": "Set the number of the iteration per loop\n\nArgs:\n   nit (int,list): integer of the number of iterations. Might be a scalar\n        or a list, up to length two. The first element of the list contains\n        the number of iterations of the direct minimization loop. if\n        ``nit`` is a scalar, only this contribution is taken into account.\n        The second element is the number of subspace iterations where the\n        hamiltonian is diagonalized in the subspace. For a LS calculation,\n        the number of iteration correspond to the levels of the outer loop.",
+  "error": null,
+  "is_method": true,
+  "name": "set_scf_iterations",
+  "parameters": [
+   {
+    "default": "[50, 1]",
+    "kind": "positional_or_keyword",
+    "name": "nit",
+    "required": false
+   }
+  ],
+  "signature": "(nit=[50, 1])",
+  "summary": "Set the number of the iteration per loop",
+  "writes": {
+   "dft.itermax": 50,
+   "dft.nrepmax": 1,
+   "lin_general.nit": [
+    50,
+    1
+   ]
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_scf_method(method='dirmin', mixing_on='density', mixing_scheme='Pulay')",
+  "doc": "Set the algorithm for scf.\n\nArgs:\n   method (str): The algoritm chosen. Might be different for the cubic (CS)\n     or linear scaling (LS) algorithm.\n     * dirmin: Direct minimization approach (only CS)\n     * mixing: Mixing scheme (only CS)\n     * hybrid: outer loop of the LS mode\n     * two_levels: two level of accuracy in the scf\n\n   mixing_on (str): May be ``\"density\"`` or ``\"potential\"`` in the\n     ``\"mixing\"`` case, decide to which quantity the mixing to be performed\n\n   mixing_scheme (str): May be:\n\n      * Pulay : DIIS mixing on the last 7 iterations\n\n      * Simple: Simple mixing\n\n      * Anderson: Anderson scheme\n\n      * Anderson2: Anderson scheme based on the two pervious iterations\n\n      * CG: Conjugate Gradient based on the minimum of the energy with\n            respect of the potential\n\nWarning:\n   Only the FOE method exhibit asymptotic linear scaling regime.\n\nTodo:\n   Check if the linear scaling case needs another input variable for the\n   mixing of the potential (density)",
+  "error": null,
+  "is_method": true,
+  "name": "set_scf_method",
+  "parameters": [
+   {
+    "default": "'dirmin'",
+    "kind": "positional_or_keyword",
+    "name": "method",
+    "required": false
+   },
+   {
+    "default": "'density'",
+    "kind": "positional_or_keyword",
+    "name": "mixing_on",
+    "required": false
+   },
+   {
+    "default": "'Pulay'",
+    "kind": "positional_or_keyword",
+    "name": "mixing_scheme",
+    "required": false
+   }
+  ],
+  "signature": "(method='dirmin', mixing_on='density', mixing_scheme='Pulay')",
+  "summary": "Set the algorithm for scf.",
+  "writes": {},
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_symmetry(yes=True)",
+  "doc": "Set the symmetry detection for the charge density and the ionic forces and\nstressdef set_symmetry(inp,yes=True):\n\nArgs:\n   yes (bool): If ``False`` the symmetry detection is disabled",
+  "error": null,
+  "is_method": true,
+  "name": "set_symmetry",
+  "parameters": [
+   {
+    "default": "True",
+    "kind": "positional_or_keyword",
+    "name": "yes",
+    "required": false
+   }
+  ],
+  "signature": "(yes=True)",
+  "summary": "Set the symmetry detection for the charge density and the ionic forces and stressdef set_symmetry(inp,yes=True):",
+  "writes": {
+   "dft.disablesym": false
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.set_xc(xc='PBE')",
+  "doc": "Set the exchange and correlation approximation\n\nArgs:\n   xc (str): the Acronym of the XC approximation\n\nTodo:\n   Insert the XC codes corresponding to ``libXC`` conventions",
+  "error": null,
+  "is_method": true,
+  "name": "set_xc",
+  "parameters": [
+   {
+    "default": "'PBE'",
+    "kind": "positional_or_keyword",
+    "name": "xc",
+    "required": false
+   }
+  ],
+  "signature": "(xc='PBE')",
+  "summary": "Set the exchange and correlation approximation",
+  "writes": {
+   "dft.ixc": "PBE"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.spin_polarize(mpol=1)",
+  "doc": "Add a collinear spin polarization to the system.\n\nArguments:\n   mpol (int): spin polarization in Bohr magneton units.",
+  "error": null,
+  "is_method": true,
+  "name": "spin_polarize",
+  "parameters": [
+   {
+    "default": "1",
+    "kind": "positional_or_keyword",
+    "name": "mpol",
+    "required": false
+   }
+  ],
+  "signature": "(mpol=1)",
+  "summary": "Add a collinear spin polarization to the system.",
+  "writes": {
+   "dft.mpol": 1,
+   "dft.nspin": 2
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.use_gpu_acceleration()",
+  "doc": "Employ gpu acceleration when available, for convolutions and Fock operator\n\nTodo:\n   Verify what happens when only one of the functionality is enabled at\n   compile-time",
+  "error": null,
+  "is_method": true,
+  "name": "use_gpu_acceleration",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Employ gpu acceleration when available, for convolutions and Fock operator",
+  "writes": {
+   "perf.accel": "OCLGPU",
+   "psolver.setup.accel": "CUDA"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.write_cubefiles_around_fermi_level(nplot=1)",
+  "doc": "Writes the ``nplot`` orbitals around the fermi level in cube format.\n\nArgs:\n  nplot (int): the number of orbitals to print around the fermi level.\n\nWarning:\n   This would work only for the cubic scaling code at present.",
+  "error": null,
+  "is_method": true,
+  "name": "write_cubefiles_around_fermi_level",
+  "parameters": [
+   {
+    "default": "1",
+    "kind": "positional_or_keyword",
+    "name": "nplot",
+    "required": false
+   }
+  ],
+  "signature": "(nplot=1)",
+  "summary": "Writes the ``nplot`` orbitals around the fermi level in cube format.",
+  "writes": {
+   "dft.nplot": 1
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.write_density_on_disk()",
+  "doc": "Write the charge density on the disk after the last scf convergence",
+  "error": null,
+  "is_method": true,
+  "name": "write_density_on_disk",
+  "parameters": [],
+  "signature": "()",
+  "summary": "Write the charge density on the disk after the last scf convergence",
+  "writes": {
+   "dft.output_denspot": 21
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.write_orbitals_on_disk(format='binary')",
+  "doc": "Set the code to write the orbitals on disk in the provided format\n\nArgs:\n  format (str): The format to write the orbitals with. Accepts the strings:\n     * 'binary'\n     * 'text'\n     * 'etsf' (requires etsf-io enabled)\n\nTodo:\n  Verify if this option works for a linear scaling calulation.",
+  "error": null,
+  "is_method": true,
+  "name": "write_orbitals_on_disk",
+  "parameters": [
+   {
+    "default": "'binary'",
+    "kind": "positional_or_keyword",
+    "name": "format",
+    "required": false
+   }
+  ],
+  "signature": "(format='binary')",
+  "summary": "Set the code to write the orbitals on disk in the provided format",
+  "writes": {
+   "output.orbitals": "binary"
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.write_support_function_matrices(format='text')",
+  "doc": "Write the matrices of the linear scaling formats.\n\nArgs:\n   format (str): The format to write the orbitals with. Accepts the\n     strings:\n      * 'binary'\n      * 'text'\n\nTodo:\n   Verify if the binary format is available and set the appropriate values",
+  "error": null,
+  "is_method": true,
+  "name": "write_support_function_matrices",
+  "parameters": [
+   {
+    "default": "'text'",
+    "kind": "positional_or_keyword",
+    "name": "format",
+    "required": false
+   }
+  ],
+  "signature": "(format='text')",
+  "summary": "Write the matrices of the linear scaling formats.",
+  "writes": {
+   "lin_general.output_mat": 1
+  },
+  "writes_posinp": false
+ },
+ {
+  "call": "inp.write_support_functions_on_disk(format='text')",
+  "doc": "Dump the support functions.\n\nWrite the support function which are expressed in wavelet basis in the\ncode as files at the end of the calculation.\n\nArgs:\n    format (str): the format of the data, can be 'text', 'ETSF' or 'binary'\n         or one of the allowed codes of the `output_wf` key.",
+  "error": null,
+  "is_method": true,
+  "name": "write_support_functions_on_disk",
+  "parameters": [
+   {
+    "default": "'text'",
+    "kind": "positional_or_keyword",
+    "name": "format",
+    "required": false
+   }
+  ],
+  "signature": "(format='text')",
+  "summary": "Dump the support functions.",
+  "writes": {
+   "lin_general.output_wf": "text"
+  },
+  "writes_posinp": false
+ }
+]

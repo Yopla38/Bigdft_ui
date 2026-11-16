@@ -1,0 +1,54 @@
+# Questions an agent asks while writing PyBigDFT code, and the snippet that
+# answers each. eval/retrieval.py asks them through the pack's own query tool
+# and checks that the snippet comes back, verbatim.
+#
+# Written the way a question is asked, without the words of the answer.
+
+- question: How do I set the k-point mesh in a PyBigDFT input file?
+  expects: 07_periodic_cell.py
+- question: My PBE0 calculation is refused, it says a pseudopotential parameter file is lacking.
+  expects: 14_input_hybrid_functional.py
+- question: How can I tell whether BigDFT accepted my input before launching the real calculation?
+  expects: 30_dry_run_and_check.py
+- question: I relaxed a molecule, how do I get the final energy from the logfile?
+  expects: 42_relaxation_read_the_last_step.py
+- question: How do I continue a calculation from the orbitals of a previous run?
+  expects: 49_restart_from_wavefunctions.py
+- question: The restart did not seem to speed anything up, how do I check the wavefunctions were read?
+  expects: 48_was_the_restart_used.py
+- question: Use the geometry obtained at the end of an optimisation as the starting point of a new calculation.
+  expects: 43_relaxed_geometry_for_the_next_run.py
+- question: How do I load an xyz file into a System?
+  expects: 02_read_structure_from_xyz.py
+- question: Which names can I give to the runs I send to the HAPS?
+  expects: 32_prepare_runs_for_the_haps.py
+- question: After preparing my inputs again the energies I had computed disappeared from the logs.
+  expects: 31_dry_run_overwrites_the_log.py
+- question: Compute a triplet state, or a charged molecule.
+  expects: 11_input_spin_and_charge.py
+- question: How do I make the SCF stricter and give it more iterations?
+  expects: 12_input_scf_convergence.py
+- question: Get the HOMO energy in eV from a finished run.
+  expects: 44_orbital_energies.py
+- question: Plot the density of states of my calculation.
+  expects: 46_density_of_states.py
+- question: I want to run the calculation in a solvent other than water.
+  expects: 16_input_implicit_solvent.py
+- question: How do I change an input variable for which there is no method on Inputfile?
+  expects: 15_input_keys_without_action.py
+- question: Did my run converge, and were there any warnings?
+  expects: 41_check_a_run_converged.py
+- question: Make a table of energies from all the log files of a directory.
+  expects: 50_table_from_many_logs.py
+- question: Move one molecule three angstroem away from another.
+  expects: 06_move_a_fragment.py
+- question: Build the system of a finished calculation from its logfile.
+  expects: 09_structure_from_a_log.py
+- question: Set up a geometry optimisation.
+  expects: 13_input_geometry_optimisation.py
+- question: How do I do a linear scaling calculation, and why is there no memory estimate?
+  expects: 35_linear_scaling_input.py
+- question: Energy difference between two calculations in eV and kJ/mol.
+  expects: 47_energy_difference_between_runs.py
+- question: Organise a whole study so that it can be prepared, sent to the HAPS and analysed in several goes.
+  expects: 60_pipeline_prepare_and_analyse.py

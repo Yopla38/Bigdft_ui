@@ -1,0 +1,304 @@
+# Things that go wrong silently, or with a misleading message, with PyBigDFT.
+#
+# Each one was observed on a real run and is tied to snippets whose assertions
+# reproduce it. If a new version behaves differently, those snippets fail when
+# the graph is rebuilt: that is the signal to revise or remove the entry.
+#
+#   title      one line, what happens
+#   symptom    what one sees
+#   cause      why
+#   remedy     what to do
+#   snippets   files of snippets/ that show it (and assert it)
+#   concerns   functions (Module.name or Class.method), attributes (Logfile.energy)
+#              or input variables (dft.ixc) it is about
+#   observed   only when no snippet can assert it: how it was seen
+
+- id: dry_run_never_raises
+  title: >-
+    A dry run returns a log and raises nothing, even when BigDFT refused the input
+  symptom: >-
+    SystemCalculator(dry_run=True).run(...) returns a Logfile; the script goes on and sends an input BigDFT cannot read.
+  cause: >-
+    PyBigDFT loads whatever log BigDFT wrote. On a refusal that log ends with the key "Additional Info", holding the reason.
+  remedy: >-
+    After a dry run, test `"Additional Info" in log.log`. If it is there the input is refused and its value is the reason.
+  snippets: [30_dry_run_and_check.py, 14_input_hybrid_functional.py, 32_prepare_runs_for_the_haps.py]
+  concerns: [SystemCalculator, Runner.run, Logfile]
+
+- id: dry_run_accepts_input_errors
+  title: >-
+    BigDFT goes on after some input errors, such as a value out of range or a method that does not exist
+  symptom: >-
+    The dry run completes and estimates memory although hgrids = 9.0 or geopt.method = "NOPE" was given.
+  cause: >-
+    These errors are collected in the log under "List of error found while parsing input variables" and repeated in WARNINGS; they do not stop BigDFT.
+  remedy: >-
+    Treat that key as a refusal. Do not send a run whose dry-run log has it.
+  snippets: [30_dry_run_and_check.py, 32_prepare_runs_for_the_haps.py]
+  concerns: [SystemCalculator, dft.hgrids, geopt.method]
+
+- id: dry_run_overwrites_log
+  title: >-
+    A dry run replaces the log of a finished calculation of the same name
+  symptom: >-
+    After preparing a study again, energies that had been computed are gone; Logfile has no attribute energy.
+  cause: >-
+    A dry run writes log-NAME.yaml like a real run. skip=True does not prevent it when dry_run=True.
+  remedy: >-
+    Before a dry run, check whether log-NAME.yaml already holds an energy, and leave that run alone.
+  snippets: [31_dry_run_overwrites_the_log.py, 60_pipeline_prepare_and_analyse.py]
+  concerns: [SystemCalculator, Runner.run]
+
+- id: memory_estimate_absent_in_linear_scaling
+  title: >-
+    A dry run in linear scaling prints no memory estimate
+  symptom: >-
+    log.memory_peak is absent after a dry run with set_linear_scaling(), although the input is valid.
+  cause: >-
+    BigDFT only prints "Estimated Memory Peak (MB)" for the cubic algorithm.
+  remedy: >-
+    Never use the memory estimate to decide whether an input was accepted. Use the key "Additional Info".
+  snippets: [35_linear_scaling_input.py, 30_dry_run_and_check.py]
+  concerns: [InputActions.set_linear_scaling, Logfile.memory_peak, dft.inputpsiid]
+
+- id: hybrid_needs_pseudopotential
+  title: >-
+    A hybrid functional is refused unless the pseudopotentials are named
+  symptom: >-
+    The pseudopotential parameter file "psppar.O" is lacking, and no registered pseudo found for "O"
+  cause: >-
+    BigDFT registers pseudopotentials for LDA and PBE, none for PBE0, B3LYP or HF.
+  remedy: >-
+    For every element, inp["psppar." + element] = {"Pseudopotential XC": 11}, which selects the PBE one. BigDFT then warns "PSP generated with a different XC", which is expected.
+  snippets: [14_input_hybrid_functional.py, 49_restart_from_wavefunctions.py]
+  concerns: [InputActions.set_xc, dft.ixc]
+
+- id: relaxation_attributes_are_lowest_energy
+  title: >-
+    On a relaxation, log.energy is the lowest energy met, not the final one
+  symptom: >-
+    The energy read from the log of a geometry optimisation does not match the last step, nor the geometry in final_NAME.yaml.
+  cause: >-
+    The log holds one document per force evaluation. The attributes of the Logfile come from the document of lowest energy (log.reference_log).
+  remedy: >-
+    Take the last document, log[len(log) - 1]. For code that handles both cases, (log if len(log) == 0 else log[len(log) - 1]).energy, since len(log) is 0 for a single point.
+  snippets: [42_relaxation_read_the_last_step.py, 47_energy_difference_between_runs.py, 50_table_from_many_logs.py]
+  concerns: [Logfile, Logfile.energy, Logfile.forcemax, InputActions.optimize_geometry]
+
+- id: missing_wavefunctions_only_warn
+  title: >-
+    A restart whose wavefunction files are missing runs anyway, from scratch
+  symptom: >-
+    The run succeeds with the right energy but takes as many iterations as without restart.
+  cause: >-
+    With inputpsiid = 2 and no file in data-NAME/, BigDFT warns "Missing wavefunction files, switch to normal input guess" and continues.
+  remedy: >-
+    After the run, look for that sentence in log.log["WARNINGS"].
+  snippets: [48_was_the_restart_used.py]
+  concerns: [InputActions.read_orbitals_from_disk, dft.inputpsiid]
+
+- id: wavefunctions_are_read_from_own_data_directory
+  title: >-
+    A run reads wavefunctions from its own data directory, not from the run that wrote them
+  symptom: >-
+    read_orbitals_from_disk() is set and the earlier run wrote its orbitals, yet the restart is not used.
+  cause: >-
+    The run NAME looks in data-NAME/. The earlier run wrote in data-EARLIER/.
+  remedy: >-
+    Copy data-EARLIER/wavefunction-* into data-NAME/ before the run, and send that directory with the input.
+  snippets: [49_restart_from_wavefunctions.py]
+  concerns: [InputActions.read_orbitals_from_disk, InputActions.write_orbitals_on_disk]
+
+- id: dataset_names_not_accepted_by_haps
+  title: >-
+    The run names a Dataset builds contain ':' and '.'
+  symptom: >-
+    A run named "h:0.5" is refused by the HAPS, whose names may only hold letters, digits, '_' and '-'.
+  cause: >-
+    Dataset derives the name from the id dictionary, as key:value.
+  remedy: >-
+    Name the runs yourself for the HAPS, e.g. "water_h050". Keep Dataset for dry runs and local runs.
+  snippets: [33_dataset_of_runs.py, 32_prepare_runs_for_the_haps.py]
+  concerns: [Dataset, Dataset.append_run]
+
+- id: input_actions_are_not_in_dir
+  title: >-
+    The methods of an Inputfile do not show in dir(Inputfile)
+  symptom: >-
+    Introspection of the class finds only dictionary methods; set_xc and the others seem not to exist.
+  cause: >-
+    The functions of BigDFT.InputActions are attached to each Inputfile when it is created.
+  remedy: >-
+    Every public function of BigDFT.InputActions is a method of an Inputfile instance, called without the first argument.
+  snippets: [10_input_functional_and_grid.py, 19_input_save_and_reload.py]
+  concerns: [Inputfile]
+
+- id: scf_convergence_default_is_a_string
+  title: >-
+    set_scf_convergence() without a value writes the word "default"
+  symptom: >-
+    dft.gnrm_cv holds the string "default" instead of a number.
+  cause: >-
+    The arguments of the action default to the string 'default'.
+  remedy: >-
+    Always give the value, set_scf_convergence(gnrm=1.0e-5).
+  snippets: [12_input_scf_convergence.py]
+  concerns: [InputActions.set_scf_convergence, dft.gnrm_cv]
+
+- id: geometry_optimisation_defaults
+  title: >-
+    optimize_geometry() defaults to FIRE, 50 steps and forcemax = 0
+  symptom: >-
+    A relaxation stops on the fluctuation of the forces, or after 50 steps, far from the accuracy wanted.
+  cause: >-
+    forcemax = 0 means no criterion on the largest force.
+  remedy: >-
+    Give method, nsteps and forcemax (Ha/bohr) explicitly.
+  snippets: [13_input_geometry_optimisation.py]
+  concerns: [InputActions.optimize_geometry, geopt.forcemax, geopt.method]
+
+- id: no_action_for_kpoints
+  title: >-
+    No input action sets the k-point mesh in this version
+  symptom: >-
+    AttributeError: 'Inputfile' object has no attribute 'set_kpt_mesh'
+  cause: >-
+    PyBigDFT 0.9 has no such action; later versions and some tutorials do.
+  remedy: >-
+    Write the keys, inp["kpt"] = {"method": "mpgrid", "ngkpt": [2, 2, 2]}.
+  snippets: [07_periodic_cell.py]
+  concerns: [kpt.ngkpt, kpt.method]
+
+- id: implicit_solvent_takes_no_solvent_name
+  title: >-
+    set_implicit_solvent() takes no solvent name in this version
+  symptom: >-
+    TypeError: set_implicit_solvent() got an unexpected keyword argument 'solvent'
+  cause: >-
+    In PyBigDFT 0.9 its arguments are itermax and minres; it switches on the soft-sphere cavity with the parameters of water.
+  remedy: >-
+    For another solvent write psolver.environment.epsilon and the cavity parameters as keys.
+  snippets: [16_input_implicit_solvent.py]
+  concerns: [InputActions.set_implicit_solvent, psolver.environment.cavity]
+
+- id: scipy_cannot_be_imported
+  title: >-
+    Functions that import scipy fail in the BigDFT 1.9.1 image
+  symptom: >-
+    "ImportError: libifport.so.5: cannot open shared object file", for instance from Systems.system_from_log.
+  cause: >-
+    scipy.linalg of that image needs a library the image does not carry.
+  remedy: >-
+    Avoid those functions there. For the structure of a run, build the System from log.astruct with system_from_dict_positions.
+  snippets: [09_structure_from_a_log.py]
+  concerns: [Systems.system_from_log, System.compute_matching]
+
+- id: readers_take_open_files
+  title: >-
+    read_xyz and write_xyz take an open file, not a file name
+  symptom: >-
+    An error on a string, or an empty system.
+  cause: >-
+    The readers and writers of BigDFT.IO work on file objects. fragmentation is "atomic" or "single" and nothing else.
+  remedy: >-
+    with open(name) as ifile: system = read_xyz(ifile).
+  snippets: [02_read_structure_from_xyz.py, 08_write_structure_to_xyz.py]
+  concerns: [IO.read_xyz, IO.write_xyz]
+
+- id: fragment_geometry_is_in_bohr
+  title: >-
+    Fragment.translate and centroid work in bohr
+  symptom: >-
+    A molecule moved by "3" ends up 1.59 angstroem away.
+  cause: >-
+    Positions are stored in bohr whatever units the atoms were given in.
+  remedy: >-
+    Divide a length in angstroem by BigDFT.Atoms.AU_to_A before translating; multiply a centroid or a distance by it to read angstroem.
+  snippets: [06_move_a_fragment.py]
+  concerns: [Fragment.translate, Fragment.centroid, Fragments.distance]
+
+- id: log_attributes_may_be_absent
+  title: >-
+    An attribute of a Logfile exists only if the log holds the quantity
+  symptom: >-
+    "AttributeError: 'Logfile' object has no attribute 'energy'" (or pressure, magnetization, kpts...)
+  cause: >-
+    Attributes are created from the content of the log; a dry-run log has no energy, an isolated system no pressure.
+  remedy: >-
+    getattr(log, name, None), and treat a missing energy as "not computed".
+  snippets: [40_read_energy_and_main_quantities.py, 53_spin_polarised_result.py, 31_dry_run_overwrites_the_log.py]
+  concerns: [Logfile]
+
+- id: orbital_energies_are_padded_with_nan
+  title: >-
+    With spin polarisation the shorter list of orbital energies is padded with nan
+  symptom: >-
+    max() or a sum over log.evals gives nan.
+  cause: >-
+    log.evals[k] has one row per spin and as many columns as the larger of the two.
+  remedy: >-
+    Drop the nan of each row before using it, row[~numpy.isnan(row)].
+  snippets: [44_orbital_energies.py]
+  concerns: [Logfile.evals]
+
+- id: molecule_is_not_a_system
+  title: >-
+    Database.Molecules.Molecule is a posinp dictionary, not a System
+  symptom: >-
+    AttributeError: 'Molecule' object has no attribute 'get_posinp'
+  cause: >-
+    Molecule(name) already is the dictionary a calculator takes as posinp.
+  remedy: >-
+    Pass it directly as posinp. For a System, system_from_dict_positions(m["positions"], units=m["units"]).
+  snippets: [05_molecule_from_database.py]
+  concerns: [Molecule, Systems.system_from_dict_positions]
+
+- id: structure_file_name_does_not_travel
+  title: >-
+    A structure given as a file name is not copied into the input
+  symptom: >-
+    The input works where it was prepared and fails elsewhere, the .xyz not being found.
+  cause: >-
+    With posinp="file.xyz" the input only refers to the file.
+  remedy: >-
+    Give a dictionary, system.get_posinp(), so that NAME.yaml holds the positions.
+  snippets: [03_xyz_file_name_as_posinp.py, 02_read_structure_from_xyz.py]
+  concerns: [Runner.run, System.get_posinp]
+
+- id: odd_electrons_accepted
+  title: >-
+    An odd number of electrons without spin polarisation is accepted
+  symptom: >-
+    The calculation runs; only a warning "Odd number of electrons, no closed shell system" says something is off.
+  cause: >-
+    BigDFT does not refuse the input.
+  remedy: >-
+    Count the electrons when a charge is set; use spin_polarize(mpol=...) with the parity of the electron count, or charge_and_polarize().
+  snippets: [30_dry_run_and_check.py, 11_input_spin_and_charge.py]
+  concerns: [InputActions.charge, InputActions.spin_polarize, dft.qcharge, dft.mpol]
+
+- id: pandas_is_not_installed
+  title: >-
+    pandas is not installed in the BigDFT 1.9.1 image
+  symptom: >-
+    "ModuleNotFoundError: No module named 'pandas'", also from System.to_dataframe.
+  cause: >-
+    The image does not carry it.
+  remedy: >-
+    Use lists and the csv module for tables.
+  snippets: [50_table_from_many_logs.py]
+  concerns: [System.to_dataframe]
+
+- id: gpu_acceleration_not_checked_by_dry_run
+  title: >-
+    An input asking for a GPU passes the dry run and stops at start where there is none
+  symptom: >-
+    "No OpenCL platform available! GPUassert: CUDA driver is a stub library", exit code 34.
+  cause: >-
+    use_gpu_acceleration() writes perf.accel and psolver.setup.accel; a dry run does not try the device.
+  remedy: >-
+    Only call use_gpu_acceleration() for a machine known to have a GPU.
+  snippets: []
+  concerns: [InputActions.use_gpu_acceleration, perf.accel]
+  observed: >-
+    A PBE0 run of water with these two keys, in the CPU image of the pack, on 2026-11-14. The dry run printed a memory estimate; `bigdft -n` exited with code 34.

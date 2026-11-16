@@ -1,0 +1,186 @@
+# =============================================================
+#  api_layer.ttl — the classes and predicates of the PyBigDFT API graph.
+#
+#  Paste everything below the @prefix lines at the end of the pack's
+#  ontology/schema.ttl. It uses the pack's own namespace and reuses its
+#  classes Library, Module, Function, CodeSnippet and Workflow, and its
+#  predicates belongsTo and demonstrates; nothing existing is redefined.
+#
+#  EVERY PREDICATE IS extractionScope "derived": the instances are written
+#  by code (fetchers/pybigdft_api.py reading data/pybigdft-api.ttl), never
+#  proposed to the model that extracts facts from the tutorials. Adding this
+#  layer does not change what `learn.sh` extracts.
+#
+#  THE LABELS ARE A CONTRACT with tools/build_ttl.py and the fetcher, which
+#  refer to them by name.
+# =============================================================
+
+@prefix :     <http://bigdft.org/onto#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+:extractionScope a owl:AnnotationProperty ;
+    rdfs:comment """"derived" on a property: never asserted by a document, so never
+    offered to the extracting LLM."""@en .
+
+# ── Classes ─────────────────────────────────────────────────────────────────
+
+:PythonClass a owl:Class ;
+    rdfs:label "PythonClass" ;
+    rdfs:comment "A class of PyBigDFT, as installed: Inputfile, Logfile, System, SystemCalculator."@en .
+
+:Attribute a owl:Class ;
+    rdfs:label "Attribute" ;
+    rdfs:comment """A value read on an object without calling anything: log.energy. The
+    attributes of a Logfile exist only when the log holds the quantity."""@en .
+
+:Parameter a owl:Class ;
+    rdfs:label "Parameter" ;
+    rdfs:comment "An input variable of BigDFT, named by its path in the input file: dft.hgrids."@en .
+
+:Pitfall a owl:Class ;
+    rdfs:label "Pitfall" ;
+    rdfs:comment """Something that goes wrong without an error message, or with a misleading
+    one, observed on the installed version. Each one names its remedy."""@en .
+
+# ── What every node carries ─────────────────────────────────────────────────
+
+:hasDescription a owl:DatatypeProperty ;
+    rdfs:label "hasDescription" ;
+    rdfs:comment "One sentence saying what the thing is or does."@en ;
+    :extractionScope "derived" .
+
+# ── The library as installed ────────────────────────────────────────────────
+
+:hasVersion a owl:DatatypeProperty ;
+    rdfs:label "hasVersion" ; rdfs:domain :Library ;
+    rdfs:comment "Version of PyBigDFT, of BigDFT and of Python the graph was read from."@en ;
+    :extractionScope "derived" .
+
+:availability a owl:DatatypeProperty ;
+    rdfs:label "availability" ; rdfs:domain :Module ;
+    rdfs:comment "Set when a module cannot be imported in the environment the graph was read from, with the reason."@en ;
+    :extractionScope "derived" .
+
+:definedIn a owl:ObjectProperty ;
+    rdfs:label "definedIn" ; rdfs:range :Module ;
+    rdfs:comment "The module a function or a class is imported from."@en ;
+    :extractionScope "derived" .
+
+:methodOf a owl:ObjectProperty ;
+    rdfs:label "methodOf" ; rdfs:domain :Function ; rdfs:range :PythonClass ;
+    :extractionScope "derived" .
+
+:attributeOf a owl:ObjectProperty ;
+    rdfs:label "attributeOf" ; rdfs:domain :Attribute ; rdfs:range :PythonClass ;
+    :extractionScope "derived" .
+
+:inheritsFrom a owl:ObjectProperty ;
+    rdfs:label "inheritsFrom" ; rdfs:domain :PythonClass ; rdfs:range :PythonClass ;
+    rdfs:comment "The methods of the parent are methods of the child: SystemCalculator.run is Runner.run."@en ;
+    :extractionScope "derived" .
+
+:hasSignature a owl:DatatypeProperty ;
+    rdfs:label "hasSignature" ;
+    rdfs:comment "Arguments and defaults, exactly as the installed code declares them."@en ;
+    :extractionScope "derived" .
+
+:hasArgument a owl:DatatypeProperty ;
+    rdfs:label "hasArgument" ;
+    rdfs:comment "One argument, `name=default` or `name (required)`."@en ;
+    :extractionScope "derived" .
+
+:calledAs a owl:DatatypeProperty ;
+    rdfs:label "calledAs" ; rdfs:domain :Function ;
+    rdfs:comment "How the call is typed in a script: inp.set_xc(xc='PBE')."@en ;
+    :extractionScope "derived" .
+
+# ── Input file ──────────────────────────────────────────────────────────────
+
+:writesInput a owl:DatatypeProperty ;
+    rdfs:label "writesInput" ; rdfs:domain :Function ;
+    rdfs:comment """What an input action wrote in an empty input file when called with its
+    default arguments, as `section.key = value`. Observed, not documented."""@en ;
+    :extractionScope "derived" .
+
+:setsParameter a owl:ObjectProperty ;
+    rdfs:label "setsParameter" ; rdfs:range :Parameter ;
+    rdfs:comment "The input variable an input action, or a snippet, writes."@en ;
+    :extractionScope "derived" .
+
+:inSection a owl:DatatypeProperty ;
+    rdfs:label "inSection" ; rdfs:domain :Parameter ;
+    :extractionScope "derived" .
+
+:hasDefault a owl:DatatypeProperty ;
+    rdfs:label "hasDefault" ; rdfs:domain :Parameter ;
+    :extractionScope "derived" .
+
+:hasRange a owl:DatatypeProperty ;
+    rdfs:label "hasRange" ; rdfs:domain :Parameter ;
+    :extractionScope "derived" .
+
+:hasAllowedValues a owl:DatatypeProperty ;
+    rdfs:label "hasAllowedValues" ; rdfs:domain :Parameter ;
+    :extractionScope "derived" .
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+
+:readsLogKey a owl:DatatypeProperty ;
+    rdfs:label "readsLogKey" ; rdfs:domain :Attribute ;
+    rdfs:comment "Where in the log the value comes from: the first path that exists."@en ;
+    :extractionScope "derived" .
+
+# ── Tested code ─────────────────────────────────────────────────────────────
+
+:hasCode a owl:DatatypeProperty ;
+    rdfs:label "hasCode" ; rdfs:domain :CodeSnippet ;
+    rdfs:comment "The code, verbatim. The fetcher stores it as an artifact, not as a fact."@en ;
+    :extractionScope "derived" .
+
+:shownIn a owl:ObjectProperty ;
+    rdfs:label "shownIn" ; rdfs:range :CodeSnippet ;
+    rdfs:comment """A function, a class or an attribute, and a snippet that uses it. Recorded
+    while the snippet ran: what it really called, not what it seems to call."""@en ;
+    :extractionScope "derived" .
+
+:runsAtStage a owl:DatatypeProperty ;
+    rdfs:label "runsAtStage" ; rdfs:domain :CodeSnippet ;
+    rdfs:comment """prepare (no BigDFT at all), dry-run (BigDFT reads the input), analysis
+    (reads finished logs), or compute (needs the bigdft executable)."""@en ;
+    :extractionScope "derived" .
+
+:verifiedWith a owl:DatatypeProperty ;
+    rdfs:label "verifiedWith" ; rdfs:domain :CodeSnippet ;
+    rdfs:comment "The versions the snippet was executed with, successfully."@en ;
+    :extractionScope "derived" .
+
+:printsOutput a owl:DatatypeProperty ;
+    rdfs:label "printsOutput" ; rdfs:domain :CodeSnippet ;
+    rdfs:comment "What the snippet printed when it was verified."@en ;
+    :extractionScope "derived" .
+
+# ── Pitfalls ────────────────────────────────────────────────────────────────
+
+:hasSymptom a owl:DatatypeProperty ;
+    rdfs:label "hasSymptom" ; rdfs:domain :Pitfall ;
+    :extractionScope "derived" .
+
+:hasCause a owl:DatatypeProperty ;
+    rdfs:label "hasCause" ; rdfs:domain :Pitfall ;
+    :extractionScope "derived" .
+
+:hasRemedy a owl:DatatypeProperty ;
+    rdfs:label "hasRemedy" ; rdfs:domain :Pitfall ;
+    :extractionScope "derived" .
+
+:avoids a owl:ObjectProperty ;
+    rdfs:label "avoids" ; rdfs:domain :CodeSnippet ; rdfs:range :Pitfall ;
+    rdfs:comment "The snippet shows the pitfall and the way around it."@en ;
+    :extractionScope "derived" .
+
+:concerns a owl:ObjectProperty ;
+    rdfs:label "concerns" ; rdfs:domain :Pitfall ;
+    rdfs:comment "The function, class, attribute or input variable the pitfall is about."@en ;
+    :extractionScope "derived" .

@@ -1,0 +1,4457 @@
+[
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "The simplest structure PyBigDFT accepts: a dictionary with `units` and a list of one-key dictionaries, element -> [x, y, z]. It goes as `posinp=` to the calculator, which writes it inside NAME.yaml under the key `posinp`.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "01_positions_as_dictionary.py",
+  "intent": "Describe a molecule as a dictionary of positions and pass it to a calculation.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-water.yaml\natoms: 3 | orbitals: 4",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 360,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 390,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 464,
+    "name": "_GetSymbol"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 299,
+    "name": "__add__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 305,
+    "name": "__radd__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/IO.py",
+    "line": 167,
+    "name": "read_xyz"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 194,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 208,
+    "name": "_read_xyz_header"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 33,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 209,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1151,
+    "name": "GetFragTuple"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1163,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 90,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 100,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 106,
+    "name": "minimum_image"
+   }
+  ],
+  "created": [],
+  "description": "`IO.read_xyz` takes an OPEN FILE, not a file name. `fragmentation` is \"atomic\" (one fragment per atom, the default) or \"single\" (the whole file is one fragment); nothing else is accepted.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "02_read_structure_from_xyz.py",
+  "intent": "Read a structure from an .xyz file into a System, and turn it into `posinp`.",
+  "output": "fragments: ['FRA:0']\natoms: ['O', 'H', 'H']\n{'H': [0.757, 0.5859, 0.0], 'frag': ['FRA', '0']}",
+  "seconds": 0.2,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "from_file.yaml",
+   "from_file_minimal.yaml",
+   "log-from_file.yaml"
+  ],
+  "description": "`posinp=` also accepts a file name. The calculator then refers to that file instead of writing the positions in NAME.yaml, so the .xyz must travel with the input: prefer a dictionary (system.get_posinp()) when the input is sent elsewhere.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "03_xyz_file_name_as_posinp.py",
+  "intent": "Give the name of an .xyz file directly as the structure of a calculation.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-from_file.yaml\nstructure read from: h2o.xyz",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 238,
+    "name": "nel"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 356,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 360,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 390,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 419,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 464,
+    "name": "_GetSymbol"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 291,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 487,
+    "name": "nel"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 492,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 209,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1151,
+    "name": "GetFragTuple"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1163,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 90,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 100,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 106,
+    "name": "minimum_image"
+   }
+  ],
+  "created": [],
+  "description": "A System is a dictionary of Fragments; a Fragment is a list of Atoms. Fragment names have the form \"NAME:NUMBER\". An Atom is made from a dictionary holding the element as key, its position, and the units of that position.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "04_build_system_by_hand.py",
+  "intent": "Build a System atom by atom, grouped in named fragments.",
+  "output": "valence electrons of the fragment: 8.0\nfirst atom: O [0.0, 0.0, 0.0]",
+  "seconds": 0.2,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Database/Molecules.py",
+    "line": 4,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 622,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/IO.py",
+    "line": 631,
+    "name": "__enter__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/IO.py",
+    "line": 651,
+    "name": "__next__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/IO.py",
+    "line": 663,
+    "name": "__iter__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/IO.py",
+    "line": 672,
+    "name": "__exit__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 33,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 209,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 986,
+    "name": "system_from_dict_positions"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1129,
+    "name": "GetFragId"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1142,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1151,
+    "name": "GetFragTuple"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 90,
+    "name": "get_posinp"
+   }
+  ],
+  "created": [],
+  "description": "`Molecule(name)` is already a `posinp` dictionary (units, positions): pass it as it is to a calculator. It is not a System; build one from its positions when fragments or geometry operations are needed.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "05_molecule_from_database.py",
+  "intent": "Take a common molecule from the database shipped with PyBigDFT.",
+  "output": "positions: ['O', 'H', 'H']\nas a System, fragments: ['molecule:0']",
+  "seconds": 0.2,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 360,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 390,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 392,
+    "name": "set_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 464,
+    "name": "_GetSymbol"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 13,
+    "name": "distance"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 117,
+    "name": "dot"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Fragments.py",
+    "line": 132,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Fragments.py",
+    "line": 145,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 165,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 179,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 277,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 287,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 291,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 299,
+    "name": "__add__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 305,
+    "name": "__radd__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 340,
+    "name": "centroid"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Fragments.py",
+    "line": 346,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 546,
+    "name": "rotate"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Fragments.py",
+    "line": 612,
+    "name": "translate"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/IO.py",
+    "line": 167,
+    "name": "read_xyz"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 194,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 208,
+    "name": "_read_xyz_header"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 33,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 209,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1151,
+    "name": "GetFragTuple"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1163,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 90,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 100,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 106,
+    "name": "minimum_image"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/wahba.py",
+    "line": 11,
+    "name": "apply_R"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/wahba.py",
+    "line": 27,
+    "name": "apply_t"
+   }
+  ],
+  "created": [],
+  "description": "Fragment.translate takes a vector in BOHR, whatever the units the atoms were given in. `centroid` is in bohr too. Multiply by AU_to_A to get angstroem.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "06_move_a_fragment.py",
+  "intent": "Translate and rotate a fragment, and measure a distance between fragments.",
+  "output": "distance between the two molecules: 3.000 angstroem\natoms in the dimer: 6",
+  "seconds": 0.2,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 57,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/UnitCells.py",
+    "line": 60,
+    "name": "get_boundary_condition"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 79,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 87,
+    "name": "<listcomp>"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "The boundary conditions come from the cell, not from an input variable. In a `posinp` dictionary the key `cell` holds the three lengths; a free direction is written `inf` (a surface is periodic along x and z, free along y). No `cell` key at all means an isolated system.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Build a structure"
+  },
+  "file": "07_periodic_cell.py",
+  "intent": "Give a periodic cell to a structure: bulk, surface or isolated.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-si.yaml\nperiodic\nsurface\nk-point mesh read by BigDFT: [2, 2, 2]",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 360,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 390,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 464,
+    "name": "_GetSymbol"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Fragments.py",
+    "line": 277,
+    "name": "__len__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/IO.py",
+    "line": 167,
+    "name": "read_xyz"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 194,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 208,
+    "name": "_read_xyz_header"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/IO.py",
+    "line": 541,
+    "name": "write_xyz"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 551,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/IO.py",
+    "line": 557,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 60,
+    "name": "get_boundary_condition"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 79,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 106,
+    "name": "minimum_image"
+   }
+  ],
+  "created": [
+   "copy.xyz"
+  ],
+  "description": "`IO.write_xyz` takes a System and an OPEN FILE. The first line holds the number of atoms and the units, the second the boundary conditions.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Build a structure"
+  },
+  "file": "08_write_structure_to_xyz.py",
+  "intent": "Write a System to an .xyz file.",
+  "output": "3 angstroem\nfree\nO 0.0 0.0 0.0\nH 0.757 0.5859 0.0\nH -0.757 0.5859 0.0",
+  "seconds": 0.2,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 132,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 320,
+    "name": "sym"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 337,
+    "name": "get_position"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 356,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 360,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 390,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 464,
+    "name": "_GetSymbol"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Atoms.py",
+    "line": 490,
+    "name": "IsReduced"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Atoms.py",
+    "line": 506,
+    "name": "IsAngstroem"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Fragments.py",
+    "line": 243,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 20,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 33,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 36,
+    "name": "__setitem__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 48,
+    "name": "__keytransform__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 209,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 428,
+    "name": "set_atom_forces"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 579,
+    "name": "set_logfile_info"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 986,
+    "name": "system_from_dict_positions"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Systems.py",
+    "line": 1008,
+    "name": "system_from_log"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1129,
+    "name": "GetFragId"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1142,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Systems.py",
+    "line": 1151,
+    "name": "GetFragTuple"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Systems.py",
+    "line": 1163,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 17,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/UnitCells.py",
+    "line": 90,
+    "name": "get_posinp"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 100,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/UnitCells.py",
+    "line": 106,
+    "name": "minimum_image"
+   }
+  ],
+  "created": [],
+  "description": "`log.astruct` is the `posinp` dictionary BigDFT read. Build a System from it with system_from_dict_positions. (Systems.system_from_log does the same in one call but imports scipy, which fails in the BigDFT 1.9.1 image of the pack.)",
+  "fields": {
+   "stage": "analysis",
+   "task": "Build a structure"
+  },
+  "file": "09_structure_from_a_log.py",
+  "intent": "Recover the structure a calculation was run on, from its log.",
+  "output": "system_from_log is unusable in this image: libifport.so.5: cannot open shared object file: No such file or directory\nunits: angstroem | atoms: ['O', 'H', 'H']",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 191,
+    "name": "set_rmult"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [],
+  "description": "An Inputfile is a dictionary. Its methods (set_xc, set_hgrid, ...) are the functions of BigDFT.InputActions, attached when the object is created: they do not appear in dir(Inputfile). Each one writes one or a few keys; printing the Inputfile shows exactly what BigDFT will read. A key left out keeps BigDFT's default.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Write an input file"
+  },
+  "file": "10_input_functional_and_grid.py",
+  "intent": "Write the three settings every calculation needs: functional, grid spacing, extent of the grid.",
+  "output": "{'dft': {'ixc': 'PBE', 'hgrids': 0.4, 'rmult': [5.0, 8.0]}}",
+  "seconds": 0.0,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 246,
+    "name": "spin_polarize"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 257,
+    "name": "charge"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "spin_polarize(mpol) writes dft.nspin = 2 and dft.mpol = number of up minus down electrons. charge(q) writes dft.qcharge: +1 for a cation (charge() without argument means -1, an anion). The parity of mpol must match the number of electrons, or BigDFT refuses the input.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "11_input_spin_and_charge.py",
+  "intent": "Set the spin polarisation and the charge of a system.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-cation.yaml\ncharge: 1 | nspin: 2 | mpol: 1",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 176,
+    "name": "set_scf_convergence"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [],
+  "description": "set_scf_convergence(gnrm=...) writes dft.gnrm_cv (default 1e-4). Called WITHOUT a value it writes the string \"default\", not a number. The iteration limits are dft.itermax (50 per cycle) and dft.nrepmax (1 restart): a spin-polarised or difficult system often needs more than 50.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Write an input file"
+  },
+  "file": "12_input_scf_convergence.py",
+  "intent": "Tighten the self-consistency criterion and allow more iterations.",
+  "output": "{'dft': {'gnrm_cv': 1e-05, 'itermax': 200, 'nrepmax': 5}, 'lin_general': {'rpnrm_cv': 'default'}, 'mix': {'rpnrm_cv': 'default'}}",
+  "seconds": 0.1,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 491,
+    "name": "optimize_geometry"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "optimize_geometry writes the `geopt` section. Its default method is FIRE with 50 steps and forcemax = 0, which means \"stop on the fluctuation of the forces\": give forcemax (Ha/bohr) explicitly. SQNM is the usual choice for molecules.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "13_input_geometry_optimisation.py",
+  "intent": "Ask for a geometry optimisation.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-relax.yaml\n{'method': 'SQNM', 'ncount_cluster_x': 100, 'betax': 4.0, 'frac_fluct': 1.0, 'forcemax': 0.001}",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "BigDFT has no pseudopotential registered for a hybrid functional. With set_xc(\"PBE0\") alone it refuses the input: 'The pseudopotential parameter file \"psppar.O\" is lacking, and no registered pseudo found for \"O\"'. Tell it to use the PBE ones (XC code 11), for every element of the structure. BigDFT then warns that the pseudopotential was generated with another functional.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "14_input_hybrid_functional.py",
+  "intent": "Use a hybrid functional (PBE0, B3LYP, HF): name the pseudopotentials explicitly.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-pbe0_refused.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-pbe0.yaml\nwithout pseudopotentials: The pseudopotential parameter file \"psppar.O\" is lacking, and no registered pseudo found for \"O\"\nwith the PBE pseudopotentials: dry run passed, memory peak 86 MB",
+  "seconds": 1.5,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "The Inputfile is a dictionary of sections. Any variable of BigDFT can be written as inp[section][key] = value; create the section first if it is not there. Actions and direct keys mix freely. A wrong key name is NOT refused by PyBigDFT: only BigDFT (the dry run) tells.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "15_input_keys_without_action.py",
+  "intent": "Set an input variable that no action covers, by writing its key.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-keys.yaml\nncong read by BigDFT: 8 | alphamix: 0.3",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 687,
+    "name": "set_implicit_solvent"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "set_implicit_solvent() switches the cavity on with the parameters of water. It takes no solvent name in PyBigDFT 0.9: another solvent is set by writing the keys of psolver.environment (epsilon, and the cavity parameters).",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "16_input_implicit_solvent.py",
+  "intent": "Compute in implicit solvent (soft-sphere cavity).",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-solvated.yaml\nno solvent name: set_implicit_solvent() got an unexpected keyword argument 'solvent'\ncavity: soft-sphere | epsilon: 24.852",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 268,
+    "name": "apply_electric_field"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/InputActions.py",
+    "line": 276,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 482,
+    "name": "set_electronic_temperature"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 703,
+    "name": "set_dispersion_correction"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [],
+  "description": "Three independent actions, each writing one key. The field is in atomic units (Ha/bohr). The dispersion correction (D3) only exists for isolated systems.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Write an input file"
+  },
+  "file": "17_input_electric_field_dispersion_temperature.py",
+  "intent": "Add an electric field, a dispersion correction, or an electronic temperature.",
+  "output": "{'dft': {'elecfield': [0.0, 0.0, 0.001], 'dispersion': 5}, 'mix': {'tel': 0.001}}",
+  "seconds": 0.1,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 366,
+    "name": "write_cubefiles_around_fermi_level"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 379,
+    "name": "write_orbitals_on_disk"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 542,
+    "name": "write_density_on_disk"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [],
+  "description": "These actions choose what a run leaves in data-NAME/ besides its log.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Write an input file"
+  },
+  "file": "18_input_outputs_on_disk.py",
+  "intent": "Ask BigDFT to write the density, the orbitals or cube files.",
+  "output": "{'dft': {'output_denspot': 21, 'nplot': 2}, 'output': {'orbitals': 'binary'}}",
+  "seconds": 0.1,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 246,
+    "name": "spin_polarize"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "settings.yaml"
+  ],
+  "description": "An Inputfile is a dictionary: yaml.dump writes it, Inputfile(dictionary) reads it. The file NAME.yaml that a calculator writes is the same thing plus `posinp`.",
+  "fields": {
+   "stage": "prepare",
+   "task": "Write an input file"
+  },
+  "file": "19_input_save_and_reload.py",
+  "intent": "Save an Inputfile to YAML and load it back.",
+  "output": "dft:\n  hgrids: 0.4\n  ixc: PBE",
+  "seconds": 0.1,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 629,
+    "name": "extract_virtual_states"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "extract_virtual_states(nvirt) writes dft.nvirt and dft.norbv. Without it a log only holds the occupied levels.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "20_input_virtual_orbitals.py",
+  "intent": "Compute empty (virtual) orbitals, for a gap or a density of states above the Fermi level.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-virtual.yaml\n{'ixc': 'PBE', 'norbv': -4, 'nvirt': 4, 'itermax_virt': 150}",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 257,
+    "name": "charge"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "A dry run (SystemCalculator(dry_run=True)) makes BigDFT read the input and build the grid, without any SCF step. It writes NAME.yaml, the file a real run reads. PyBigDFT returns a Logfile and raises nothing, WHATEVER BigDFT said. Three outcomes, all read in log.log: - refused: the key \"Additional Info\" is at the top of the log, with the reason; - accepted with errors: \"List of error found while parsing input variables\" is there. BigDFT went on although a value is out of range or not allowed; - accepted: neither key. Warnings, if any, are under \"WARNINGS\". The memory estimate (log.memory_peak) is only printed for the cubic algorithm: do not use it as the test.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Check an input before computing"
+  },
+  "file": "30_dry_run_and_check.py",
+  "intent": "Dry-run an input and decide, correctly, whether BigDFT accepted it.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-good.yaml\n <BigDFT> log of the run will be written in logfile: ./log-odd.yaml\n <BigDFT> log of the run will be written in logfile: ./log-hybrid.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-typo.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-coarse.yaml\ngood        : accepted\nodd         : accepted, warnings: ['Odd number of electrons, no closed shell system']\nhybrid      : refused, The pseudopotential parameter file \"psppar.O\" is lacking, and no registered pseudo found for \"O\"\ntypo        : refused, An invalid key (hgrid) has been found in section \"dft\". Check above the allowed keys.\nout of range: accepted WITH ERRORS, hgrids = '9.0' not in range.",
+  "seconds": 2.8,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 426,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [
+   "logfiles"
+  ],
+  "description": "A dry run writes log-NAME.yaml, like a real run. Under the same name and in the same directory it REPLACES the log of the finished calculation, and the energy is gone. `skip=True` does not protect: with dry_run=True the estimate runs anyway. Test for a finished calculation yourself before preparing it again.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Check an input before computing"
+  },
+  "file": "31_dry_run_overwrites_the_log.py",
+  "intent": "Never dry-run under the name of a calculation that is already done.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h2o.14:26:31.617.yaml\nbefore: energy -17.20985643099385\nafter : log-h2o.yaml is now a dry-run log, without energy",
+  "seconds": 0.5,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "The HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every input with a dry run in one directory, keep the names that passed, and hand them to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold letters, digits, '_' and '-' (no dot, no colon), 64 characters at most.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Send runs to the HAPS"
+  },
+  "file": "32_prepare_runs_for_the_haps.py",
+  "intent": "Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-water_h050.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h045.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h040.yaml\nready for the HAPS: ['water_h050', 'water_h045', 'water_h040']\nnext: haps_bigdft(names=['water_h050', 'water_h045', 'water_h040'], directory=\"runs\")",
+  "seconds": 0.7,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 236,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Datasets.py",
+    "line": 13,
+    "name": "name_from_id"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Datasets.py",
+    "line": 23,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Datasets.py",
+    "line": 63,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Datasets.py",
+    "line": 100,
+    "name": "append_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Datasets.py",
+    "line": 147,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Datasets.py",
+    "line": 155,
+    "name": "_run_the_calculations"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Datasets.py",
+    "line": 166,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Datasets.py",
+    "line": 189,
+    "name": "post_processing"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Datasets.py",
+    "line": 198,
+    "name": "fetch_results"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "grid"
+  ],
+  "description": "A Dataset holds runs identified by a dictionary (`id`). `run()` executes them with the calculator given to append_run, `fetch_results(attribute=...)` returns the attribute of every log, in order. The run names are built from the ids (\"h:0.5\"): they contain ':' and '.', which the HAPS does not accept. Use a Dataset for dry runs and local runs; name the runs yourself for the HAPS.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Converge a parameter"
+  },
+  "file": "33_dataset_of_runs.py",
+  "intent": "Group runs in a Dataset and collect one quantity from all of them.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.5.14:26:33.062.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.45.14:26:33.184.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.4.14:26:33.317.yaml\nnames : ['h:0.5', 'h:0.45', 'h:0.4']\nmemory: [70, 86, 117] MB",
+  "seconds": 1.0,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "Without dry_run the calculator launches BigDFT and returns the log of the finished run. In the pack's container bigdft is disabled: there, prepare with a dry run and send the name to the HAPS instead. `omp` is the number of OpenMP threads (a string); `mpi_run` is the launcher prefix, e.g. \"mpirun -np 2\".",
+  "fields": {
+   "stage": "compute",
+   "task": "Send runs to the HAPS"
+  },
+  "file": "34_run_bigdft_here.py",
+  "intent": "Run a calculation directly, where the bigdft executable is available.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-direct.yaml\nenergy: -17.200235 Ha",
+  "seconds": 2.5,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 218,
+    "name": "set_linear_scaling"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "set_linear_scaling() writes dft.inputpsiid = \"linear\". A dry run of such an input is accepted but prints NO memory estimate: log.memory_peak is absent. So \"no memory estimate\" does not mean \"refused\"; look for \"Additional Info\".",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Write an input file"
+  },
+  "file": "35_linear_scaling_input.py",
+  "intent": "Switch to the linear-scaling algorithm, for systems of hundreds of atoms and more.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-linear.yaml\nAt line 1677 of file /opt/bigdft/bigdft/src/modules/types.f90\nFortran runtime error: Attempt to DEALLOCATE unallocated 'aux'\n\nError termination. Backtrace:\n#0  0x7f9c8f3f5d21 in ???\n#1  0x7f9c8f3f6869 in ???\n#2  0x7f9c8f3f6ee6 in ???\n#3  0x7f9c8fb1dd88 in ???\n#4  0x7f9c8fb1deb8 in ???\n#5  0x7f9c8f816f9d in ???\n#6  0x7f9c8f8fb44b in ???\n#7  0x7f9c8f90371a in ???\n#8  0x56409797955d in ???\n#9  0x564097971a4e in ???\n#10  0x7f9c871d20b2 in ???\n#11  0x564097971a8d in ???\n#12  0xffffffffffffffff in ???\naccepted; memory estimate: not printed in linear scaling",
+  "seconds": 0.5,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "Logfile(path) loads log-NAME.yaml. Its attributes (energy, nat, fermi_level, dipole, forces, evals, memory_peak, ...) are created from the content of the log: one that BigDFT did not write is simply ABSENT, so use getattr with a default. Energies are in hartree; BigDFT.DoS.AU_eV converts to eV.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "40_read_energy_and_main_quantities.py",
+  "intent": "Read the energy and the main quantities of a finished calculation.",
+  "output": "energy          : -17.20985643 Ha = -468.3040 eV\natoms, orbitals : 3 4\nhighest occupied: -0.2657 Ha\ndipole (AU)     : [-0.0001, 0.701, -0.0007]\nmemory peak     : 86 MB\npressure        : not in this log",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 253,
+    "name": "find_iterations"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "Three things to look at: the last wavefunction residue against the criterion (dft.gnrm_cv), the warnings (log.log[\"WARNINGS\"], absent or None when there are none), and that an energy is there at all. A run can end normally, report convergence, and still carry warnings worth reading.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "41_check_a_run_converged.py",
+  "intent": "Check that a finished run converged, and collect what BigDFT warned about.",
+  "output": "h2o          : 11 iterations, residue 7.0e-05 <= 1.0e-04\npbe0_restart : 8 iterations, warnings: ['PSP generated with a different XC. Input XC is \"XC: PBEH (PBE0)\"']",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 403,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 412,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 426,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "The log of a relaxation holds one document per force evaluation: len(log) is their number (0 for a single point) and log[i] is step i. The attributes of the log itself (log.energy, log.forcemax) are those of the step of LOWEST ENERGY (log.reference_log), which is not necessarily the last one nor the one whose geometry BigDFT wrote in final_NAME.yaml.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "42_relaxation_read_the_last_step.py",
+  "intent": "Read a geometry optimisation: take the LAST step, not the attributes of the log.",
+  "output": "Found 16 different runs\nforce evaluations      : 16\nenergy of the last step: -17.21121191 Ha, largest force 1.70e-04 Ha/bohr\nlog.energy             : -17.21124578 Ha, which is step 9\nenergy gained          : 1.36 mHa\nFound 16 different runs",
+  "seconds": 1.1,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "runs"
+  ],
+  "description": "BigDFT writes the final geometry in final_NAME.yaml (same directory as the log), with the forces on each atom. Keep the element and its position, drop the rest, and the result is a `posinp` dictionary for the next run.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Chain calculations"
+  },
+  "file": "43_relaxed_geometry_for_the_next_run.py",
+  "intent": "Start a calculation from the geometry a relaxation ended on.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-after_relax.yaml\nO-H distance after relaxation: 0.9779 angstroem",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "log.evals is a list with one BandArray per k-point. A BandArray is a numpy array of shape (number of spins, number of orbitals), in hartree. With spin polarisation the two rows may hold different numbers of orbitals: the shorter one is padded with nan. A log only holds occupied orbitals unless virtual states were asked for (extract_virtual_states).",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "44_orbital_energies.py",
+  "intent": "Read the orbital energies: highest occupied level, and both spins of a polarised system.",
+  "output": "water, occupied levels (eV): [-25.457, -13.183, -9.287, -7.23]\nwater, highest occupied    : -7.230 eV\nOH, highest occupied up    : -7.934 eV\nOH, highest occupied down  : -7.337 eV",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "log.forces is a list, one dictionary per atom in the order of the input: {element: [fx, fy, fz]} in Ha/bohr. log.forcemax is the largest component norm.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "45_forces_on_atoms.py",
+  "intent": "Read the forces on the atoms.",
+  "output": "O   [7e-05, -0.01332, -0.0]  |F| = 0.01332 Ha/bohr\nH   [0.00959, 0.00664, 0.0]  |F| = 0.01166 Ha/bohr\nH   [-0.00966, 0.00669, 0.0]  |F| = 0.01175 Ha/bohr\nlargest force: 0.01332 Ha/bohr",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/DoS.py",
+    "line": 147,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/DoS.py",
+    "line": 194,
+    "name": "append_from_bandarray"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/DoS.py",
+    "line": 289,
+    "name": "fermi_level"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/DoS.py",
+    "line": 299,
+    "name": "set_range"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/DoS.py",
+    "line": 332,
+    "name": "get_curves"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/DoS.py",
+    "line": 358,
+    "name": "<genexpr>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/DoS.py",
+    "line": 384,
+    "name": "dump"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/DoS.py",
+    "line": 403,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/DoS.py",
+    "line": 407,
+    "name": "plot"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/DoS.py",
+    "line": 433,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 575,
+    "name": "get_dos"
+   }
+  ],
+  "created": [
+   "dos.dat",
+   "dos.png"
+  ],
+  "description": "log.get_dos() returns a DoS built from the orbital energies, in eV. dump() gives two columns of text (energy, density); plot() draws on a matplotlib axis. Use the Agg backend where there is no display.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "46_density_of_states.py",
+  "intent": "Build the density of states of a run, as a table and as a figure.",
+  "output": "points: 2500 | from -26.4 to -6.3 eV\nwritten: dos.dat, dos.png",
+  "seconds": 0.8,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 403,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 412,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 426,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "Read each log once into a dictionary NAME -> energy, skipping what is not finished, then apply the formula. Total energies are in hartree: 1 Ha = 27.2114 eV = 2625.50 kJ/mol = 627.51 kcal/mol.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "47_energy_difference_between_runs.py",
+  "intent": "Compare two finished runs: an energy difference, converted, with missing runs handled.",
+  "output": "Found 16 different runs\nrelaxation energy: 0.00136 Ha = 0.0369 eV = 3.56 kJ/mol",
+  "seconds": 0.7,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 253,
+    "name": "find_iterations"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "If the wavefunction files are not where BigDFT looks (data-NAME/), it does not stop: it warns \"Missing wavefunction files, switch to normal input guess\" and starts from scratch. The run succeeds, with the same energy and more iterations. Only the warning tells.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Chain calculations"
+  },
+  "file": "48_was_the_restart_used.py",
+  "intent": "After a restart from wavefunctions, check that BigDFT really read them.",
+  "output": "pbe0_restart: wavefunctions read, 8 iterations\npbe0_cold   : files missing, started from scratch, 11 iterations",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 437,
+    "name": "read_orbitals_from_disk"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   }
+  ],
+  "created": [
+   "data-h2o_pbe0",
+   "h2o_pbe0.yaml",
+   "h2o_pbe0_minimal.yaml",
+   "log-h2o_pbe0.yaml"
+  ],
+  "description": "Three steps. The earlier run must have written its orbitals (write_orbitals_on_disk): they are in data-EARLIER/, one file per orbital. The new run reads them from ITS OWN data directory, data-NEW/: copy the wavefunction-* files there. And its input says read_orbitals_from_disk(), which writes dft.inputpsiid = 2. Another functional or another grid spacing is fine.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Chain calculations"
+  },
+  "file": "49_restart_from_wavefunctions.py",
+  "intent": "Restart a calculation from the wavefunctions of an earlier one.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o_pbe0.yaml\ncopied 5 files to data-h2o_pbe0/ ; input ready: h2o_pbe0.yaml\nsend h2o_pbe0.yaml AND data-h2o_pbe0/ to where it is computed",
+  "seconds": 0.4,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 403,
+    "name": "<listcomp>"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 412,
+    "name": "__getitem__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 426,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [
+   "results.csv"
+  ],
+  "description": "Loop over the log files, keep the finished runs, and print or save rows. pandas is not installed in the BigDFT 1.9.1 image: use plain lists and csv.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "50_table_from_many_logs.py",
+  "intent": "Collect the same quantities from many logs into a table.",
+  "output": "Found 16 different runs\nh2o             3 atoms  h=0.45  E=-17.20985643 Ha   1 evaluation(s)\nh2o_relax       3 atoms  h=0.45  E=-17.21121191 Ha  16 evaluation(s)\noh              2 atoms  h=0.45  E=-16.51883047 Ha   1 evaluation(s)\npbe0_cold       3 atoms  h=0.45  E=-17.20385733 Ha   1 evaluation(s)\npbe0_restart    3 atoms  h=0.45  E=-17.20385733 Ha   1 evaluation(s)",
+  "seconds": 0.8,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "log.log is the whole YAML document. Useful keys: the input as BigDFT read it (log.log[\"dft\"], ...), the grid, the wall time, the version, the last SCF iteration. For a relaxation, each step has its own: log[i].log.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "51_raw_content_of_a_log.py",
+  "intent": "Reach what no attribute gives: the log as a dictionary.",
+  "output": "BigDFT version  : 1.9.1\nfunctional read : -101130 (libxc code of PBE)\nbox (angstroem) : [9.0489, 7.6202, 7.6202]\ngrid points     : 23159 coarse, 482 fine\nlast iteration  : 11 | residue 6.98e-05\nwall time       : 2.3 s",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 253,
+    "name": "find_iterations"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [
+   "scf.png"
+  ],
+  "description": "find_iterations(log.log) returns an array with one row per SCF cycle; each row holds the residue (gnrm) at every iteration of that cycle.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "52_scf_convergence_trace.py",
+  "intent": "Plot how the SCF converged: the wavefunction residue at each iteration.",
+  "output": "11 iterations, from 2.7e-01 to 7.0e-05 (criterion 1e-04)",
+  "seconds": 1.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [],
+  "description": "log.magnetization is the total magnetisation BigDFT found; log.total_magn_moment and log.spin_polarization repeat the input (dft.mpol, dft.nspin). Compare them when the spin state matters: a run can converge on another state than expected.",
+  "fields": {
+   "stage": "analysis",
+   "task": "Read a result"
+  },
+  "file": "53_spin_polarised_result.py",
+  "intent": "Read a spin-polarised result: magnetisation and what was asked.",
+  "output": "asked : nspin = 2 , mpol = 1\nfound : magnetisation = 1.0\nenergy: -16.518830 Ha",
+  "seconds": 0.3,
+  "status": "passed"
+ },
+ {
+  "calls": [
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 56,
+    "name": "__new__"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/BZ.py",
+    "line": 102,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 123,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 176,
+    "name": "_run_options"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 207,
+    "name": "run"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Calculators.py",
+    "line": 381,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 404,
+    "name": "pre_processing"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 440,
+    "name": "process_run"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Calculators.py",
+    "line": 468,
+    "name": "post_processing"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 512,
+    "name": "_get_command"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 542,
+    "name": "_get_logname"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 552,
+    "name": "_get_inputfilename"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 558,
+    "name": "_ensure_run_directory"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 582,
+    "name": "_posinp_dictionary_value"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Calculators.py",
+    "line": 616,
+    "name": "_get_debugfile_date"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 165,
+    "name": "set_hgrid"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 246,
+    "name": "spin_polarize"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 257,
+    "name": "charge"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/InputActions.py",
+    "line": 529,
+    "name": "set_xc"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Inputfiles.py",
+    "line": 58,
+    "name": "__init__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 117,
+    "name": "get_logs"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 163,
+    "name": "document_quantities"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 335,
+    "name": "__init__"
+   },
+   {
+    "depth": 1,
+    "file": "BigDFT/Logfiles.py",
+    "line": 426,
+    "name": "__len__"
+   },
+   {
+    "depth": 2,
+    "file": "BigDFT/Logfiles.py",
+    "line": 433,
+    "name": "_initialize_class"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 440,
+    "name": "<dictcomp>"
+   },
+   {
+    "depth": 3,
+    "file": "BigDFT/Logfiles.py",
+    "line": 498,
+    "name": "_fermi_level_from_evals"
+   }
+  ],
+  "created": [
+   "h2o_cation.yaml",
+   "h2o_cation_minimal.yaml",
+   "log-h2o_cation.yaml"
+  ],
+  "description": "The shape that fits the HAPS: `prepare` writes and dry-runs every input that is not computed yet and returns the names to send; `analyse` reads the logs that came back and applies the formulas. Both can be repeated: finished runs are skipped, missing ones are simply not in the result.",
+  "fields": {
+   "stage": "dry-run",
+   "task": "Send runs to the HAPS"
+  },
+  "file": "60_pipeline_prepare_and_analyse.py",
+  "intent": "A study as one script with two verbs: prepare the runs, then analyse the logs.",
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o_cation.yaml\nto send to the HAPS: ['h2o_cation']\nenergies so far: {'h2o': -17.209856, 'oh': -16.51883, 'h2o_cation': None}",
+  "seconds": 0.5,
+  "status": "passed"
+ }
+]
