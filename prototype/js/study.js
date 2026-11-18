@@ -121,8 +121,8 @@ window.OND = window.OND || {};
     ['prod', 'pbe0v', 'wavefunctions'], ['prod', 'relc', 'geometry'], ['prod', 'relf', 'geometry'], ['prod', 'etv', 'energies'], ['pbe0v', 'etv', 'energies'],
     ['relc', 'cg', 'geometry'], ['cg', 'pbe0cg', 'wavefunctions'], ['cg', 'eta', 'energies'], ['pbe0cg', 'eta', 'energies'],
   ];
-  const LINKS = { geometry: ['Geometry', ''], wavefunctions: ['Wavefunctions', '7 4'], choice: ['Choice of settings', '2 4'], energies: ['Energies into a formula', ''] };
-  const ICON = { structure: '<circle cx="6" cy="12" r="3"/><circle cx="14.5" cy="6" r="2.3"/><circle cx="14" cy="15.5" r="1.8"/><path d="M8.6 10.4l3.8-3M8.9 13l3.4 1.7"/>', series: '<path d="M4 15V9M8 15V5M12 15v-4M16 15V7"/>', run: '<path d="M6 4l9 6-9 6z"/>', relax: '<path d="M3 6c3 0 3 8 7 8s4-5 7-5"/><circle cx="10" cy="14" r="1.3"/>', formula: '<path d="M5 6h10M5 10h7M5 14h10"/>' };
+  const LINKS = { geometry: ['Geometry', ''], wavefunctions: ['Wavefunctions', '7 4'], choice: ['Choice of settings', '2 4'], energies: ['Energies into a formula', ''], criterion: ['Criterion fixed in advance', '2 4'], lesson: ['Lesson from a failed attempt', '1 5'] };
+  const ICON = { structure: '<circle cx="6" cy="12" r="3"/><circle cx="14.5" cy="6" r="2.3"/><circle cx="14" cy="15.5" r="1.8"/><path d="M8.6 10.4l3.8-3M8.9 13l3.4 1.7"/>', series: '<path d="M4 15V9M8 15V5M12 15v-4M16 15V7"/>', run: '<path d="M6 4l9 6-9 6z"/>', relax: '<path d="M3 6c3 0 3 8 7 8s4-5 7-5"/><circle cx="10" cy="14" r="1.3"/>', formula: '<path d="M5 6h10M5 10h7M5 14h10"/>', decision: '<path d="M10 3l7 7-7 7-7-7z"/>', target: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/>' };
   const CW = 186, CH = 98, PX = 222, PY = 130, PAD = 14;
 
   let ctx = null, selected = 'prod', extraViews = {}, fig = {}, kindFilter = 'correction';
@@ -149,10 +149,10 @@ window.OND = window.OND || {};
 
   /* Draws any study: nodes placed on a (col, row) lattice, typed links, one selection.
    * Used for the real study and for the one a user builds. */
-  function drawBoard(host, nodes, edges, sel, onSelect, statusOf) {
-    const { h } = ctx;
-    const pos = (n) => ({ x: PAD + n.col * PX + (n.dx || 0), y: PAD + n.row * PY + (n.dy || 0) });
-    const W = PAD * 2 + Math.max(...nodes.map((n) => n.col)) * PX + CW, H = PAD * 2 + Math.max(...nodes.map((n) => n.row)) * PY + CH;
+  function drawBoard(host, nodes, edges, sel, onSelect, statusOf, opt = {}) {
+    const { h } = ctx, px = opt.px || PX, lane = px - CW;                 // opt.px: a tighter column pitch, for a board that must fit
+    const pos = (n) => ({ x: PAD + n.col * px + (n.dx || 0), y: PAD + n.row * PY + (n.dy || 0) });
+    const W = PAD * 2 + Math.max(...nodes.map((n) => n.col)) * px + CW, H = PAD * 2 + Math.max(...nodes.map((n) => n.row)) * PY + CH;
     const svgNS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('class', 'edges'); svg.setAttribute('aria-hidden', 'true');
     const head = (id, cls) => '<marker id="' + id + '" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto"><path class="' + cls + '" d="M0 0L8 4L0 8z"/></marker>';
@@ -163,7 +163,7 @@ window.OND = window.OND || {};
       let d;
       if (Math.abs(A.x - B.x) < CW / 2) d = 'M' + (A.x + CW / 2) + ' ' + (A.y + CH) + 'L' + (B.x + CW / 2) + ' ' + (B.y - 3);            // same column: straight down
       else if (nb.col - na.col > 1 && !na.dx && !nb.dx && !na.dy && !nb.dy) {                                                           // skips a column: go round the blocks
-        const yc = Math.min(A.y, B.y) + CH + (PY - CH) / 2, xa = A.x + CW + 16, xb = B.x - 18;
+        const yc = Math.min(A.y, B.y) + CH + (PY - CH) / 2, xa = A.x + CW + lane * 0.44, xb = B.x - lane * 0.5;
         d = rounded([[A.x + CW, A.y + CH / 2], [xa, A.y + CH / 2], [xa, yc], [xb, yc], [xb, B.y + CH / 2], [B.x - 3, B.y + CH / 2]], 9);
       } else {
         const x0 = A.x + CW, y0 = A.y + CH / 2, x1 = B.x - 3, y1 = B.y + CH / 2, c = Math.max(14, (x1 - x0) * 0.55);

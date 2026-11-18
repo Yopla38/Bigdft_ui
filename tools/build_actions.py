@@ -79,7 +79,7 @@ def main() -> int:
 
     names = {a["name"] for a in out}
     unknown = []
-    for source in ("prototype/js/blueprint.js", "prototype/js/builder.js"):
+    for source in ("prototype/js/blueprint.js", "prototype/js/builder.js", "prototype/js/steps.js"):
         for called in sorted(set(re.findall(r"\binp\.(\w+)\(", (ROOT / source).read_text()))):
             if called not in names and called not in ("update", "setdefault", "get"):
                 unknown.append(f"{source}: inp.{called}() is not an input action of PyBigDFT {versions['pybigdft']}")

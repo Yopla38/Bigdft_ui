@@ -123,6 +123,18 @@ Five things came out that no amount of design would have found:
 
 The workshop's own input was checked the same way: the `input.yaml` it writes for water was read and computed by BigDFT 1.9.1 (PBE: −17.218473 Ha in 11 iterations; PBE0: −17.212363 Ha). BigDFT counted 33,012 coarse and 680 fine grid points where the workshop estimated 33,072 and 711. The memory estimate is poor for so small a system (13 MB estimated, 117 MB reported): it was fitted on the tetrapeptide runs and misses a fixed part. In production that figure comes from BigDFT's dry run, not from the workshop.
 
+### Steps and decisions (a sketch, to decide on)
+
+The builder's three gestures cover calculations. A study such as the 6a capsule also holds **decisions** (which grid, after the convergence study), a **criterion fixed in advance**, and **failed attempts** that taught something. The Study space has a third view that draws those, to judge the idea before building it: "Steps and decisions".
+
+The idea is a second registry, one level above `BigDFT.InputActions`: functions that are the steps of a study (`converge`, `choose`, `relax`, `single_point`, `difference`, `target`), with the same convention (plain functions, defaults everywhere, read by introspection). One rule does the rest: **an argument that is the result of another box is an arrow.** The capsule then reads as ten lines, and the board and the script are the same thing, which is also what would let a capsule's script be read back into a board.
+
+A decision is a box of its own, drawn as a diamond: the machine applies the criterion and proposes, a person retains. The capsule's own numbers make the point. The criterion "the triplet gap within 1 meV of the finest grid" accepts the coarsest spacing, 0.45 bohr, at 25 core-hours a pair; the researcher kept 0.35, at 63, because the calibration molecule had been run there. In the sketch the tolerance can be changed and another grid retained: the diamond changes colour, the script line says `by="you"`, and every box downstream turns to "to run", since the capsule only holds them at 0.35.
+
+Each box has three faces: what it does and why, its settings with where each comes from (pre-filled, you, a decision, a link, a lesson learned from a failed attempt), and the PyBigDFT under the call. The failed attempt stays on the board, faded, with a dotted arrow to the boxes that inherit what it taught.
+
+None of the registry exists. Every number in the sketch is read from the capsule's logs.
+
 ### Results: a view is a description, code is the exception
 
 `tools/build_results.py` reads the BigDFT logfiles of that campaign and writes a small typed result set (40 single points, 4 relaxations). Every number of the Study space comes from it. Three ways to get a view, from no code to code:

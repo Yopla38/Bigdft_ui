@@ -279,6 +279,21 @@ td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top
 .node{position:absolute;width:186px;height:98px;text-align:left;padding:9px 11px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel-2);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:2px;cursor:grab;touch-action:none;box-shadow:0 6px 18px rgba(0,0,0,.16);transition:box-shadow .15s,border-color .15s}
 .node:hover{border-color:var(--fg-3)}
 .node[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),0 10px 26px rgba(0,0,0,.24)}
+.node.t-decision{background:none;border:0;box-shadow:none;isolation:isolate;text-align:center;justify-items:center;align-content:center;grid-template-rows:auto auto;gap:1px;padding:0 40px}
+.node.t-decision::before,.node.t-decision::after{content:"";position:absolute;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);z-index:-1}
+.node.t-decision::before{inset:0;background:var(--line-2)}.node.t-decision::after{inset:2px 3.5px;background:var(--raise)}
+.node.t-decision:hover::before{background:var(--fg-3)}.node.t-decision[aria-pressed="true"]::before{background:var(--accent)}.node.t-decision[aria-pressed="true"]{box-shadow:none;filter:drop-shadow(0 0 5px var(--accent-soft))}
+.node.t-decision.mine::before{background:var(--warn)}
+.node.t-decision .node-foot{display:none}.node.t-decision .node-sub{font:600 13px var(--mono);color:var(--fg);overflow:visible}.node.t-decision > b{font-weight:500;font-size:12px;color:var(--fg-2)}
+.node.t-target{border-radius:49px;padding:9px 20px}.node.hot{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.node.t-decision.hot::before{background:var(--accent)}
+.script{font:12px/1.95 var(--mono);white-space:pre;overflow-x:auto;padding:10px 8px;background:var(--panel-2);margin:0 -16px -16px;border-radius:0 0 12px 12px}
+.sline{padding:0 8px;border-radius:5px;cursor:pointer;width:max-content;min-width:100%}.sline:hover{background:var(--panel)}.sline.on{background:var(--accent-soft)}
+.sline .c{color:var(--fg-3)}.sline .s{color:var(--warn)}.ref{display:inline-block;min-height:22px;text-align:center;font:inherit;color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;border-radius:4px;padding:0 4px;margin:0 -3px}.ref:hover,.ref:focus-visible{background:var(--accent);color:var(--accent-ink)}
+.box-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}.box-head h3{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.1}
+.box-words{color:var(--fg-2);font-size:14.5px;max-width:62ch;margin-bottom:10px}#steps-box .figure{margin-top:6px}#steps-box .field{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--fg-2);margin:6px 0 12px}
+.box-set{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;margin:4px 0 12px;font-size:13px}.box-set dt{color:var(--fg-3)}.box-set dd{margin:0;display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.src{font:11px var(--mono);padding:0 7px;border-radius:99px;border:1px solid var(--line-2);color:var(--fg-3);white-space:nowrap}.src-decision,.src-link{color:var(--accent);border-color:currentColor}.src-lesson{color:var(--warn);border-color:currentColor}.src-you{color:var(--fg);border-color:var(--fg-3)}
+table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;padding:7px 6px 7px 0}table.choice .btn.small{padding-inline:8px}table.choice th{white-space:normal;vertical-align:bottom}table.choice tr.kept td{background:var(--accent-soft)}.pill.kept{border-color:var(--accent);color:var(--fg)}
 .node.s-queued{border-style:dashed;background:var(--panel)}.node.s-aside{opacity:.6}.node.t-formula{background:var(--raise)}
 .node > b{font-size:13px;font-weight:600;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .node-sub{font-size:12px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:start}
@@ -489,6 +504,7 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
       <div class="seg" id="study-mode" role="group" aria-label="Which study">
         <button type="button" data-mode="real" aria-pressed="true">A real study</button>
         <button type="button" data-mode="mine" aria-pressed="false">Build your own</button>
+        <button type="button" data-mode="steps" aria-pressed="false">Steps and decisions · proposal</button>
       </div>
 
       <div id="study-real" class="study-pane">
@@ -517,6 +533,30 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
           <header><h2>The capsule that carries this study</h2><span class="pill">Capsule-Maker format</span></header>
           <div class="tile" id="study-capsule"></div>
         </section>
+      </div>
+
+      <div id="study-steps" class="study-pane" hidden>
+        <header class="board-head">
+          <p class="label">A proposal, to judge on sight · every number is read from the logs of the 6a capsule</p>
+          <h1>A study as steps and decisions</h1>
+          <p>Each box is one call to a registry of steps. Each arrow is an argument that is the result of another box. A decision is a box too: the machine applies the criterion and proposes, a person retains. The registry does not exist yet; this board is here to decide whether it should.</p>
+        </header>
+        <section class="sect">
+          <header><h2>Board</h2>
+            <div class="edge-legend" aria-label="Kinds of arrow">
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge"/></svg>result into a step</span>
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="7 4"/></svg>geometry and orbitals</span>
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="2 4"/></svg>a decision, or the criterion</span>
+              <span><svg width="34" height="8"><path d="M0 4H34" class="edge" stroke-dasharray="1 5"/></svg>lesson of a failed attempt</span>
+            </div>
+          </header>
+          <div class="board-scroll" id="steps-board"></div>
+          <p class="figmeta">Read it left to right: fix the target, converge, choose, relax both states, compare, then do it again with the better functional. Select a box; in the diamond, change the tolerance or retain another grid and watch what it does downstream.</p>
+        </section>
+        <div class="mine-cols">
+          <section class="tile" id="steps-box" aria-label="Selected box"></section>
+          <section class="tile"><div class="codehead"><code>study.py</code><span>ten lines: a line is a box, an underlined argument is an arrow</span></div><div id="steps-code" class="script"></div></section>
+        </div>
       </div>
 
       <div id="study-mine" class="study-pane" hidden>
@@ -731,5 +771,6 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 <script src="js/figure.js"></script>
 <script src="js/study.js"></script>
 <script src="js/example.js"></script>
+<script src="js/steps.js"></script>
 <script src="js/builder.js"></script>
 <script src="js/app.js"></script>

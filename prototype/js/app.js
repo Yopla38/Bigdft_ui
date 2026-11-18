@@ -881,7 +881,7 @@
     $$('.spaces a').forEach((a) => { if (a.getAttribute('href') === '#' + name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (name === 'publish') renderPublication();
     if (name === 'lab') typeset($('#view-lab'));
-    if (name === 'study') { if ($('#study-mine').hidden) OND.studyView.refresh(); else OND.builder.render(); }
+    if (name === 'study') { if (!$('#study-steps').hidden) OND.steps.render(); else if ($('#study-mine').hidden) OND.studyView.refresh(); else OND.builder.render(); }
     if (name === 'library') renderGuides();
   }
 
@@ -943,10 +943,11 @@
   OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
   /* The study a user builds starts from the blueprint of the workshop: its settings become the script's blueprint(). */
   OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => /^inp[.[]/.test(l)), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores', haps: blueprint.TARGETS[st.v.target] }) });
+  OND.steps.mount({ h, $, typeset });
   const studyMode = (mode) => {
     $$('#study-mode button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    $('#study-real').hidden = mode !== 'real'; $('#study-mine').hidden = mode !== 'mine';
-    if (mode === 'mine') OND.builder.render(); else OND.studyView.refresh();
+    $('#study-real').hidden = mode !== 'real'; $('#study-mine').hidden = mode !== 'mine'; $('#study-steps').hidden = mode !== 'steps';
+    if (mode === 'mine') OND.builder.render(); else if (mode === 'steps') OND.steps.render(); else OND.studyView.refresh();
   };
   $('#study-mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) studyMode(b.dataset.mode); });
   $('#mine-example').addEventListener('click', () => OND.builder.example());
