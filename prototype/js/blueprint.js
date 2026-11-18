@@ -92,8 +92,10 @@ window.OND = window.OND || {};
   /* The machines a run can be sent to: the HAPS listed in config/haps.yaml (bundled as OND.targets). */
   const TARGETS = Object.fromEntries(Object.entries(OND.targets.haps).map(([id, t]) => [id, Object.assign({}, t, { rate: t.estimate.credits_per_core_hour, speed: t.estimate.relative_speed })]));
 
+  const py = (x) => (x === true ? 'True' : x === false ? 'False' : x == null ? 'None' : Array.isArray(x) ? '[' + x.map(py).join(', ') + ']' : typeof x === 'string' ? JSON.stringify(x) : String(x));
+
   function Blueprint() {
-    const st = { v: {}, src: {}, why: {}, expert: {}, sys: null, advice: [], vol: null };
+    const st = { v: {}, src: {}, why: {}, expert: {}, actions: [], sys: null, advice: [], vol: null };
     for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; }
     const listeners = [];
     const self = { st, PARAMS, TARGETS };
@@ -110,11 +112,45 @@ window.OND = window.OND || {};
     };
     self.clear = function () {
       for (const k in PARAMS) { st.v[k] = PARAMS[k][0]; st.src[k] = 'default'; }
-      st.why = {}; st.expert = {};
+      st.why = {}; st.expert = {}; st.actions = [];
     };
     self.reset = function (key) { st.src[key] = 'default'; st.v[key] = PARAMS[key][0]; advise(); emit(key); };
     self.setExpert = function (path, value) { if (value === '' || value == null) delete st.expert[path]; else st.expert[path] = value; emit('expert'); };
-    self.snapshot = () => JSON.parse(JSON.stringify({ v: st.v, src: st.src, why: st.why, expert: st.expert }));
+    self.snapshot = () => JSON.parse(JSON.stringify({ v: st.v, src: st.src, why: st.why, expert: st.expert, actions: st.actions }));
+
+    // --- actions of PyBigDFT's registry (BigDFT.InputActions), applied in order ---------
+    /* An applied action is its name and the arguments that differ from its defaults. */
+    self.applyAction = function (name, args) {
+      const at = st.actions.findIndex((a) => a.name === name), entry = { name, args: args || {} };
+      if (at < 0) st.actions.push(entry); else st.actions[at] = entry;
+      emit('action');
+    };
+    self.removeAction = function (name) { st.actions = st.actions.filter((a) => a.name !== name); emit('action'); };
+    self.appliedAction = (name) => st.actions.find((a) => a.name === name) || null;
+    /* What an action writes with these arguments: [path, value, known]. The registry recorded what it
+     * writes with its defaults and which argument drives which key. When a key is computed from an
+     * argument by PyBigDFT in a way that was not observed, known is false: only PyBigDFT can say. */
+    self.actionWrites = function (name, args) {
+      const def = OND.actions.list.find((a) => a.name === name), out = new Map(Object.entries(def.writes || {}).map(([p, v]) => [p, [v, true]]));
+      for (const [arg, value] of Object.entries(args || {})) {
+        const map = def.maps[arg], param = def.params.find((p) => p.name === arg);
+        if (!map || JSON.stringify(value) === JSON.stringify(param.default)) continue;
+        for (const key of map.keys) {
+          const cur = out.has(key.path) ? out.get(key.path)[0] : undefined;
+          if (key.as === 'value') out.set(key.path, [value, true]);
+          else if (key.as === 'negated') out.set(key.path, [-value, true]);
+          else if (key.as === 'element') { const list = Array.isArray(cur) ? cur.slice() : []; list[key.index] = value; out.set(key.path, [list, true]); }
+          else if (JSON.stringify(value) === JSON.stringify(map.when)) { if (key.removed) out.delete(key.path); else out.set(key.path, [key.gives, true]); }
+          else out.set(key.path, [cur, false]);
+        }
+      }
+      return [...out].map(([path, [value, known]]) => [path, value, known]);
+    };
+    self.actionCall = function (name, args) {
+      const def = OND.actions.list.find((a) => a.name === name);
+      const shown = def.params.filter((p) => args && p.name in args && JSON.stringify(args[p.name]) !== JSON.stringify(p.default)).map((p) => p.name + '=' + py(args[p.name]));
+      return 'inp.' + name + '(' + shown.join(', ') + ')';
+    };
     self.restore = function (snap) { Object.assign(st, JSON.parse(JSON.stringify(snap))); advise(); emit('restore'); };
 
     // --- adaptive defaults ---------------------------------------------------
@@ -210,6 +246,7 @@ window.OND = window.OND || {};
       if (sys.bc !== 'free' && v.kpt === 1 && v.algo !== 'linear') add('environment', 'warn', 'A single k-point for a periodic system: the Brillouin zone is not sampled', ['kpt']);
       if (d.credits > 128) add('machine', 'warn', 'Estimated cost exceeds your 128 credits: lower the accuracy or change the target', ['target', 'mpi', 'hgrid', 'kpt']);
       if (TARGETS[v.target].gpu) add('machine', 'warn', 'GPU acceleration is written in the input, and a dry run cannot verify it: on a machine without a GPU, BigDFT stops as it starts', ['target']);
+      for (const act of st.actions) if (self.actionWrites(act.name, act.args).some((w) => !w[2])) add(OND.actions.list.find((x) => x.name === act.name).block, 'warn', self.actionCall(act.name, act.args) + ' writes a value PyBigDFT computes from its arguments: the preview shows “?” there, the script on the right is exact');
       if (d.mem > 16) add('machine', 'warn', 'High estimated memory per MPI task: use more tasks or a coarser grid', ['mpi', 'hgrid', 'crmult']);
       else add('machine', 'ok', 'Fits in memory: ' + d.mem.toFixed(d.mem < 10 ? 1 : 0) + ' GB per MPI task, estimated');
       return out;
@@ -221,7 +258,7 @@ window.OND = window.OND || {};
     /* Returns the input as ordered sections of [key, value, comment]. */
     self.input = function () {
       const sys = st.sys, v = st.v, S = {}, imports = [];
-      const put = (sec, key, val, k) => { (S[sec] = S[sec] || []).push([key, val, k && st.why[k] ? st.why[k].triplet.join(' → ') : '']); };
+      const put = (sec, key, val, k, note) => { const rows = (S[sec] = S[sec] || []), row = [key, val, note || (k && st.why[k] ? st.why[k].triplet.join(' → ') : '')], at = rows.findIndex((r) => r[0] === key); if (at < 0) rows.push(row); else rows[at] = row; };
       if (v.algo === 'linear') imports.push('linear');
       if (v.scf === 'mixing') imports.push('mixing');
       put('dft', 'hgrids', v.hgrid, 'hgrid');
@@ -259,10 +296,13 @@ window.OND = window.OND || {};
         put('psolver.environment', 'gammaS', P[2]); put('psolver.environment', 'alphaS', P[3]); put('psolver.environment', 'betaV', 0.0);
       }
       if (TARGETS[v.target].gpu) { put('perf', 'accel', 'OCLGPU', 'target'); put('psolver.setup', 'accel', 'CUDA'); }
+      for (const a of st.actions) for (const [path, value, known] of self.actionWrites(a.name, a.args)) {
+        const cut = path.lastIndexOf('.');
+        if (cut < 0) put('', path, value, null, self.actionCall(a.name, a.args)); else put(path.slice(0, cut), path.slice(cut + 1), known ? value : '?', null, self.actionCall(a.name, a.args) + (known ? '' : ': computed by PyBigDFT'));
+      }
       for (const path in st.expert) {
         const cut = path.lastIndexOf('.');
-        put(path.slice(0, cut), path.slice(cut + 1), st.expert[path]);
-        S[path.slice(0, cut)][S[path.slice(0, cut)].length - 1][2] = 'expert setting';
+        put(path.slice(0, cut), path.slice(cut + 1), st.expert[path], null, 'expert setting');
       }
       return { imports, sections: S, file: XYZ[sys.id] };
     };
@@ -277,7 +317,8 @@ window.OND = window.OND || {};
       const line = (ind, k, val, c) => L.push({ ind, k, val, c });
       if (inp.imports.length) line(0, 'import', inp.imports.length > 1 ? '[' + inp.imports.join(', ') + ']' : inp.imports[0], 'profiles shipped with BigDFT');
       const tree = {};
-      for (const sec in inp.sections) { let node = tree; for (const part of (sec.startsWith('psppar.') ? [sec] : sec.split('.'))) node = node[part] = node[part] || {}; node.__ = inp.sections[sec]; }
+      for (const [key, val, c] of inp.sections[''] || []) line(0, key, yv(val), c);   // keys at the top of the input
+      for (const sec in inp.sections) { if (sec === '') continue; let node = tree; for (const part of (sec.startsWith('psppar.') ? [sec] : sec.split('.'))) node = node[part] = node[part] || {}; node.__ = inp.sections[sec]; }
       (function walk(node, ind) {
         for (const k in node) {
           if (k === '__') continue;
@@ -331,6 +372,7 @@ window.OND = window.OND || {};
       if (v.dipole) c('inp.calculate_dipole()');
       if (v.charges) c('inp.calculate_multipoles()');
       if (TARGETS[v.target].gpu) c('inp.use_gpu_acceleration()');
+      for (const a of st.actions) c(self.actionCall(a.name, a.args));
       for (const path in st.expert) c('inp' + path.split('.').map((p) => '["' + p + '"]').join('') + ' = ' + JSON.stringify(st.expert[path]));
       c('');
       c('code = Calculators.SystemCalculator(omp=' + v.omp + ', mpi_run="mpirun -np ' + v.mpi + '")');

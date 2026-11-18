@@ -159,6 +159,18 @@ What becomes a "button", and why:
 
 What does *not* become a button: the 49 `perf` variables (except acceleration and a few analyses), the internal tolerances of CheSS, the block sizes of the input guess. They remain reachable in Expert mode and in the source.
 
+### A fourth depth, drawn from PyBigDFT's own registry
+
+PyBigDFT has a registry of functions for the input: the module `BigDFT.InputActions`. Every public function there is attached to each `Inputfile` when it is created (`inp.set_xc("PBE")` is `InputActions.set_xc(inp, "PBE")`), its documentation sorts them in five families, and `remove` undoes any of them. That is the natural source for an interface, and the workshop now has a depth that is nothing else: **PyBigDFT**, between Advanced and Expert, shows one control per action, drawn from its signature.
+
+Nothing about an action is written by hand. `for_pybigdft_pack/extract/extract.py` reads the registry in the pack's image, calls each action on an empty input to record what it writes, then calls it again with each argument changed to see which key follows which argument, and how: as it is, as one element of a list (`set_rmult(coarse=…)` is `dft.rmult[0]`), as its opposite (`extract_virtual_states(nvirt=…)` writes `dft.norbv = −nvirt`), or computed. `tools/build_actions.py` bundles that for the page and places each action in a block from the variables it writes. 45 actions for PyBigDFT 0.9, 38 of them usable as they are; the other 7 need a value the workshop cannot give yet and say so.
+
+Applying an action adds a line to the script and its keys to the input, in order; removing it removes both. The preview was checked against PyBigDFT itself: the same five actions, run in the image, wrote the same keys and values. Where PyBigDFT computes a value in a way that was not observed (a temperature given in kelvin), the preview shows "?" and says that only PyBigDFT can tell; the script stays exact.
+
+Two consequences. A new version of PyBigDFT changes this depth without anyone touching the page. And the build now refuses a workshop that writes a call the installed version does not have: the three wrong calls found earlier (`set_kpt_mesh`, a solvent name, `calculate_coupling_matrix`) would have stopped it.
+
+The same holds on the results side: `BigDFT.Logfiles.BUILTIN` is the registry of what a log exposes (37 named quantities with the keys they are read from). The views of the Study space should be drawn from it in the same way; that is not done.
+
 ## 5. Defaults that adapt, and say why
 
 Every value carries a provenance: **BigDFT default**, **Adapted**, **You**, **Agent**, **Paper**, **Guide**. An adapted value never overwrites a human choice: when the advice differs it is shown beside the value with a "Follow the advice" button.

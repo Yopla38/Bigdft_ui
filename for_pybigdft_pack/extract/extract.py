@@ -227,6 +227,61 @@ def _flatten(node, prefix=""):
     return flat
 
 
+def _probe(default):
+    """A value close to a default and different from it, to see where an argument ends up."""
+    if isinstance(default, bool):
+        return not default
+    if isinstance(default, int):
+        return default + 3
+    if isinstance(default, float):
+        return round(default + 0.123, 6)
+    if isinstance(default, str):
+        return "PROBE_" + default
+    if isinstance(default, list) and default and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in default):
+        return [_probe(x) for x in default]
+    return None
+
+
+def _relation(written, probe):
+    """How a written value follows from the argument: as it is, one element of it, its opposite, or computed."""
+    if written == probe:
+        return {"as": "value"}
+    if isinstance(probe, (int, float)) and not isinstance(probe, bool):
+        if isinstance(written, (int, float)) and written == -probe:
+            return {"as": "negated"}
+        if isinstance(written, list) and probe in written:
+            return {"as": "element", "index": written.index(probe)}
+    return {"as": "computed"}
+
+
+def _argument_map(func, params, base, kwargs):
+    """For each argument with a default, the input keys that follow it. Found by calling, not by reading."""
+    from BigDFT.Inputfiles import Inputfile
+    found = {}
+    for p in params:
+        if p["default"] is None or p["name"] in kwargs:
+            continue
+        try:
+            default = ast.literal_eval(p["default"])
+        except Exception:
+            continue
+        probe = _probe(default)
+        if probe is None:
+            continue
+        try:
+            inp = Inputfile()
+            func(inp, **dict(kwargs, **{p["name"]: probe}))
+            flat = {k: v for k, v in _flatten(dict(inp)).items() if not k.startswith("posinp")}
+        except Exception as exc:
+            found[p["name"]] = {"error": "%s: %s" % (type(exc).__name__, exc)}
+            continue
+        changed = [k for k in sorted(set(flat) | set(base)) if flat.get(k, "<absent>") != base.get(k, "<absent>")]
+        # `when`/`gives`: the one other case that was really observed (for a yes/no argument, the whole truth)
+        found[p["name"]] = {"when": probe, "keys": [dict(_relation(flat.get(k), probe), path=k, removed=k not in flat,
+                                                           gives=flat.get(k)) for k in changed]}
+    return found
+
+
 def actions(out):
     """Call every input action on an empty input file and record what it wrote."""
     from BigDFT import InputActions
@@ -263,9 +318,16 @@ def actions(out):
                     entry["writes_posinp"] = any(k.startswith("posinp") for k in flat)
                     shown = ", ".join("%s=%s" % (p["name"], p["default"]) for p in params if p["default"] is not None)
                     entry["call"] = "inp.%s(%s)" % (name, shown)
+                    entry["arguments"] = _argument_map(func, params, {k: v for k, v in flat.items() if not k.startswith("posinp")}, kwargs)
                 except Exception as exc:
                     entry["error"] = "%s: %s" % (type(exc).__name__, exc)
         found.append(entry)
+    doc = inspect.getdoc(InputActions) or ""
+    for title, body in re.findall(r"\n([^\n]+)\n-{5,}\n\n\.\. autosummary::\n\n((?:   \w+\n?)+)", doc):
+        for name in body.split():
+            for entry in found:
+                if entry["name"] == name:
+                    entry["category"] = title.strip()
     print("actions: %d, %d called" % (len(found), sum(1 for a in found if a["writes"] is not None)))
     return write(out, "actions.json", found)
 

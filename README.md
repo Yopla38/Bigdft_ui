@@ -49,6 +49,17 @@ git clone --depth 1 https://github.com/BigDFT-group/capsule-maker.git /tmp/capsu
 python tools/build_results.py "/tmp/capsule-maker/Open-Scientific-Intelligence-Hackathon-2026/knowledge-capsule-artefacts-claude-opus-5.5/phase-2-growth/bigdft-6a-tsubame"
 ```
 
+## Regenerate the controls drawn from PyBigDFT
+
+The "PyBigDFT" depth of the workshop is drawn from the registry of input actions of the installed
+PyBigDFT, read in the pack's image by `for_pybigdft_pack/repopulate.sh`. After a new build:
+
+```bash
+python tools/build_actions.py        # for_pybigdft_pack/build/<latest> -> prototype/js/actions.js
+```
+
+It fails if the workshop itself writes a call the installed version does not have.
+
 ## Change where calculations run
 
 Edit `config/haps.yaml`, then:

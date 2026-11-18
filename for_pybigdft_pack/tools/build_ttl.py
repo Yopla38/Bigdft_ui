@@ -183,10 +183,16 @@ def build(args) -> int:
             g.add(iri, ":hasSignature", lit(f"{f['qualname']}  (a property: read it, do not call it)"))
         elif signature:
             g.add(iri, ":hasSignature", lit(f"{f['name']}{signature}"))
+        drives = (action_names[f["name"]].get("arguments") or {}) if is_action else {}
         for p in f["parameters"]:
             if is_action and p["name"] == "inp":
                 continue
-            g.add(iri, ":hasArgument", lit(f"{p['name']}={p['default']}" if p["default"] is not None else f"{p['name']} (required)"))
+            text = f"{p['name']}={p['default']}" if p["default"] is not None else f"{p['name']} (required)"
+            keys = (drives.get(p["name"]) or {}).get("keys") or []
+            if keys:      # which input keys follow this argument, found by calling the action with another value
+                how = {"value": "", "negated": " (its opposite)", "computed": " (computed from it)"}
+                text += " → " + ", ".join(k["path"] + (f"[{k['index']}]" if k["as"] == "element" else how[k["as"]]) for k in keys)
+            g.add(iri, ":hasArgument", lit(text))
     for c in api["classes"]:
         if c["file"]:
             by_place[(c["file"], c["line"])] = class_iri[(c["module"], c["name"])]

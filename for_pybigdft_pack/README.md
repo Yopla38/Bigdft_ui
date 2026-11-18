@@ -11,7 +11,7 @@ Read from **PyBigDFT 0.9, BigDFT 1.9.1** (`bigdft/runtime@sha256:6f16f65f5b33…
 |---|---|---|
 | Modules, classes, functions and methods | 39, 62, 530 | introspection of the installed package: exact signatures, defaults, docstrings |
 | Attributes of a `Logfile` | 37 | the table PyBigDFT builds them from, with the log keys they read |
-| Input actions, with what each one writes | 45 | each action called on an empty input file, the result recorded |
+| Input actions, with what each one writes | 45 | each action called on an empty input file, then once more per argument to see which key follows it |
 | Input variables | 317 | the log of a run (243) completed from the source definitions |
 | Snippets | 41 | written by hand, **each executed in the image**; only those that pass are kept |
 | Pitfalls | 24 | observed on real runs; all but one are asserted by a snippet |

@@ -25,7 +25,7 @@
   const blueprint = OND.Blueprint(), P = blueprint.PARAMS, st = blueprint.st;
   const stage = OND.Stage($('#stage'));
   const SCHEMA = OND.schema.variables;
-  const ui = { brick: 'matter', depth: 0, view: { grid: false, density: false, orbital: false, fragment: false, ghosts: true, vdw: false }, sel: null, undo: [], drag: false, ran: false, query: '', notes: [] };
+  const ui = { acts: {}, brick: 'matter', depth: 0, view: { grid: false, density: false, orbital: false, fragment: false, ghosts: true, vdw: false }, sel: null, undo: [], drag: false, ran: false, query: '', notes: [] };
 
   const icon = (d) => '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const BRICKS = [
@@ -292,6 +292,36 @@
     else if (tries < 25) setTimeout(() => typeset(el, tries + 1), 400);
   }
 
+  /* One control per action of PyBigDFT's registry, drawn from its signature. */
+  function actionCard(def) {
+    const applied = blueprint.appliedAction(def.name), draft = ui.acts[def.name] || (ui.acts[def.name] = Object.assign({}, applied ? applied.args : {}));
+    const value = (p) => (p.name in draft ? draft[p.name] : p.default), changed = (p) => JSON.stringify(value(p)) !== JSON.stringify(p.default);
+    const args = () => Object.fromEntries(def.params.filter(changed).map((p) => [p.name, value(p)]));
+    const set = (p, v) => { draft[p.name] = v; renderInspector(); };
+    const field = (p) => {
+      const id = 'act-' + def.name + '-' + p.name;
+      if (p.kind === 'bool') return h('button', { class: 'tog', id, type: 'button', role: 'switch', 'aria-checked': String(!!value(p)), 'aria-label': p.name, onclick: () => set(p, !value(p)) }, value(p) ? 'True' : 'False');
+      if (p.kind === 'number') return h('input', { id, type: 'number', step: 'any', value: String(value(p)), 'aria-label': p.name, onchange: (e) => set(p, e.target.value === '' ? p.default : +e.target.value) });
+      if (p.kind === 'text') return h('input', { id, type: 'text', value: value(p), 'aria-label': p.name, onchange: (e) => set(p, e.target.value) });
+      if (p.kind === 'list') return h('input', { id, type: 'text', value: JSON.stringify(value(p)), 'aria-label': p.name, onchange: (e) => { try { const v = JSON.parse(e.target.value); if (Array.isArray(v)) set(p, v); } catch (err) { e.target.value = JSON.stringify(value(p)); } } });
+      return h('code', {}, p.kind === 'required' ? 'required' : p.shown);
+    };
+    const usable = def.writes !== null, writes = usable ? blueprint.actionWrites(def.name, args()) : [];
+    const curated = [...new Set(writes.map(([path]) => Object.keys(P).find((k) => P[k][1] === path)).filter(Boolean).map(labelOf))];
+    return h('div', { class: 'act' + (applied ? ' on' : ''), 'data-action': def.name },
+      h('div', { class: 'act-head' }, h('code', {}, blueprint.actionCall(def.name, args())), applied ? h('span', { class: 'pill' }, 'applied') : null),
+      h('p', { class: 'act-sum' }, (def.summary || 'No docstring in PyBigDFT for this action.').replace(/``/g, '')),
+      def.params.length ? h('div', { class: 'act-args' }, def.params.map((p) => h('label', {}, h('span', {}, p.name), field(p)))) : null,
+      !usable ? h('p', { class: 'act-note' }, 'Not offered here: it was ' + def.note + '.')
+        : writes.length ? h('ul', { class: 'act-writes' }, writes.map(([path, v, known]) => h('li', {}, h('code', {}, path), ' = ', known ? h('code', {}, JSON.stringify(v)) : h('i', {}, 'computed by PyBigDFT from these arguments'))))
+          : h('p', { class: 'act-note' }, 'With these arguments it writes nothing in the input.'),
+      curated.length ? h('p', { class: 'act-note' }, 'Also set by the control' + (curated.length > 1 ? 's ' : ' ') + curated.map((c) => '“' + c + '”').join(', ') + '; the action is applied after it.') : null,
+      usable ? h('div', { class: 'act-do' },
+        h('button', { class: 'btn small' + (applied ? '' : ' cta'), type: 'button', onclick: () => blueprint.applyAction(def.name, args()) }, applied ? 'Update' : 'Apply'),
+        applied ? h('button', { class: 'btn small', type: 'button', onclick: () => { delete ui.acts[def.name]; blueprint.removeAction(def.name); } }, 'Remove') : null) : null,
+      def.doc && def.doc !== def.summary ? h('details', {}, h('summary', {}, 'Documentation, from PyBigDFT'), h('pre', {}, def.doc)) : null);
+  }
+
   function schemaRow(vr) {
     const cur = st.expert[vr.p], set = cur !== undefined;
     const parse = (s) => { if (s === '') return ''; try { return JSON.parse(s); } catch (e) { return s; } };
@@ -311,7 +341,7 @@
   function reveal(key) {
     const block = P[key][2];
     ui.brick = block; ui.query = '';
-    ui.depth = controls(block, 0).some((x) => x && x.k === key) ? (ui.depth === 2 ? 0 : ui.depth) : 1;
+    ui.depth = controls(block, 0).some((x) => x && x.k === key) ? (ui.depth >= 2 ? 0 : ui.depth) : 1;
     if (location.hash.slice(1) !== 'workshop' && location.hash) location.hash = 'workshop';
     renderRail(); renderInspector();
     const row = document.getElementById('row-' + key);
@@ -377,6 +407,11 @@
         const rows = SCHEMA.filter((x) => x.b === ui.brick && x.t === 1);
         if (rows.length) kids.push(h('p', { class: 'label', style: 'margin-top:18px' }, 'Advanced settings · ' + rows.length), ...rows.map(schemaRow));
       }
+    } else if (ui.depth === 3) {
+      const all = OND.actions.list, mine = all.filter((a) => a.block === ui.brick);
+      kids.push(h('p', { class: 'count' }, mine.length + ' of the ' + all.length + ' input actions of ' + OND.actions.version.split(',')[0] + ' write in this block. These controls are drawn from its registry, the module BigDFT.InputActions, as installed: nothing here is written by hand, and another version gives another list.'),
+        st.actions.length ? h('p', { class: 'count' }, 'Applied, in this order: ' + st.actions.map((a) => a.name).join(', ') + '.') : null,
+        ...mine.map(actionCard));
     } else {
       const q = ui.query.toLowerCase();
       const rows = SCHEMA.filter((x) => (q ? (x.p + ' ' + x.c).toLowerCase().includes(q) : x.b === ui.brick));

@@ -2549,7 +2549,7 @@
     :hasDescription "Insert ``norbs`` empty orbitals in the scf procedure" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "add_empty_scf_orbitals(norbs=10)" ;
-    :hasArgument "norbs=10" ;
+    :hasArgument "norbs=10 → lin_general.extra_states, mix.norbsempty" ;
     :calledAs "inp.add_empty_scf_orbitals(norbs=10)" ;
     :writesInput "lin_general.extra_states = 10" ;
     :setsParameter :Parameter_lin_general_extra_states ;
@@ -2562,7 +2562,7 @@
     :hasDescription "Apply an external electric field on the system" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "apply_electric_field(elecfield=[0, 0, 0.001])" ;
-    :hasArgument "elecfield=[0, 0, 0.001]" ;
+    :hasArgument "elecfield=[0, 0, 0.001] → dft.elecfield" ;
     :calledAs "inp.apply_electric_field(elecfield=[0, 0, 0.001])" ;
     :writesInput "dft.elecfield = [0, 0, 0.001]" ;
     :setsParameter :Parameter_dft_elecfield ;
@@ -2584,7 +2584,7 @@
     :hasDescription "Calculate the multipoles on the atoms based on SF." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "calculate_multipoles(yes=True)" ;
-    :hasArgument "yes=True" ;
+    :hasArgument "yes=True → lin_general.charge_multipoles (computed from it)" ;
     :calledAs "inp.calculate_multipoles(yes=True)" ;
     :writesInput "lin_general.charge_multipoles = 11" ;
     :setsParameter :Parameter_lin_general_charge_multipoles .
@@ -2605,9 +2605,9 @@
     :hasDescription "Perform a Casida TDDFT coupling matrix extraction." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "calculate_tddft_coupling_matrix(tda=False, rpa=True, fxc=True)" ;
-    :hasArgument "tda=False" ;
-    :hasArgument "rpa=True" ;
-    :hasArgument "fxc=True" ;
+    :hasArgument "tda=False → tddft.tddft_approach (computed from it)" ;
+    :hasArgument "rpa=True → output.coupling_matrix (computed from it)" ;
+    :hasArgument "fxc=True → output.coupling_matrix (computed from it)" ;
     :calledAs "inp.calculate_tddft_coupling_matrix(tda=False, rpa=True, fxc=True)" ;
     :writesInput "output.coupling_matrix = \"complete\"" ;
     :setsParameter :Parameter_output_coupling_matrix ;
@@ -2620,7 +2620,7 @@
     :hasDescription "Modify the name of the ``data-`` directory. Useful to grab the orbitals from another directory than the run name" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "change_data_directory(name='')" ;
-    :hasArgument "name=''" ;
+    :hasArgument "name='' → radical" ;
     :calledAs "inp.change_data_directory(name='')" ;
     :writesInput "radical = \"\"" ;
     :setsParameter :Parameter_radical .
@@ -2631,7 +2631,7 @@
     :hasDescription "Charge the system" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "charge(charge=-1)" ;
-    :hasArgument "charge=-1" ;
+    :hasArgument "charge=-1 → dft.qcharge" ;
     :calledAs "inp.charge(charge=-1)" ;
     :writesInput "dft.qcharge = -1" ;
     :setsParameter :Parameter_dft_qcharge ;
@@ -2668,10 +2668,10 @@
     :hasDescription "Extract a given number of empty states **after** the scf cycle." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "extract_virtual_states(nvirt=8, davidson=False, norbv=None, itermax_virt=150)" ;
-    :hasArgument "nvirt=8" ;
-    :hasArgument "davidson=False" ;
+    :hasArgument "nvirt=8 → dft.norbv (its opposite), dft.nvirt" ;
+    :hasArgument "davidson=False → dft.norbv (computed from it)" ;
     :hasArgument "norbv=None" ;
-    :hasArgument "itermax_virt=150" ;
+    :hasArgument "itermax_virt=150 → dft.itermax_virt" ;
     :calledAs "inp.extract_virtual_states(nvirt=8, davidson=False, norbv=None, itermax_virt=150)" ;
     :writesInput "dft.itermax_virt = 150" ;
     :setsParameter :Parameter_dft_itermax_virt ;
@@ -2697,8 +2697,8 @@
     :hasDescription "Methods for scf of the kernel coefficients." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "optimize_coefficients(nit=1, gnrm=1e-05)" ;
-    :hasArgument "nit=1" ;
-    :hasArgument "gnrm=1e-05" ;
+    :hasArgument "nit=1 → lin_kernel.nstep" ;
+    :hasArgument "gnrm=1e-05 → lin_kernel.gnrm_cv_coeff" ;
     :calledAs "inp.optimize_coefficients(nit=1, gnrm=1e-05)" ;
     :writesInput "lin_kernel.gnrm_cv_coeff = 1e-05" ;
     :setsParameter :Parameter_lin_kernel_gnrm_cv_coeff ;
@@ -2711,11 +2711,11 @@
     :hasDescription "Optimize the geometry of the system" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "optimize_geometry(method='FIRE', nsteps=50, betax=4.0, frac_fluct=1.0, forcemax=0)" ;
-    :hasArgument "method='FIRE'" ;
-    :hasArgument "nsteps=50" ;
-    :hasArgument "betax=4.0" ;
-    :hasArgument "frac_fluct=1.0" ;
-    :hasArgument "forcemax=0" ;
+    :hasArgument "method='FIRE' → geopt.method" ;
+    :hasArgument "nsteps=50 → geopt.ncount_cluster_x" ;
+    :hasArgument "betax=4.0 → geopt.betax" ;
+    :hasArgument "frac_fluct=1.0 → geopt.frac_fluct" ;
+    :hasArgument "forcemax=0 → geopt.forcemax" ;
     :calledAs "inp.optimize_geometry(method='FIRE', nsteps=50, betax=4.0, frac_fluct=1.0, forcemax=0)" ;
     :writesInput "geopt.betax = 4.0" ;
     :setsParameter :Parameter_geopt_betax ;
@@ -2735,11 +2735,11 @@
     :hasDescription "Methods for scf of the density kernel." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "optimize_kernel(method='DIAG', dynamic_convergence=True, nit=5, rpnrm=1e-10, alphamix=0.5)" ;
-    :hasArgument "method='DIAG'" ;
-    :hasArgument "dynamic_convergence=True" ;
-    :hasArgument "nit=5" ;
-    :hasArgument "rpnrm=1e-10" ;
-    :hasArgument "alphamix=0.5" ;
+    :hasArgument "method='DIAG' → lin_kernel.linear_method" ;
+    :hasArgument "dynamic_convergence=True → lin_kernel.delta_prnm (computed from it), perf.adjust_kernel_iterations, perf.adjust_kernel_threshold" ;
+    :hasArgument "nit=5 → lin_kernel.nit" ;
+    :hasArgument "rpnrm=1e-10 → lin_kernel.rpnrm_cv" ;
+    :hasArgument "alphamix=0.5 → lin_kernel.alphamix" ;
     :calledAs "inp.optimize_kernel(method='DIAG', dynamic_convergence=True, nit=5, rpnrm=1e-10, alphamix=0.5)" ;
     :writesInput "lin_kernel.alphamix = 0.5" ;
     :setsParameter :Parameter_lin_kernel_alphamix ;
@@ -2756,9 +2756,9 @@
     :hasDescription "Methods for scf of the Support functions." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "optimize_support_functions(nit=1, gnrm=1e-06, diis_history=0)" ;
-    :hasArgument "nit=1" ;
-    :hasArgument "gnrm=1e-06" ;
-    :hasArgument "diis_history=0" ;
+    :hasArgument "nit=1 → lin_basis.nit" ;
+    :hasArgument "gnrm=1e-06 → lin_basis.gnrm_cv" ;
+    :hasArgument "diis_history=0 → lin_basis.idsx" ;
     :calledAs "inp.optimize_support_functions(nit=1, gnrm=1e-06, diis_history=0)" ;
     :writesInput "lin_basis.gnrm_cv = 1e-06" ;
     :setsParameter :Parameter_lin_basis_gnrm_cv ;
@@ -2812,8 +2812,8 @@
     :hasDescription "Define the electronic temperature, in AU (``kT``) or K (``T``)" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_electronic_temperature(kT=0.001, T=0)" ;
-    :hasArgument "kT=0.001" ;
-    :hasArgument "T=0" ;
+    :hasArgument "kT=0.001 → mix.tel" ;
+    :hasArgument "T=0 → mix.tel (computed from it)" ;
     :calledAs "inp.set_electronic_temperature(kT=0.001, T=0)" ;
     :writesInput "mix.tel = 0.001" ;
     :setsParameter :Parameter_mix_tel ;
@@ -2834,7 +2834,7 @@
     :hasDescription "Set the wavelet grid spacing." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_hgrid(hgrids=0.4)" ;
-    :hasArgument "hgrids=0.4" ;
+    :hasArgument "hgrids=0.4 → dft.hgrids" ;
     :calledAs "inp.set_hgrid(hgrids=0.4)" ;
     :writesInput "dft.hgrids = 0.4" ;
     :setsParameter :Parameter_dft_hgrids ;
@@ -2852,8 +2852,8 @@
     :hasDescription "Add an acqueous implicit solvent around the system with the soft-sphere cavity method" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_implicit_solvent(itermax=20, minres=0.0001)" ;
-    :hasArgument "itermax=20" ;
-    :hasArgument "minres=0.0001" ;
+    :hasArgument "itermax=20 → psolver.environment.itermax" ;
+    :hasArgument "minres=0.0001 → psolver.environment.minres" ;
     :calledAs "inp.set_implicit_solvent(itermax=20, minres=0.0001)" ;
     :writesInput "psolver.environment.cavity = \"soft-sphere\"" ;
     :setsParameter :Parameter_psolver_environment_cavity ;
@@ -2869,7 +2869,7 @@
     :hasDescription "Method for guessing the kernel at restart." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_kernel_guess(mode='kernel')" ;
-    :hasArgument "mode='kernel'" ;
+    :hasArgument "mode='kernel' → lin_general.kernel_restart_mode" ;
     :calledAs "inp.set_kernel_guess(mode='kernel')" ;
     :writesInput "lin_general.kernel_restart_mode = \"kernel\"" ;
     :setsParameter :Parameter_lin_general_kernel_restart_mode .
@@ -2890,7 +2890,7 @@
     :hasDescription "Constrain the number of grid points in each direction. This is useful when performing periodic system calculations with variable cells which need to be compared each other. In this way the number of degrees of freedom is kept constant throughout the various simuilations." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_mesh_sizes(ngrids=64)" ;
-    :hasArgument "ngrids=64" ;
+    :hasArgument "ngrids=64 → dft.ngrids" ;
     :calledAs "inp.set_mesh_sizes(ngrids=64)" ;
     :writesInput "dft.ngrids = 64" ;
     :setsParameter :Parameter_dft_ngrids .
@@ -2904,7 +2904,7 @@
     :hasArgument "avg={}" ;
     :hasArgument "up={}" ;
     :hasArgument "down={}" ;
-    :hasArgument "kpoint=1" ;
+    :hasArgument "kpoint=1 → occupation (computed from it)" ;
     :calledAs "inp.set_orbital_occupancy(avg={}, up={}, down={}, kpoint=1)" ;
     :writesInput "occupation = \"{'K point 1': {}}\"" .
 
@@ -2943,8 +2943,8 @@
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_rmult(rmult=None, coarse=5.0, fine=8.0)" ;
     :hasArgument "rmult=None" ;
-    :hasArgument "coarse=5.0" ;
-    :hasArgument "fine=8.0" ;
+    :hasArgument "coarse=5.0 → dft.rmult[0]" ;
+    :hasArgument "fine=8.0 → dft.rmult[1]" ;
     :calledAs "inp.set_rmult(rmult=None, coarse=5.0, fine=8.0)" ;
     :writesInput "dft.rmult = [5.0, 8.0]" ;
     :setsParameter :Parameter_dft_rmult ;
@@ -2956,8 +2956,8 @@
     :hasDescription "Set the tolerance acceptance level for stopping the self-consistent iterations. Useful both for LS and CS" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_scf_convergence(gnrm='default', rpnrm='default')" ;
-    :hasArgument "gnrm='default'" ;
-    :hasArgument "rpnrm='default'" ;
+    :hasArgument "gnrm='default' → dft.gnrm_cv" ;
+    :hasArgument "rpnrm='default' → lin_general.rpnrm_cv, mix.rpnrm_cv" ;
     :calledAs "inp.set_scf_convergence(gnrm='default', rpnrm='default')" ;
     :writesInput "dft.gnrm_cv = \"default\"" ;
     :setsParameter :Parameter_dft_gnrm_cv ;
@@ -2973,7 +2973,7 @@
     :hasDescription "Set the number of the iteration per loop" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_scf_iterations(nit=[50, 1])" ;
-    :hasArgument "nit=[50, 1]" ;
+    :hasArgument "nit=[50, 1] → dft.itermax (computed from it), dft.nrepmax (computed from it), lin_general.nit" ;
     :calledAs "inp.set_scf_iterations(nit=[50, 1])" ;
     :writesInput "dft.itermax = 50" ;
     :setsParameter :Parameter_dft_itermax ;
@@ -3000,7 +3000,7 @@
     :hasDescription "Set the symmetry detection for the charge density and the ionic forces and stressdef set_symmetry(inp,yes=True):" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_symmetry(yes=True)" ;
-    :hasArgument "yes=True" ;
+    :hasArgument "yes=True → dft.disablesym (computed from it)" ;
     :calledAs "inp.set_symmetry(yes=True)" ;
     :writesInput "dft.disablesym = false" ;
     :setsParameter :Parameter_dft_disablesym .
@@ -3011,7 +3011,7 @@
     :hasDescription "Set the exchange and correlation approximation" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "set_xc(xc='PBE')" ;
-    :hasArgument "xc='PBE'" ;
+    :hasArgument "xc='PBE' → dft.ixc" ;
     :calledAs "inp.set_xc(xc='PBE')" ;
     :writesInput "dft.ixc = \"PBE\"" ;
     :setsParameter :Parameter_dft_ixc ;
@@ -3039,7 +3039,7 @@
     :hasDescription "Add a collinear spin polarization to the system." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "spin_polarize(mpol=1)" ;
-    :hasArgument "mpol=1" ;
+    :hasArgument "mpol=1 → dft.mpol" ;
     :calledAs "inp.spin_polarize(mpol=1)" ;
     :writesInput "dft.mpol = 1" ;
     :setsParameter :Parameter_dft_mpol ;
@@ -3067,7 +3067,7 @@
     :hasDescription "Writes the ``nplot`` orbitals around the fermi level in cube format." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "write_cubefiles_around_fermi_level(nplot=1)" ;
-    :hasArgument "nplot=1" ;
+    :hasArgument "nplot=1 → dft.nplot" ;
     :calledAs "inp.write_cubefiles_around_fermi_level(nplot=1)" ;
     :writesInput "dft.nplot = 1" ;
     :setsParameter :Parameter_dft_nplot ;
@@ -3089,7 +3089,7 @@
     :hasDescription "Set the code to write the orbitals on disk in the provided format" ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "write_orbitals_on_disk(format='binary')" ;
-    :hasArgument "format='binary'" ;
+    :hasArgument "format='binary' → output.orbitals" ;
     :calledAs "inp.write_orbitals_on_disk(format='binary')" ;
     :writesInput "output.orbitals = \"binary\"" ;
     :setsParameter :Parameter_output_orbitals ;
@@ -3101,7 +3101,7 @@
     :hasDescription "Write the matrices of the linear scaling formats." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "write_support_function_matrices(format='text')" ;
-    :hasArgument "format='text'" ;
+    :hasArgument "format='text' → lin_general.output_mat (computed from it)" ;
     :calledAs "inp.write_support_function_matrices(format='text')" ;
     :writesInput "lin_general.output_mat = 1" ;
     :setsParameter :Parameter_lin_general_output_mat .
@@ -3112,7 +3112,7 @@
     :hasDescription "Dump the support functions." ;
     :definedIn :Module_BigDFT_InputActions ;
     :hasSignature "write_support_functions_on_disk(format='text')" ;
-    :hasArgument "format='text'" ;
+    :hasArgument "format='text' → lin_general.output_wf" ;
     :calledAs "inp.write_support_functions_on_disk(format='text')" ;
     :writesInput "lin_general.output_wf = \"text\"" ;
     :setsParameter :Parameter_lin_general_output_wf .
