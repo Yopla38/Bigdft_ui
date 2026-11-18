@@ -31,16 +31,44 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 python tools/preview.py        # http://localhost:8765
 ```
 
-## Regenerate after a BigDFT upgrade
+## Moving to another version of BigDFT or PyBigDFT
+
+One command. It needs the image the pack will run and a source checkout of the same version
+(the input variables are declared in the source, not in the image):
 
 ```bash
-git clone --depth 1 --branch <tag> https://gitlab.com/l_sim/bigdft-suite.git /tmp/bigdft-suite
-python tools/extract_schema.py /tmp/bigdft-suite -o /tmp/new.json --revision "tag <tag>"
-python tools/diff_schema.py schema/bigdft-input.schema.json /tmp/new.json   # what changes; fails if a control is lost
-cp /tmp/new.json schema/bigdft-input.schema.json
-python tools/build_prototype_schema.py               # prototype/js/schema.js, fails if the curation is stale
-python tools/build_parameter_instances.py            # ontology/instances/ and ontology/corpus/
+tools/update_version.sh --image docker://bigdft/runtime@sha256:<digest> \
+                        --source /path/to/bigdft-suite --revision "tag 1.9.5"
 ```
+
+It ends with the list of what a person has to look at. When that list is empty, the application
+follows the new version as it is.
+
+What is read again from the code, never rewritten by hand:
+
+| Part of the application | Read from | By |
+|---|---|---|
+| The 311 input variables: names, defaults, ranges, conditions, profiles (Expert and Advanced depths) | the source definitions | `extract_schema.py`, `build_prototype_schema.py` |
+| The parameter graph and its text corpus | the same | `build_parameter_instances.py` |
+| The PyBigDFT depth: one control per input action, with what it writes | the installed PyBigDFT, called in the image | `for_pybigdft_pack/repopulate.sh`, `build_actions.py` |
+| The agent's graph: API, snippets, pitfalls | the installed PyBigDFT, snippets executed in the image | `for_pybigdft_pack/repopulate.sh` |
+| Where calculations run | `config/haps.yaml` | `build_targets.py` |
+
+What is written by hand, and what watches over it:
+
+| Written by hand | What stops the build, or is reported, when the version no longer agrees |
+|---|---|
+| Which variable is shown at which depth and in which block (`schema/ui-tiers.yaml`) | `diff_schema.py`, `build_prototype_schema.py`: a variable shown as a control that no longer exists |
+| The Essential controls and how they become input keys (`prototype/js/blueprint.js`) | `build_actions.py`: every key the workshop writes must be a variable of the version (40 today) |
+| The PyBigDFT calls the workshop and the study builder write | `build_actions.py`: every call must be an action of the installed registry |
+| The snippets and the pitfalls | they are executed: one that fails is listed, with what changed, in `for_pybigdft_pack/data/CHANGES.md` |
+| The adaptive defaults, the checks, the cost estimates (`blueprint.js`) | nothing automatic: they are judgements, to be re-read when the physics or the defaults change |
+| The reading of logs for the figures (`tools/build_results.py`) | nothing automatic: it names log keys, and would fail on a log whose keys changed |
+
+So a new version does not mean rewriting the application: the command regenerates what describes the
+code and says where the hand-written part stopped agreeing with it. The last two rows are the honest
+limit. The way to shrink it is the one started with the PyBigDFT depth: draw the Essential controls
+from registry actions too, and the result views from `BigDFT.Logfiles.BUILTIN`.
 
 ## Regenerate the real results
 

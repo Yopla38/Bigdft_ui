@@ -292,34 +292,57 @@
     else if (tries < 25) setTimeout(() => typeset(el, tries + 1), 400);
   }
 
-  /* One control per action of PyBigDFT's registry, drawn from its signature. */
+  /* One control per action of PyBigDFT's registry, drawn from its signature.
+   * Typing in a field never redraws the inspector: a redraw between the last keystroke and the
+   * click on "Apply" would replace the button under the pointer and lose the click. The card
+   * updates its own call and its own list of written keys in place. */
+  const parseList = (text) => {
+    const parts = text.trim().replace(/^[\[(]\s*|\s*[\])]$/g, '').split(/[\s,;]+/).filter(Boolean);
+    const out = parts.map((x) => (/^(true|false)$/i.test(x) ? /^true$/i.test(x) : Number(x)));
+    return parts.length && out.every((x) => typeof x === 'boolean' || Number.isFinite(x)) ? out : null;
+  };
   function actionCard(def) {
     const applied = blueprint.appliedAction(def.name), draft = ui.acts[def.name] || (ui.acts[def.name] = Object.assign({}, applied ? applied.args : {}));
     const value = (p) => (p.name in draft ? draft[p.name] : p.default), changed = (p) => JSON.stringify(value(p)) !== JSON.stringify(p.default);
     const args = () => Object.fromEntries(def.params.filter(changed).map((p) => [p.name, value(p)]));
-    const set = (p, v) => { draft[p.name] = v; renderInspector(); };
+    const usable = def.writes !== null, invalid = new Set();
+    const call = h('code', {}), writesBox = h('div', {}), problem = h('p', { class: 'act-note err', hidden: true });
+    const dirty = () => applied && JSON.stringify(args()) !== JSON.stringify(applied.args);
+    const sync = () => {
+      call.textContent = blueprint.actionCall(def.name, args());
+      problem.hidden = !invalid.size;
+      problem.textContent = invalid.size ? 'Not understood: ' + [...invalid].join(', ') + '. A list is written as numbers separated by commas or spaces, for instance 0, 0.2, 0.01.' : '';
+      if (pending) { pending.hidden = !dirty(); shown.hidden = dirty(); }
+      if (!usable) return;
+      const writes = blueprint.actionWrites(def.name, args());
+      const curated = [...new Set(writes.map(([path]) => Object.keys(P).find((k) => P[k][1] === path)).filter(Boolean).map(labelOf))];
+      writesBox.replaceChildren(
+        writes.length ? h('ul', { class: 'act-writes' }, writes.map(([path, v, known]) => h('li', {}, h('code', {}, path), ' = ', known ? h('code', {}, JSON.stringify(v)) : h('i', {}, 'computed by PyBigDFT from these arguments'))))
+          : h('p', { class: 'act-note' }, 'With these arguments it writes nothing in the input.'),
+        ...(curated.length ? [h('p', { class: 'act-note' }, 'Also set by the control' + (curated.length > 1 ? 's ' : ' ') + curated.map((c) => '“' + c + '”').join(', ') + '; the action is applied after it.')] : []));
+    };
+    const take = (p, v, el) => { if (v === null) { invalid.add(p.name); el.setAttribute('aria-invalid', 'true'); } else { invalid.delete(p.name); el.removeAttribute('aria-invalid'); draft[p.name] = v; } sync(); };
     const field = (p) => {
       const id = 'act-' + def.name + '-' + p.name;
-      if (p.kind === 'bool') return h('button', { class: 'tog', id, type: 'button', role: 'switch', 'aria-checked': String(!!value(p)), 'aria-label': p.name, onclick: () => set(p, !value(p)) }, value(p) ? 'True' : 'False');
-      if (p.kind === 'number') return h('input', { id, type: 'number', step: 'any', value: String(value(p)), 'aria-label': p.name, onchange: (e) => set(p, e.target.value === '' ? p.default : +e.target.value) });
-      if (p.kind === 'text') return h('input', { id, type: 'text', value: value(p), 'aria-label': p.name, onchange: (e) => set(p, e.target.value) });
-      if (p.kind === 'list') return h('input', { id, type: 'text', value: JSON.stringify(value(p)), 'aria-label': p.name, onchange: (e) => { try { const v = JSON.parse(e.target.value); if (Array.isArray(v)) set(p, v); } catch (err) { e.target.value = JSON.stringify(value(p)); } } });
+      if (p.kind === 'bool') return h('button', { class: 'tog', id, type: 'button', role: 'switch', 'aria-checked': String(!!value(p)), 'aria-label': p.name, onclick: (e) => { draft[p.name] = !value(p); e.currentTarget.setAttribute('aria-checked', String(draft[p.name])); e.currentTarget.textContent = draft[p.name] ? 'True' : 'False'; sync(); } }, value(p) ? 'True' : 'False');
+      if (p.kind === 'number') return h('input', { id, type: 'text', inputmode: 'decimal', value: String(value(p)), 'aria-label': p.name, oninput: (e) => { const t = e.target.value.trim().replace(',', '.'); take(p, t === '' ? p.default : (Number.isFinite(Number(t)) ? Number(t) : null), e.target); } });
+      if (p.kind === 'text') return h('input', { id, type: 'text', value: value(p), 'aria-label': p.name, oninput: (e) => take(p, e.target.value, e.target) });
+      if (p.kind === 'list') return h('input', { id, type: 'text', value: value(p).join(', '), 'aria-label': p.name + ', values separated by commas', oninput: (e) => take(p, e.target.value.trim() === '' ? p.default : parseList(e.target.value), e.target) });
       return h('code', {}, p.kind === 'required' ? 'required' : p.shown);
     };
-    const usable = def.writes !== null, writes = usable ? blueprint.actionWrites(def.name, args()) : [];
-    const curated = [...new Set(writes.map(([path]) => Object.keys(P).find((k) => P[k][1] === path)).filter(Boolean).map(labelOf))];
-    return h('div', { class: 'act' + (applied ? ' on' : ''), 'data-action': def.name },
-      h('div', { class: 'act-head' }, h('code', {}, blueprint.actionCall(def.name, args())), applied ? h('span', { class: 'pill' }, 'applied') : null),
+    const pending = applied ? h('span', { class: 'pill warn', hidden: true }, 'changed, not applied') : null, shown = applied ? h('span', { class: 'pill' }, 'applied') : null;
+    const card = h('div', { class: 'act' + (applied ? ' on' : ''), 'data-action': def.name },
+      h('div', { class: 'act-head' }, call, h('span', { class: 'act-state' }, pending, shown)),
       h('p', { class: 'act-sum' }, (def.summary || 'No docstring in PyBigDFT for this action.').replace(/``/g, '')),
       def.params.length ? h('div', { class: 'act-args' }, def.params.map((p) => h('label', {}, h('span', {}, p.name), field(p)))) : null,
-      !usable ? h('p', { class: 'act-note' }, 'Not offered here: it was ' + def.note + '.')
-        : writes.length ? h('ul', { class: 'act-writes' }, writes.map(([path, v, known]) => h('li', {}, h('code', {}, path), ' = ', known ? h('code', {}, JSON.stringify(v)) : h('i', {}, 'computed by PyBigDFT from these arguments'))))
-          : h('p', { class: 'act-note' }, 'With these arguments it writes nothing in the input.'),
-      curated.length ? h('p', { class: 'act-note' }, 'Also set by the control' + (curated.length > 1 ? 's ' : ' ') + curated.map((c) => '“' + c + '”').join(', ') + '; the action is applied after it.') : null,
+      usable ? writesBox : h('p', { class: 'act-note' }, 'Not offered here: it was ' + def.note + '.'),
+      problem,
       usable ? h('div', { class: 'act-do' },
-        h('button', { class: 'btn small' + (applied ? '' : ' cta'), type: 'button', onclick: () => blueprint.applyAction(def.name, args()) }, applied ? 'Update' : 'Apply'),
+        h('button', { class: 'btn small' + (applied ? '' : ' cta'), type: 'button', onclick: () => { if (invalid.size) { sync(); return; } blueprint.applyAction(def.name, args()); } }, applied ? 'Update' : 'Apply'),
         applied ? h('button', { class: 'btn small', type: 'button', onclick: () => { delete ui.acts[def.name]; blueprint.removeAction(def.name); } }, 'Remove') : null) : null,
       def.doc && def.doc !== def.summary ? h('details', {}, h('summary', {}, 'Documentation, from PyBigDFT'), h('pre', {}, def.doc)) : null);
+    sync();
+    return card;
   }
 
   function schemaRow(vr) {

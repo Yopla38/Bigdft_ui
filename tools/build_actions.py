@@ -13,8 +13,8 @@ workshop draws one control per action. Nothing about an action is written by
 hand here: a new version of PyBigDFT changes the list, not this file.
 
 It also checks the PyBigDFT calls the workshop writes itself (prototype/js/
-blueprint.js and builder.js): a call to an action the installed version does
-not have stops the build.
+blueprint.js and builder.js): a call to an action, or an input key, the installed
+version does not have stops the build (exit status 3).
 """
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def kind(value) -> str:
 
 def main() -> int:
     builds = sorted((ROOT / "for_pybigdft_pack/build").glob("pybigdft-*"))
-    build = Path(sys.argv[1]) if len(sys.argv) > 1 else builds[-1]
+    build = (Path(sys.argv[1]) if len(sys.argv) > 1 else builds[-1]).resolve()
     actions = json.loads((build / "actions.json").read_text())
     versions = json.loads((build / "versions.json").read_text())
     schema = json.loads((ROOT / "prototype/js/schema.js").read_text().split("OND.schema = ", 1)[1].rstrip().rstrip(";"))
@@ -83,9 +83,16 @@ def main() -> int:
         for called in sorted(set(re.findall(r"\binp\.(\w+)\(", (ROOT / source).read_text()))):
             if called not in names and called not in ("update", "setdefault", "get"):
                 unknown.append(f"{source}: inp.{called}() is not an input action of PyBigDFT {versions['pybigdft']}")
+    # ... and the input keys it writes itself: each must be a variable of this version
+    blueprint = (ROOT / "prototype/js/blueprint.js").read_text()
+    written = set(re.findall(r"\bput\('([\w.]+)',\s*'(\w+)'", blueprint))
+    written |= {tuple(path.rsplit(".", 1)) for path in re.findall(r"\w+: \[[^\]]*?, '([a-z_]+(?:\.\w+)+)', '\w+'\]", blueprint)}
+    for section, key in sorted(written):
+        if f"{section}.{key}" not in block_of:
+            unknown.append(f"prototype/js/blueprint.js writes {section}.{key}, which is not an input variable of BigDFT {versions['bigdft']}")
     if unknown:
-        print("\n".join(unknown), file=sys.stderr)
-        return 1
+        print("The workshop writes things this version does not have:\n  " + "\n  ".join(unknown), file=sys.stderr)
+        return 3
 
     stamp = f"PyBigDFT {versions['pybigdft']}, BigDFT {versions['bigdft']}"
     target = ROOT / "prototype/js/actions.js"
@@ -95,7 +102,7 @@ def main() -> int:
         f"OND.actions = {json.dumps({'version': stamp, 'list': out}, ensure_ascii=False, separators=(',', ':'))};\n")
     per_block = Counter(a["block"] for a in out)
     print(f"{target.relative_to(ROOT)}: {len(out)} actions of {stamp} | " + ", ".join(f"{b} {n}" for b, n in sorted(per_block.items()))
-          + f" | {sum(1 for a in out if a['writes'] is None)} not callable here | workshop calls checked")
+          + f" | {sum(1 for a in out if a['writes'] is None)} not callable here | checked: {len(written)} keys and the PyBigDFT calls the workshop writes itself")
     return 0
 
 
