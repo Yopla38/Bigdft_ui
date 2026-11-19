@@ -13,7 +13,8 @@ import http.server
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent / "prototype"
+# python tools/preview.py [port] [directory]: `workshop` serves version 2
+ROOT = Path(__file__).resolve().parent.parent / (sys.argv[2] if len(sys.argv) > 2 else "prototype")
 HEAD = (
     '<!doctype html><html lang="en"><head><meta charset="utf-8">'
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'

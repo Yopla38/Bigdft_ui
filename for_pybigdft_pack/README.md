@@ -37,6 +37,7 @@ data/pybigdft-api.ttl      THE GRAPH (generated)
 data/REPORT.md             what is in it, what was left out and why (generated)
 data/TUTORIAL_AUDIT.md     the pack's tutorials checked against this version (generated)
 build/<version>/*.json     what was read from the image, kept to compare versions
+study/                     the registry of steps and its engine: a study as a script (see study/README.md)
 ```
 
 ## Put it in the pack

@@ -22,14 +22,31 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `docs/patches/` | Changes proposed for repositories this work may read but not write, tested on a copy |
 | `for_pybigdft_pack/` | For the PyBigDFT pack's agent: the installed API as an instantiated graph, 41 snippets executed in the pack's image, 24 pitfalls, the loader, and one command to rebuild it for a new version. See its README |
 | `examples/water-study/` | A study built with the mock-up's builder and run with BigDFT 1.9.1: board, generated script, inputs, logs, two attempts |
-| `prototype/` | Immersive mock-up (single page, three.js, no build step) |
+| `prototype/` | The first workshop: immersive mock-up (single page, three.js, no build step) |
+| `workshop/` | **Workshop 2**: one study built step by step, from a system to its results. Each step continues the previous one; the steps come from the registry of steps; results are real BigDFT runs. See its README |
+| `for_pybigdft_pack/study/` | The registry of steps (`StudyActions.py`) and its engine (`Studies.py`): a study as a script, prepared here, computed on the HAPS, analysed here. See its README |
+| `examples/water-ionisation/` | A study written by workshop 2 and run as written with BigDFT 1.9.1: script, inputs, logs, analysis |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
 
 ## See the mock-up
 
 ```bash
-python tools/preview.py        # http://localhost:8765
+python tools/preview.py                   # the first workshop, http://localhost:8765
+python tools/preview.py 8766 workshop     # workshop 2,         http://localhost:8766
+node tools/check_workshop.js              # workshop 2 against a real BigDFT run
 ```
+
+The two are separate pages. Workshop 2 starts again from one idea: you are building a calculation, then a study, in one continuous line. It reuses the first workshop's scene, figures, checks and registries.
+
+## Regenerate what workshop 2 reads
+
+```bash
+python tools/build_steps.py                       # the steps, from for_pybigdft_pack/study/StudyActions.py
+mkdir -p /tmp/lattice && tar -xzf workshop/library/runs.tgz -C /tmp/lattice
+python tools/build_library.py /tmp/lattice examples/water-study/attempt-2/runs    # the recorded results
+```
+
+To record more results, run a study through the registry (`workshop/library/lattice.py` is the one behind the library) and pass its `runs` directory to `build_library.py`.
 
 ## Moving to another version of BigDFT or PyBigDFT
 

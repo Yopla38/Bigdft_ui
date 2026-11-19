@@ -382,7 +382,6 @@
     :inheritsFrom :Class_BigDFT_Calculators_Runner ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0a567087a54d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0de5af033369> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_3632e96e2724> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4949e483cb32> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4b96ec8088d3> ;
@@ -397,7 +396,8 @@
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_d6f6eae07786> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_dd92f39d71c0> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_e6334eb746ee> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> .
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> ;
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> .
 
 :Class_BigDFT_Database_Molecules_Molecule a :PythonClass ;
     rdfs:label "Molecule" ;
@@ -518,7 +518,6 @@
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0a567087a54d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0d92b27b3bc7> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0de5af033369> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_3632e96e2724> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4949e483cb32> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4b96ec8088d3> ;
@@ -537,6 +536,7 @@
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_dd92f39d71c0> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_e6334eb746ee> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> ;
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_fbfe5297dec3> .
 
 :Class_BigDFT_Interop_DNAviewerInterop_SequenceRecord a :PythonClass ;
@@ -1734,11 +1734,11 @@
     rdfs:comment "Rename the names of the residues of a BioSystem in order\nto be compatible with other naming schemes.\n\nArgs:\n    labels (iterable): contains the list of residue to be renamed\n    as_dict (bool): if True, returns a dictionary as a relabel\n    from_dict (bool): if True assumes that the remapping has to be\n       performed also on the labels values.\n    mappable (func): the function that will be applied for renaming\nReturns:\n    dict, list: dictionary or list of the renamed labels, depending on\n        the arguments." ;
     :hasDescription "Rename the names of the residues of a BioSystem in order to be compatible with other naming schemes." ;
     :definedIn :Module_BigDFT_BioQM ;
-    :hasSignature "rename_labels(labels, as_dict=False, from_dict=False, mappable=<function rename_residue at 0x7ff2af0e9710>)" ;
+    :hasSignature "rename_labels(labels, as_dict=False, from_dict=False, mappable=<function rename_residue at 0x7f7ea80c9710>)" ;
     :hasArgument "labels (required)" ;
     :hasArgument "as_dict=False" ;
     :hasArgument "from_dict=False" ;
-    :hasArgument "mappable=<function rename_residue at 0x7ff2af0e9710>" .
+    :hasArgument "mappable=<function rename_residue at 0x7f7ea80c9710>" .
 
 :Function_BigDFT_BioQM_rename_residue a :Function ;
     rdfs:label "rename_residue" ;
@@ -1965,7 +1965,6 @@
     :hasArgument "kwargs (required)" ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0a567087a54d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0de5af033369> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_3632e96e2724> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4949e483cb32> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4b96ec8088d3> ;
@@ -1980,7 +1979,8 @@
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_d6f6eae07786> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_dd92f39d71c0> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_e6334eb746ee> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> .
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> ;
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> .
 
 :Function_BigDFT_Calculators_Runner_update_global_options a :Function ;
     rdfs:label "update_global_options" ;
@@ -2839,12 +2839,12 @@
     :writesInput "dft.hgrids = 0.4" ;
     :setsParameter :Parameter_dft_hgrids ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0a567087a54d> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_77952689a33e> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_8e63561339da> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_b6431fe0ec3f> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_d97dd4d90e3a> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> .
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> ;
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> .
 
 :Function_BigDFT_InputActions_set_implicit_solvent a :Function ;
     rdfs:label "set_implicit_solvent" ;
@@ -3016,7 +3016,6 @@
     :writesInput "dft.ixc = \"PBE\"" ;
     :setsParameter :Parameter_dft_ixc ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_0a567087a54d> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_3632e96e2724> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4949e483cb32> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_4b96ec8088d3> ;
@@ -3031,7 +3030,8 @@
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_d97dd4d90e3a> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_dd92f39d71c0> ;
     :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_e6334eb746ee> ;
-    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> .
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_f12ccdac8f92> ;
+    :shownIn <http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> .
 
 :Function_BigDFT_InputActions_spin_polarize a :Function ;
     rdfs:label "spin_polarize" ;
@@ -8390,23 +8390,24 @@
     :demonstrates :Workflow_Check_an_input_before_computing ;
     :runsAtStage "dry-run" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "<BigDFT> Logfile existing, renamed into: ./logfiles/log-h2o.19:42:08.397.yaml\nbefore: energy -17.209856430993852\nafter : log-h2o.yaml is now a dry-run log, without energy" ;
+    :printsOutput "<BigDFT> Logfile existing, renamed into: ./logfiles/log-h2o.07:55:57.381.yaml\nbefore: energy -17.209856430993852\nafter : log-h2o.yaml is now a dry-run log, without energy" ;
     :hasCode "\"\"\"Never dry-run under the name of a calculation that is already done.\n\nA dry run writes log-NAME.yaml, like a real run. Under the same name and in the\nsame directory it REPLACES the log of the finished calculation, and the energy\nis gone. `skip=True` does not protect: with dry_run=True the estimate runs\nanyway. Test for a finished calculation yourself before preparing it again.\n\ntask: Check an input before computing\nstage: dry-run\n\"\"\"\nimport os\n\nfrom BigDFT.Calculators import SystemCalculator\nfrom BigDFT.Inputfiles import Inputfile\nfrom BigDFT.Logfiles import Logfile\n\n\ndef is_computed(name, run_dir=\".\"):\n    \"\"\"True if log-NAME.yaml holds a finished calculation, not a dry run or a refusal.\"\"\"\n    path = os.path.join(run_dir, \"log-%s.yaml\" % name)\n    if not os.path.isfile(path):\n        return False\n    try:\n        log = Logfile(path)\n        last = log if len(log) == 0 else log[len(log) - 1]\n        return getattr(last, \"energy\", None) is not None\n    except Exception:\n        return False\n\n\nassert is_computed(\"h2o\")                        # the finished run of the fixtures\nprint(\"before: energy\", Logfile(\"log-h2o.yaml\").energy)\n\ncode = SystemCalculator(omp=\"1\", dry_run=True, skip=True, verbose=False)\ncode.run(name=\"h2o\", input=Inputfile(), posinp=\"h2o.xyz\")     # same name, same directory\n\nassert not is_computed(\"h2o\")                    # the result has been overwritten\nprint(\"after : log-h2o.yaml is now a dry-run log, without energy\")\n" ;
     :avoids :Pitfall_dry_run_overwrites_log ;
     :avoids :Pitfall_log_attributes_may_be_absent .
 
-<http://bigdft.org/onto#:CodeSnippet:sha256_182ecc95f18d> a :CodeSnippet ;
+<http://bigdft.org/onto#:CodeSnippet:sha256_faf813c53027> a :CodeSnippet ;
     rdfs:label "Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts." ;
-    rdfs:comment "The HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every input with a dry run in one directory, keep the names that passed, and hand them to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold letters, digits, '_' and '-' (no dot, no colon), 64 characters at most." ;
+    rdfs:comment "The HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every input with a dry run in one directory, keep the names that passed, and hand them to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold letters, digits, '_' and '-' (no dot, no colon). Keep it to 30 characters: the HAPS accepts 64, but the dry run of BigDFT truncates the name of the log at 30 and PyBigDFT then finds no log and returns None." ;
     :hasDescription "Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts." ;
     :demonstrates :Workflow_Send_runs_to_the_HAPS ;
     :runsAtStage "dry-run" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "ready for the HAPS: ['water_h050', 'water_h045', 'water_h040']\nnext: haps_bigdft(names=['water_h050', 'water_h045', 'water_h040'], directory=\"runs\")" ;
-    :hasCode "\"\"\"Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts.\n\nThe HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every\ninput with a dry run in one directory, keep the names that passed, and hand\nthem to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold\nletters, digits, '_' and '-' (no dot, no colon), 64 characters at most.\n\ntask: Send runs to the HAPS\nstage: dry-run\n\"\"\"\nimport re\n\nfrom BigDFT.Calculators import SystemCalculator\nfrom BigDFT.Inputfiles import Inputfile\n\nNAME = re.compile(r\"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$\")\ncode = SystemCalculator(omp=\"1\", dry_run=True, verbose=False)\nready, refused = [], {}\n\nfor hgrid in (0.50, 0.45, 0.40):\n    name = \"water_h%03d\" % round(hgrid * 100)        # water_h050: not \"h=0.5\", not \"h:0.5\"\n    assert NAME.match(name), name\n    inp = Inputfile()\n    inp.set_xc(\"PBE\")\n    inp.set_hgrid(hgrid)\n    log = code.run(name=name, input=inp, posinp=\"h2o.xyz\", run_dir=\"runs\")\n    problems = log.log.get(\"Additional Info\") or log.log.get(\"List of error found while parsing input variables\")\n    if problems:\n        refused[name] = problems                     # refused, or accepted with an input error: do not send\n    else:\n        ready.append(name)\n\nassert ready == [\"water_h050\", \"water_h045\", \"water_h040\"] and not refused\nprint(\"ready for the HAPS:\", ready)\nprint('next: haps_bigdft(names=%r, directory=\"runs\")' % ready)\n" ;
+    :printsOutput "STOP  MPIFAKE: MPI_ABORT\na name of 32 characters: the dry run returns None, its log was written under a truncated name\nready for the HAPS: ['water_h050', 'water_h045', 'water_h040']\nnext: haps_bigdft(names=['water_h050', 'water_h045', 'water_h040'], directory=\"runs\")" ;
+    :hasCode "\"\"\"Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts.\n\nThe HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every\ninput with a dry run in one directory, keep the names that passed, and hand\nthem to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold\nletters, digits, '_' and '-' (no dot, no colon). Keep it to 30 characters: the\nHAPS accepts 64, but the dry run of BigDFT truncates the name of the log at 30\nand PyBigDFT then finds no log and returns None.\n\ntask: Send runs to the HAPS\nstage: dry-run\n\"\"\"\nimport re\n\nfrom BigDFT.Calculators import SystemCalculator\nfrom BigDFT.Inputfiles import Inputfile\n\nNAME = re.compile(r\"^[A-Za-z0-9][A-Za-z0-9_-]{0,29}$\")\ncode = SystemCalculator(omp=\"1\", dry_run=True, verbose=False)\nready, refused = [], {}\n\nfor hgrid in (0.50, 0.45, 0.40):\n    name = \"water_h%03d\" % round(hgrid * 100)        # water_h050: not \"h=0.5\", not \"h:0.5\"\n    assert NAME.match(name), name\n    inp = Inputfile()\n    inp.set_xc(\"PBE\")\n    inp.set_hgrid(hgrid)\n    log = code.run(name=name, input=inp, posinp=\"h2o.xyz\", run_dir=\"runs\")\n    problems = log.log.get(\"Additional Info\") or log.log.get(\"List of error found while parsing input variables\")\n    if problems:\n        refused[name] = problems                     # refused, or accepted with an input error: do not send\n    else:\n        ready.append(name)\n\nassert ready == [\"water_h050\", \"water_h045\", \"water_h040\"] and not refused\n\ntoo_long = \"water_grid_convergence_study_h0\" + \"5\"            # 32 characters\nassert code.run(name=too_long, input=Inputfile(), posinp=\"h2o.xyz\", run_dir=\"runs\") is None\nprint(\"a name of %d characters: the dry run returns None, its log was written under a truncated name\" % len(too_long))\nprint(\"ready for the HAPS:\", ready)\nprint('next: haps_bigdft(names=%r, directory=\"runs\")' % ready)\n" ;
     :avoids :Pitfall_dry_run_never_raises ;
     :avoids :Pitfall_dry_run_accepts_input_errors ;
-    :avoids :Pitfall_dataset_names_not_accepted_by_haps .
+    :avoids :Pitfall_dataset_names_not_accepted_by_haps ;
+    :avoids :Pitfall_run_name_longer_than_30 .
 
 :Workflow_Send_runs_to_the_HAPS a :Workflow ;
     rdfs:label "Send runs to the HAPS" ;
@@ -8419,7 +8420,7 @@
     :demonstrates :Workflow_Converge_a_parameter ;
     :runsAtStage "dry-run" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "<BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.5.19:42:10.038.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.45.19:42:10.167.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.4.19:42:10.324.yaml\nnames : ['h:0.5', 'h:0.45', 'h:0.4']\nmemory: [70, 86, 117] MB" ;
+    :printsOutput "<BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.5.07:55:59.555.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.45.07:55:59.651.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.4.07:55:59.753.yaml\nnames : ['h:0.5', 'h:0.45', 'h:0.4']\nmemory: [70, 86, 117] MB" ;
     :hasCode "\"\"\"Group runs in a Dataset and collect one quantity from all of them.\n\nA Dataset holds runs identified by a dictionary (`id`). `run()` executes them\nwith the calculator given to append_run, `fetch_results(attribute=...)` returns\nthe attribute of every log, in order. The run names are built from the ids\n(\"h:0.5\"): they contain ':' and '.', which the HAPS does not accept. Use a\nDataset for dry runs and local runs; name the runs yourself for the HAPS.\n\ntask: Converge a parameter\nstage: dry-run\n\"\"\"\nfrom BigDFT.Calculators import SystemCalculator\nfrom BigDFT.Datasets import Dataset\nfrom BigDFT.Inputfiles import Inputfile\n\ncode = SystemCalculator(omp=\"1\", dry_run=True, verbose=False)\nstudy = Dataset(label=\"grid\", run_dir=\"grid\")\nfor hgrid in (0.50, 0.45, 0.40):\n    inp = Inputfile()\n    inp.set_xc(\"PBE\")\n    inp.set_hgrid(hgrid)\n    study.append_run(id={\"h\": hgrid}, runner=code, input=inp, posinp=\"h2o.xyz\")\n\nstudy.run()\nmemory = study.fetch_results(attribute=\"memory_peak\")\n\nassert study.names == [\"h:0.5\", \"h:0.45\", \"h:0.4\"] and len(memory) == 3\nprint(\"names :\", study.names)\nprint(\"memory:\", memory, \"MB\")\n" ;
     :avoids :Pitfall_dataset_names_not_accepted_by_haps .
 
@@ -8444,7 +8445,7 @@
     :demonstrates :Workflow_Write_an_input_file ;
     :runsAtStage "dry-run" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "At line 1677 of file /opt/bigdft/bigdft/src/modules/types.f90\nFortran runtime error: Attempt to DEALLOCATE unallocated 'aux'\n\nError termination. Backtrace:\n#0  0x7f6c54ec3d21 in ???\n#1  0x7f6c54ec4869 in ???\n#2  0x7f6c54ec4ee6 in ???\n#3  0x7f6c555ebd88 in ???\n#4  0x7f6c555ebeb8 in ???\n#5  0x7f6c552e4f9d in ???\n#6  0x7f6c553c944b in ???\n#7  0x7f6c553d171a in ???\n#8  0x561aef24955d in ???\n#9  0x561aef241a4e in ???\n#10  0x7f6c4cca00b2 in ???\n#11  0x561aef241a8d in ???\n#12  0xffffffffffffffff in ???\naccepted; memory estimate: not printed in linear scaling" ;
+    :printsOutput "At line 1677 of file /opt/bigdft/bigdft/src/modules/types.f90\nFortran runtime error: Attempt to DEALLOCATE unallocated 'aux'\n\nError termination. Backtrace:\n#0  0x7f6c1079bd21 in ???\n#1  0x7f6c1079c869 in ???\n#2  0x7f6c1079cee6 in ???\n#3  0x7f6c10ec3d88 in ???\n#4  0x7f6c10ec3eb8 in ???\n#5  0x7f6c10bbcf9d in ???\n#6  0x7f6c10ca144b in ???\n#7  0x7f6c10ca971a in ???\n#8  0x5612b3a5555d in ???\n#9  0x5612b3a4da4e in ???\n#10  0x7f6c085780b2 in ???\n#11  0x5612b3a4da8d in ???\n#12  0xffffffffffffffff in ???\naccepted; memory estimate: not printed in linear scaling" ;
     :hasCode "\"\"\"Switch to the linear-scaling algorithm, for systems of hundreds of atoms and more.\n\nset_linear_scaling() writes dft.inputpsiid = \"linear\". A dry run of such an\ninput is accepted but prints NO memory estimate: log.memory_peak is absent. So\n\"no memory estimate\" does not mean \"refused\"; look for \"Additional Info\".\n\ntask: Write an input file\nstage: dry-run\n\"\"\"\nfrom BigDFT.Calculators import SystemCalculator\nfrom BigDFT.Inputfiles import Inputfile\n\ninp = Inputfile()\ninp.set_xc(\"PBE\")\ninp.set_linear_scaling()\nassert inp[\"dft\"][\"inputpsiid\"] == \"linear\"\n\nlog = SystemCalculator(omp=\"1\", dry_run=True, verbose=False).run(\n    name=\"linear\", input=inp, posinp=\"h2o.xyz\", run_dir=\"runs\")\nassert \"Additional Info\" not in log.log                 # accepted\nassert getattr(log, \"memory_peak\", None) is None        # and yet no estimate\nprint(\"accepted; memory estimate:\", getattr(log, \"memory_peak\", \"not printed in linear scaling\"))\n" ;
     :setsParameter :Parameter_dft_inputpsiid ;
     :avoids :Pitfall_memory_estimate_absent_in_linear_scaling .
@@ -8517,7 +8518,7 @@
     :demonstrates :Workflow_Read_a_result ;
     :runsAtStage "analysis" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "O   [7e-05, -0.01332, -0.0]  |F| = 0.01332 Ha/bohr\nH   [0.00959, 0.00664, 0.0]  |F| = 0.01166 Ha/bohr\nH   [-0.00966, 0.00669, 0.0]  |F| = 0.01175 Ha/bohr\nlargest force: 0.01332 Ha/bohr" ;
+    :printsOutput "O   [7e-05, -0.01332, 0.0]  |F| = 0.01332 Ha/bohr\nH   [0.00959, 0.00664, 0.0]  |F| = 0.01166 Ha/bohr\nH   [-0.00966, 0.00669, 0.0]  |F| = 0.01175 Ha/bohr\nlargest force: 0.01332 Ha/bohr" ;
     :hasCode "\"\"\"Read the forces on the atoms.\n\nlog.forces is a list, one dictionary per atom in the order of the input:\n{element: [fx, fy, fz]} in Ha/bohr. log.forcemax is the largest component norm.\n\ntask: Read a result\nstage: analysis\n\"\"\"\nimport numpy as np\nfrom BigDFT.Logfiles import Logfile\n\nlog = Logfile(\"log-h2o.yaml\")\nnorms = []\nfor atom in log.forces:\n    element, force = list(atom.items())[0]\n    norms.append(float(np.linalg.norm(force)))\n    print(\"%-2s  %s  |F| = %.5f Ha/bohr\" % (element, np.round(force, 5).tolist(), norms[-1]))\n\nassert len(log.forces) == log.nat\nassert abs(max(norms) - log.forcemax) < 1.0e-4\nprint(\"largest force:\", round(log.forcemax, 5), \"Ha/bohr\")\n" .
 
 <http://bigdft.org/onto#:CodeSnippet:sha256_47fc2d353eb4> a :CodeSnippet ;
@@ -8584,7 +8585,7 @@
     :demonstrates :Workflow_Read_a_result ;
     :runsAtStage "analysis" ;
     :verifiedWith "PyBigDFT 0.9, BigDFT 1.9.1, Python 3.7.7" ;
-    :printsOutput "BigDFT version  : 1.9.1\nfunctional read : -101130 (libxc code of PBE)\nbox (angstroem) : [9.0489, 7.6202, 7.6202]\ngrid points     : 23159 coarse, 482 fine\nlast iteration  : 11 | residue 6.98e-05\nwall time       : 2.6 s" ;
+    :printsOutput "BigDFT version  : 1.9.1\nfunctional read : -101130 (libxc code of PBE)\nbox (angstroem) : [9.0489, 7.6202, 7.6202]\ngrid points     : 23159 coarse, 482 fine\nlast iteration  : 11 | residue 6.98e-05\nwall time       : 2.3 s" ;
     :hasCode "\"\"\"Reach what no attribute gives: the log as a dictionary.\n\nlog.log is the whole YAML document. Useful keys: the input as BigDFT read it\n(log.log[\"dft\"], ...), the grid, the wall time, the version, the last SCF\niteration. For a relaxation, each step has its own: log[i].log.\n\ntask: Read a result\nstage: analysis\n\"\"\"\nfrom BigDFT.Logfiles import Logfile\n\nlog = Logfile(\"log-h2o.yaml\")\ndoc = log.log\n\ngrid = doc[\"Wavefunctions Descriptors, full simulation domain\"]\nprint(\"BigDFT version  :\", doc[\"Version Number\"])\nprint(\"functional read :\", doc[\"dft\"][\"ixc\"], \"(libxc code of PBE)\")\nprint(\"box (angstroem) :\", doc[\"Sizes of the simulation domain\"][\"Angstroem\"])\nprint(\"grid points     :\", grid[\"Coarse resolution grid\"][\"No. of points\"], \"coarse,\",\n      grid[\"Fine resolution grid\"][\"No. of points\"], \"fine\")\nprint(\"last iteration  :\", doc[\"Last Iteration\"][\"iter\"], \"| residue\", doc[\"Last Iteration\"][\"gnrm\"])\nprint(\"wall time       : %.1f s\" % doc[\"Walltime since initialization\"])\n\nassert doc[\"dft\"][\"hgrids\"] == 0.45 and doc[\"Last Iteration\"][\"EKS\"] == log.energy\n" ;
     :setsParameter :Parameter_dft_hgrids .
 
@@ -8705,6 +8706,15 @@
     :hasRemedy "Name the runs yourself for the HAPS, e.g. \"water_h050\". Keep Dataset for dry runs and local runs." ;
     :concerns :Class_BigDFT_Datasets_Dataset ;
     :concerns :Function_BigDFT_Datasets_Dataset_append_run .
+
+:Pitfall_run_name_longer_than_30 a :Pitfall ;
+    rdfs:label "A run name longer than 30 characters makes the dry run return nothing" ;
+    :hasDescription "A run name longer than 30 characters makes the dry run return nothing" ;
+    :hasSymptom "AttributeError: 'NoneType' object has no attribute 'log', right after SystemCalculator(dry_run=True).run(...)." ;
+    :hasCause "The dry run of BigDFT writes its log under the name truncated at 30 characters; PyBigDFT looks for the full name, finds no log and returns None. The HAPS itself accepts 64." ;
+    :hasRemedy "Keep run names to 30 characters at most, also for the members of a series, whose names add a suffix." ;
+    :concerns :Class_BigDFT_Calculators_SystemCalculator ;
+    :concerns :Function_BigDFT_Calculators_Runner_run .
 
 :Pitfall_input_actions_are_not_in_dir a :Pitfall ;
     rdfs:label "The methods of an Inputfile do not show in dir(Inputfile)" ;

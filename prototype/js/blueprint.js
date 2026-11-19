@@ -200,7 +200,7 @@ window.OND = window.OND || {};
       st.advice = [];
       for (let pass = 0; pass < 2; pass++) {
         for (const [key, value, reason, triplet] of rules()) {
-          const mine = ['you', 'agent', 'paper', 'guide', 'run'].includes(st.src[key]);
+          const mine = ['you', 'agent', 'paper', 'guide', 'run', 'inherited', 'decision'].includes(st.src[key]);   // the last two: set by an earlier step of a study
           if (!mine) { st.v[key] = value; st.src[key] = 'adapted'; st.why[key] = { reason, triplet }; }
           else if (pass && st.v[key] !== value && !stricter(key, st.v[key], value)) st.advice.push({ key, value, reason, triplet });
         }

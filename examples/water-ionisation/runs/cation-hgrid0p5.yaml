@@ -1,0 +1,13 @@
+dft:
+  hgrids: 0.5
+  ixc: PBE
+  mpol: 1
+  nspin: 2
+  qcharge: 1
+  rmult: [5, 8]
+posinp:
+  positions:
+  - O: [0.0, 0.0, 0.0]
+  - H: [0.757, 0.5859, 0.0]
+  - H: [-0.757, 0.5859, 0.0]
+  units: angstroem

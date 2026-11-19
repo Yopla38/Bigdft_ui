@@ -1,0 +1,490 @@
+{
+ "study": "ionisation_energy_of_water",
+ "structure": {
+  "units": "angstroem",
+  "positions": [
+   {
+    "O": [
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   {
+    "H": [
+     0.757,
+     0.5859,
+     0.0
+    ]
+   },
+   {
+    "H": [
+     -0.757,
+     0.5859,
+     0.0
+    ]
+   }
+  ]
+ },
+ "steps": [
+  {
+   "name": "experiment",
+   "kind": "target",
+   "links": {},
+   "actions": {},
+   "keys": {},
+   "params": {
+    "value": 12.62,
+    "within": 0.3,
+    "unit": "eV",
+    "source": "first ionisation energy of water, photoelectron spectroscopy"
+   }
+  },
+  {
+   "name": "ground_state",
+   "kind": "calculation",
+   "links": {},
+   "actions": {
+    "set_hgrid": 0.4,
+    "set_rmult": {
+     "coarse": 5,
+     "fine": 8
+    },
+    "set_xc": "PBE"
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "cation",
+   "kind": "calculation",
+   "links": {
+    "after": "ground_state"
+   },
+   "actions": {
+    "charge": 1,
+    "spin_polarize": 1
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "grid_convergence",
+   "kind": "converge",
+   "links": {
+    "of": "cation",
+    "relative_to": "ground_state"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "action": "set_hgrid",
+    "values": [
+     0.5,
+     0.45,
+     0.4,
+     0.35
+    ],
+    "within": 0.01,
+    "per_atom": true
+   }
+  },
+  {
+   "name": "grid_kept",
+   "kind": "choose",
+   "links": {
+    "among": "grid_convergence"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "retained": 0.4,
+    "because": "The energy difference is converged at 0.45, but the geometry is not: relaxed there, the H\u2013O\u2013H angle comes out at 99.7\u00b0 for 105.0\u00b0 at 0.40 and 104.5\u00b0 at 0.35."
+   }
+  },
+  {
+   "name": "relaxed",
+   "kind": "relax",
+   "links": {
+    "after": "ground_state"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "method": "SQNM",
+    "nsteps": 300,
+    "forcemax": 0.0002
+   }
+  },
+  {
+   "name": "cation_vertical",
+   "kind": "calculation",
+   "links": {
+    "after": "relaxed"
+   },
+   "actions": {
+    "charge": 1,
+    "spin_polarize": 1
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "ionisation_energy",
+   "kind": "difference",
+   "links": {
+    "a": "cation_vertical",
+    "b": "relaxed",
+    "against": "experiment"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "unit": "eV"
+   }
+  },
+  {
+   "name": "cation_relaxed",
+   "kind": "relax",
+   "links": {
+    "after": "cation_vertical"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "method": "SQNM",
+    "nsteps": 300,
+    "forcemax": 0.0002
+   }
+  },
+  {
+   "name": "ionisation_adiabatic",
+   "kind": "difference",
+   "links": {
+    "a": "cation_relaxed",
+    "b": "relaxed"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "unit": "eV"
+   }
+  }
+ ],
+ "runs": [
+  {
+   "name": "ground_state",
+   "own_name": "ground_state",
+   "step": "ground_state",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "cation",
+   "own_name": "cation",
+   "step": "cation",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "cation-hgrid0p5",
+   "own_name": "cation-hgrid0p5",
+   "step": "cation",
+   "member": [
+    "grid_convergence",
+    "of",
+    0.5
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.5,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state-hgrid0p5",
+   "own_name": "ground_state-hgrid0p5",
+   "step": "ground_state",
+   "member": [
+    "grid_convergence",
+    "relative_to",
+    0.5
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.5,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "cation-hgrid0p45",
+   "own_name": "cation-hgrid0p45",
+   "step": "cation",
+   "member": [
+    "grid_convergence",
+    "of",
+    0.45
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.45,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state-hgrid0p45",
+   "own_name": "ground_state-hgrid0p45",
+   "step": "ground_state",
+   "member": [
+    "grid_convergence",
+    "relative_to",
+    0.45
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.45,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "cation",
+   "own_name": "cation-hgrid0p4",
+   "step": "cation",
+   "member": [
+    "grid_convergence",
+    "of",
+    0.4
+   ],
+   "alias": true,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state",
+   "own_name": "ground_state-hgrid0p4",
+   "step": "ground_state",
+   "member": [
+    "grid_convergence",
+    "relative_to",
+    0.4
+   ],
+   "alias": true,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "cation-hgrid0p35",
+   "own_name": "cation-hgrid0p35",
+   "step": "cation",
+   "member": [
+    "grid_convergence",
+    "of",
+    0.35
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.35,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state-hgrid0p35",
+   "own_name": "ground_state-hgrid0p35",
+   "step": "ground_state",
+   "member": [
+    "grid_convergence",
+    "relative_to",
+    0.35
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.35,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "relaxed",
+   "own_name": "relaxed",
+   "step": "relaxed",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    },
+    "geopt": {
+     "method": "SQNM",
+     "ncount_cluster_x": 300,
+     "betax": 4.0,
+     "frac_fluct": 1.0,
+     "forcemax": 0.0002
+    }
+   }
+  },
+  {
+   "name": "cation_vertical",
+   "own_name": "cation_vertical",
+   "step": "cation_vertical",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": "relaxed",
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "cation_relaxed",
+   "own_name": "cation_relaxed",
+   "step": "cation_relaxed",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": "relaxed",
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    },
+    "geopt": {
+     "method": "SQNM",
+     "ncount_cluster_x": 300,
+     "betax": 4.0,
+     "frac_fluct": 1.0,
+     "forcemax": 0.0002
+    }
+   }
+  }
+ ]
+}

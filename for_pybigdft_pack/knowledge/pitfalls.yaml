@@ -121,6 +121,18 @@
   snippets: [33_dataset_of_runs.py, 32_prepare_runs_for_the_haps.py]
   concerns: [Dataset, Dataset.append_run]
 
+- id: run_name_longer_than_30
+  title: >-
+    A run name longer than 30 characters makes the dry run return nothing
+  symptom: >-
+    AttributeError: 'NoneType' object has no attribute 'log', right after SystemCalculator(dry_run=True).run(...).
+  cause: >-
+    The dry run of BigDFT writes its log under the name truncated at 30 characters; PyBigDFT looks for the full name, finds no log and returns None. The HAPS itself accepts 64.
+  remedy: >-
+    Keep run names to 30 characters at most, also for the members of a series, whose names add a suffix.
+  snippets: [32_prepare_runs_for_the_haps.py]
+  concerns: [SystemCalculator, Runner.run]
+
 - id: input_actions_are_not_in_dir
   title: >-
     The methods of an Inputfile do not show in dir(Inputfile)

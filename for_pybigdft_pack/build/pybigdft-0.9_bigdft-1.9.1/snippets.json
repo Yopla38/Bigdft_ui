@@ -103,7 +103,7 @@
   "file": "01_positions_as_dictionary.py",
   "intent": "Describe a molecule as a dictionary of positions and pass it to a calculation.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-water.yaml\natoms: 3 | orbitals: 4",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -268,7 +268,7 @@
   "file": "02_read_structure_from_xyz.py",
   "intent": "Read a structure from an .xyz file into a System, and turn it into `posinp`.",
   "output": "fragments: ['FRA:0']\natoms: ['O', 'H', 'H']\n{'H': [0.757, 0.5859, 0.0], 'frag': ['FRA', '0']}",
-  "seconds": 0.2,
+  "seconds": 0.1,
   "status": "passed"
  },
  {
@@ -377,7 +377,7 @@
   "file": "03_xyz_file_name_as_posinp.py",
   "intent": "Give the name of an .xyz file directly as the structure of a calculation.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-from_file.yaml\nstructure read from: h2o.xyz",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -950,7 +950,7 @@
   "file": "06_move_a_fragment.py",
   "intent": "Translate and rotate a fragment, and measure a distance between fragments.",
   "output": "distance between the two molecules: 3.000 angstroem\natoms in the dimer: 6",
-  "seconds": 0.3,
+  "seconds": 0.4,
   "status": "passed"
  },
  {
@@ -1099,7 +1099,7 @@
   "file": "07_periodic_cell.py",
   "intent": "Give a periodic cell to a structure: bulk, surface or isolated.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-si.yaml\nperiodic\nsurface\nk-point mesh read by BigDFT: [2, 2, 2]",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -1479,7 +1479,7 @@
   "file": "09_structure_from_a_log.py",
   "intent": "Recover the structure a calculation was run on, from its log.",
   "output": "system_from_log is unusable in this image: libifport.so.5: cannot open shared object file: No such file or directory\nunits: angstroem | atoms: ['O', 'H', 'H']",
-  "seconds": 0.3,
+  "seconds": 2.2,
   "status": "passed"
  },
  {
@@ -1643,7 +1643,7 @@
   "file": "11_input_spin_and_charge.py",
   "intent": "Set the spin polarisation and the charge of a system.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-cation.yaml\ncharge: 1 | nspin: 2 | mpol: 1",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -1670,7 +1670,7 @@
   "file": "12_input_scf_convergence.py",
   "intent": "Tighten the self-consistency criterion and allow more iterations.",
   "output": "{'dft': {'gnrm_cv': 1e-05, 'itermax': 200, 'nrepmax': 5}, 'lin_general': {'rpnrm_cv': 'default'}, 'mix': {'rpnrm_cv': 'default'}}",
-  "seconds": 0.1,
+  "seconds": 0.0,
   "status": "passed"
  },
  {
@@ -1789,7 +1789,7 @@
   "file": "13_input_geometry_optimisation.py",
   "intent": "Ask for a geometry optimisation.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-relax.yaml\n{'method': 'SQNM', 'ncount_cluster_x': 100, 'betax': 4.0, 'frac_fluct': 1.0, 'forcemax': 0.001}",
-  "seconds": 0.5,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -1902,7 +1902,7 @@
   "file": "14_input_hybrid_functional.py",
   "intent": "Use a hybrid functional (PBE0, B3LYP, HF): name the pseudopotentials explicitly.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-pbe0_refused.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-pbe0.yaml\nwithout pseudopotentials: The pseudopotential parameter file \"psppar.O\" is lacking, and no registered pseudo found for \"O\"\nwith the PBE pseudopotentials: dry run passed, memory peak 86 MB",
-  "seconds": 1.6,
+  "seconds": 1.4,
   "status": "passed"
  },
  {
@@ -2015,7 +2015,7 @@
   "file": "15_input_keys_without_action.py",
   "intent": "Set an input variable that no action covers, by writing its key.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-keys.yaml\nncong read by BigDFT: 8 | alphamix: 0.3",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -2134,7 +2134,7 @@
   "file": "16_input_implicit_solvent.py",
   "intent": "Compute in implicit solvent (soft-sphere cavity).",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-solvated.yaml\nno solvent name: set_implicit_solvent() got an unexpected keyword argument 'solvent'\ncavity: soft-sphere | epsilon: 24.852",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -2179,7 +2179,7 @@
   "file": "17_input_electric_field_dispersion_temperature.py",
   "intent": "Add an electric field, a dispersion correction, or an electronic temperature.",
   "output": "{'dft': {'elecfield': [0.0, 0.0, 0.001], 'dispersion': 5}, 'mix': {'tel': 0.001}}",
-  "seconds": 0.1,
+  "seconds": 0.0,
   "status": "passed"
  },
  {
@@ -2218,7 +2218,7 @@
   "file": "18_input_outputs_on_disk.py",
   "intent": "Ask BigDFT to write the density, the orbitals or cube files.",
   "output": "{'dft': {'output_denspot': 21, 'nplot': 2}, 'output': {'orbitals': 'binary'}}",
-  "seconds": 0.1,
+  "seconds": 0.0,
   "status": "passed"
  },
  {
@@ -2259,7 +2259,7 @@
   "file": "19_input_save_and_reload.py",
   "intent": "Save an Inputfile to YAML and load it back.",
   "output": "dft:\n  hgrids: 0.4\n  ixc: PBE",
-  "seconds": 0.2,
+  "seconds": 0.1,
   "status": "passed"
  },
  {
@@ -2378,7 +2378,7 @@
   "file": "20_input_virtual_orbitals.py",
   "intent": "Compute empty (virtual) orbitals, for a gap or a density of states above the Fermi level.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-virtual.yaml\n{'ixc': 'PBE', 'norbv': -4, 'nvirt': 4, 'itermax_virt': 150}",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -2503,7 +2503,7 @@
   "file": "30_dry_run_and_check.py",
   "intent": "Dry-run an input and decide, correctly, whether BigDFT accepted it.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-good.yaml\n <BigDFT> log of the run will be written in logfile: ./log-odd.yaml\n <BigDFT> log of the run will be written in logfile: ./log-hybrid.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-typo.yaml\nSTOP  MPIFAKE: MPI_ABORT\n <BigDFT> log of the run will be written in logfile: ./log-coarse.yaml\ngood        : accepted\nodd         : accepted, warnings: ['Odd number of electrons, no closed shell system']\nhybrid      : refused, The pseudopotential parameter file \"psppar.O\" is lacking, and no registered pseudo found for \"O\"\ntypo        : refused, An invalid key (hgrid) has been found in section \"dft\". Check above the allowed keys.\nout of range: accepted WITH ERRORS, hgrids = '9.0' not in range.",
-  "seconds": 2.9,
+  "seconds": 2.6,
   "status": "passed"
  },
  {
@@ -2657,8 +2657,8 @@
   },
   "file": "31_dry_run_overwrites_the_log.py",
   "intent": "Never dry-run under the name of a calculation that is already done.",
-  "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h2o.19:42:08.397.yaml\nbefore: energy -17.209856430993852\nafter : log-h2o.yaml is now a dry-run log, without energy",
-  "seconds": 0.5,
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h2o.07:55:57.381.yaml\nbefore: energy -17.209856430993852\nafter : log-h2o.yaml is now a dry-run log, without energy",
+  "seconds": 0.4,
   "status": "passed"
  },
  {
@@ -2769,15 +2769,15 @@
   "created": [
    "runs"
   ],
-  "description": "The HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every input with a dry run in one directory, keep the names that passed, and hand them to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold letters, digits, '_' and '-' (no dot, no colon), 64 characters at most.",
+  "description": "The HAPS runs `bigdft -n NAME` on NAME.yaml and nothing else. So: write every input with a dry run in one directory, keep the names that passed, and hand them to haps_bigdft(names=[...], directory=\"runs\"). A run name may only hold letters, digits, '_' and '-' (no dot, no colon). Keep it to 30 characters: the HAPS accepts 64, but the dry run of BigDFT truncates the name of the log at 30 and PyBigDFT then finds no log and returns None.",
   "fields": {
    "stage": "dry-run",
    "task": "Send runs to the HAPS"
   },
   "file": "32_prepare_runs_for_the_haps.py",
   "intent": "Prepare several runs for the HAPS: one NAME.yaml each, dry-run, names it accepts.",
-  "output": "<BigDFT> log of the run will be written in logfile: ./log-water_h050.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h045.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h040.yaml\nready for the HAPS: ['water_h050', 'water_h045', 'water_h040']\nnext: haps_bigdft(names=['water_h050', 'water_h045', 'water_h040'], directory=\"runs\")",
-  "seconds": 0.8,
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-water_h050.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h045.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_h040.yaml\n <BigDFT> log of the run will be written in logfile: ./log-water_grid_convergence_study_h.yaml\nSTOP  MPIFAKE: MPI_ABORT\na name of 32 characters: the dry run returns None, its log was written under a truncated name\nready for the HAPS: ['water_h050', 'water_h045', 'water_h040']\nnext: haps_bigdft(names=['water_h050', 'water_h045', 'water_h040'], directory=\"runs\")",
+  "seconds": 1.6,
   "status": "passed"
  },
  {
@@ -2895,8 +2895,8 @@
   },
   "file": "33_dataset_of_runs.py",
   "intent": "Group runs in a Dataset and collect one quantity from all of them.",
-  "output": "<BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.5.19:42:10.038.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.45.19:42:10.167.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.4.19:42:10.324.yaml\nnames : ['h:0.5', 'h:0.45', 'h:0.4']\nmemory: [70, 86, 117] MB",
-  "seconds": 1.1,
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.5.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.5.07:55:59.555.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.45.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.45.07:55:59.651.yaml\n <BigDFT> log of the run will be written in logfile: ./log-h:0.4.yaml\n <BigDFT> Logfile existing, renamed into: ./logfiles/log-h:0.4.07:55:59.753.yaml\nnames : ['h:0.5', 'h:0.45', 'h:0.4']\nmemory: [70, 86, 117] MB",
+  "seconds": 0.8,
   "status": "passed"
  },
  {
@@ -3015,7 +3015,7 @@
   "file": "34_run_bigdft_here.py",
   "intent": "Run a calculation directly, where the bigdft executable is available.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-direct.yaml\nenergy: -17.200235 Ha",
-  "seconds": 2.6,
+  "seconds": 1.7,
   "status": "passed"
  },
  {
@@ -3133,8 +3133,8 @@
   },
   "file": "35_linear_scaling_input.py",
   "intent": "Switch to the linear-scaling algorithm, for systems of hundreds of atoms and more.",
-  "output": "<BigDFT> log of the run will be written in logfile: ./log-linear.yaml\nAt line 1677 of file /opt/bigdft/bigdft/src/modules/types.f90\nFortran runtime error: Attempt to DEALLOCATE unallocated 'aux'\n\nError termination. Backtrace:\n#0  0x7f6c54ec3d21 in ???\n#1  0x7f6c54ec4869 in ???\n#2  0x7f6c54ec4ee6 in ???\n#3  0x7f6c555ebd88 in ???\n#4  0x7f6c555ebeb8 in ???\n#5  0x7f6c552e4f9d in ???\n#6  0x7f6c553c944b in ???\n#7  0x7f6c553d171a in ???\n#8  0x561aef24955d in ???\n#9  0x561aef241a4e in ???\n#10  0x7f6c4cca00b2 in ???\n#11  0x561aef241a8d in ???\n#12  0xffffffffffffffff in ???\naccepted; memory estimate: not printed in linear scaling",
-  "seconds": 0.5,
+  "output": "<BigDFT> log of the run will be written in logfile: ./log-linear.yaml\nAt line 1677 of file /opt/bigdft/bigdft/src/modules/types.f90\nFortran runtime error: Attempt to DEALLOCATE unallocated 'aux'\n\nError termination. Backtrace:\n#0  0x7f6c1079bd21 in ???\n#1  0x7f6c1079c869 in ???\n#2  0x7f6c1079cee6 in ???\n#3  0x7f6c10ec3d88 in ???\n#4  0x7f6c10ec3eb8 in ???\n#5  0x7f6c10bbcf9d in ???\n#6  0x7f6c10ca144b in ???\n#7  0x7f6c10ca971a in ???\n#8  0x5612b3a5555d in ???\n#9  0x5612b3a4da4e in ???\n#10  0x7f6c085780b2 in ???\n#11  0x5612b3a4da8d in ???\n#12  0xffffffffffffffff in ???\naccepted; memory estimate: not printed in linear scaling",
+  "seconds": 1.0,
   "status": "passed"
  },
  {
@@ -3197,7 +3197,7 @@
   "file": "40_read_energy_and_main_quantities.py",
   "intent": "Read the energy and the main quantities of a finished calculation.",
   "output": "energy          : -17.20985643 Ha = -468.3040 eV\natoms, orbitals : 3 4\nhighest occupied: -0.2657 Ha\ndipole (AU)     : [-0.0001, 0.701, -0.0007]\nmemory peak     : 86 MB\npressure        : not in this log",
-  "seconds": 0.3,
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -3266,7 +3266,7 @@
   "file": "41_check_a_run_converged.py",
   "intent": "Check that a finished run converged, and collect what BigDFT warned about.",
   "output": "h2o          : 11 iterations, residue 7.0e-05 <= 1.0e-04\npbe0_restart : 8 iterations, warnings: ['PSP generated with a different XC. Input XC is \"XC: PBEH (PBE0)\"']",
-  "seconds": 0.3,
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -3347,7 +3347,7 @@
   "file": "42_relaxation_read_the_last_step.py",
   "intent": "Read a geometry optimisation: take the LAST step, not the attributes of the log.",
   "output": "Found 16 different runs\nforce evaluations      : 16\nenergy of the last step: -17.21121191 Ha, largest force 1.70e-04 Ha/bohr\nlog.energy             : -17.21124578 Ha, which is step 9\nenergy gained          : 1.36 mHa\nFound 16 different runs",
-  "seconds": 1.2,
+  "seconds": 0.9,
   "status": "passed"
  },
  {
@@ -3460,7 +3460,7 @@
   "file": "43_relaxed_geometry_for_the_next_run.py",
   "intent": "Start a calculation from the geometry a relaxation ended on.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-after_relax.yaml\nO-H distance after relaxation: 0.9779 angstroem",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -3523,7 +3523,7 @@
   "file": "44_orbital_energies.py",
   "intent": "Read the orbital energies: highest occupied level, and both spins of a polarised system.",
   "output": "water, occupied levels (eV): [-25.457, -13.183, -9.287, -7.23]\nwater, highest occupied    : -7.230 eV\nOH, highest occupied up    : -7.934 eV\nOH, highest occupied down  : -7.337 eV",
-  "seconds": 0.3,
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -3585,8 +3585,8 @@
   },
   "file": "45_forces_on_atoms.py",
   "intent": "Read the forces on the atoms.",
-  "output": "O   [7e-05, -0.01332, -0.0]  |F| = 0.01332 Ha/bohr\nH   [0.00959, 0.00664, 0.0]  |F| = 0.01166 Ha/bohr\nH   [-0.00966, 0.00669, 0.0]  |F| = 0.01175 Ha/bohr\nlargest force: 0.01332 Ha/bohr",
-  "seconds": 0.3,
+  "output": "O   [7e-05, -0.01332, 0.0]  |F| = 0.01332 Ha/bohr\nH   [0.00959, 0.00664, 0.0]  |F| = 0.01166 Ha/bohr\nH   [-0.00966, 0.00669, 0.0]  |F| = 0.01175 Ha/bohr\nlargest force: 0.01332 Ha/bohr",
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -3718,7 +3718,7 @@
   "file": "46_density_of_states.py",
   "intent": "Build the density of states of a run, as a table and as a figure.",
   "output": "points: 2500 | from -26.4 to -6.3 eV\nwritten: dos.dat, dos.png",
-  "seconds": 0.9,
+  "seconds": 3.3,
   "status": "passed"
  },
  {
@@ -3799,7 +3799,7 @@
   "file": "47_energy_difference_between_runs.py",
   "intent": "Compare two finished runs: an energy difference, converted, with missing runs handled.",
   "output": "Found 16 different runs\nrelaxation energy: 0.00136 Ha = 0.0369 eV = 3.56 kJ/mol",
-  "seconds": 0.7,
+  "seconds": 0.6,
   "status": "passed"
  },
  {
@@ -3868,7 +3868,7 @@
   "file": "48_was_the_restart_used.py",
   "intent": "After a restart from wavefunctions, check that BigDFT really read them.",
   "output": "pbe0_restart: wavefunctions read, 8 iterations\npbe0_cold   : files missing, started from scratch, 11 iterations",
-  "seconds": 0.5,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -3990,7 +3990,7 @@
   "file": "49_restart_from_wavefunctions.py",
   "intent": "Restart a calculation from the wavefunctions of an earlier one.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o_pbe0.yaml\ncopied 5 files to data-h2o_pbe0/ ; input ready: h2o_pbe0.yaml\nsend h2o_pbe0.yaml AND data-h2o_pbe0/ to where it is computed",
-  "seconds": 0.4,
+  "seconds": 0.3,
   "status": "passed"
  },
  {
@@ -4073,7 +4073,7 @@
   "file": "50_table_from_many_logs.py",
   "intent": "Collect the same quantities from many logs into a table.",
   "output": "Found 16 different runs\nh2o             3 atoms  h=0.45  E=-17.20985643 Ha   1 evaluation(s)\nh2o_relax       3 atoms  h=0.45  E=-17.21121191 Ha  16 evaluation(s)\noh              2 atoms  h=0.45  E=-16.51883047 Ha   1 evaluation(s)\npbe0_cold       3 atoms  h=0.45  E=-17.20385733 Ha   1 evaluation(s)\npbe0_restart    3 atoms  h=0.45  E=-17.20385733 Ha   1 evaluation(s)",
-  "seconds": 0.8,
+  "seconds": 0.7,
   "status": "passed"
  },
  {
@@ -4135,8 +4135,8 @@
   },
   "file": "51_raw_content_of_a_log.py",
   "intent": "Reach what no attribute gives: the log as a dictionary.",
-  "output": "BigDFT version  : 1.9.1\nfunctional read : -101130 (libxc code of PBE)\nbox (angstroem) : [9.0489, 7.6202, 7.6202]\ngrid points     : 23159 coarse, 482 fine\nlast iteration  : 11 | residue 6.98e-05\nwall time       : 2.6 s",
-  "seconds": 0.3,
+  "output": "BigDFT version  : 1.9.1\nfunctional read : -101130 (libxc code of PBE)\nbox (angstroem) : [9.0489, 7.6202, 7.6202]\ngrid points     : 23159 coarse, 482 fine\nlast iteration  : 11 | residue 6.98e-05\nwall time       : 2.3 s",
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -4270,7 +4270,7 @@
   "file": "53_spin_polarised_result.py",
   "intent": "Read a spin-polarised result: magnetisation and what was asked.",
   "output": "asked : nspin = 2 , mpol = 1\nfound : magnetisation = 1.0\nenergy: -16.518830 Ha",
-  "seconds": 0.4,
+  "seconds": 0.2,
   "status": "passed"
  },
  {
@@ -4451,7 +4451,7 @@
   "file": "60_pipeline_prepare_and_analyse.py",
   "intent": "A study as one script with two verbs: prepare the runs, then analyse the logs.",
   "output": "<BigDFT> log of the run will be written in logfile: ./log-h2o_cation.yaml\nto send to the HAPS: ['h2o_cation']\nenergies so far: {'h2o': -17.209856, 'oh': -16.51883, 'h2o_cation': None}",
-  "seconds": 0.6,
+  "seconds": 0.4,
   "status": "passed"
  }
 ]

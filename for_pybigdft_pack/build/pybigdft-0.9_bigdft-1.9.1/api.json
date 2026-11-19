@@ -5040,14 +5040,14 @@
      "required": false
     },
     {
-     "default": "<function rename_residue at 0x7ff2af0e9710>",
+     "default": "<function rename_residue at 0x7f7ea80c9710>",
      "kind": "positional_or_keyword",
      "name": "mappable",
      "required": false
     }
    ],
    "qualname": "rename_labels",
-   "signature": "(labels, as_dict=False, from_dict=False, mappable=<function rename_residue at 0x7ff2af0e9710>)",
+   "signature": "(labels, as_dict=False, from_dict=False, mappable=<function rename_residue at 0x7f7ea80c9710>)",
    "summary": "Rename the names of the residues of a BioSystem in order to be compatible with other naming schemes."
   },
   {

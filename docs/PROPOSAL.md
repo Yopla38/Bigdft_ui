@@ -123,17 +123,21 @@ Five things came out that no amount of design would have found:
 
 The workshop's own input was checked the same way: the `input.yaml` it writes for water was read and computed by BigDFT 1.9.1 (PBE: −17.218473 Ha in 11 iterations; PBE0: −17.212363 Ha). BigDFT counted 33,012 coarse and 680 fine grid points where the workshop estimated 33,072 and 711. The memory estimate is poor for so small a system (13 MB estimated, 117 MB reported): it was fitted on the tetrapeptide runs and misses a fixed part. In production that figure comes from BigDFT's dry run, not from the workshop.
 
-### Steps and decisions (a sketch, to decide on)
+### Steps and decisions: the registry of steps
 
-The builder's three gestures cover calculations. A study such as the 6a capsule also holds **decisions** (which grid, after the convergence study), a **criterion fixed in advance**, and **failed attempts** that taught something. The Study space has a third view that draws those, to judge the idea before building it: "Steps and decisions".
+The builder's three gestures cover calculations. A study also holds **decisions** (which grid, after the convergence study), a **criterion fixed in advance**, and results that are differences between steps. These are now a second registry, one level above `BigDFT.InputActions`, in `for_pybigdft_pack/study/StudyActions.py`: functions that are the steps of a study (`calculation`, `relax`, `ionised`, `triplet`, `hybrid`, `converge`, `choose`, `difference`, `target`), with the same convention (plain functions, defaults everywhere, read by introspection). One rule does the rest: **an argument that is the result of another step is a link.** A study reads as one line per step, and the list on screen and the script are the same thing.
 
-The idea is a second registry, one level above `BigDFT.InputActions`: functions that are the steps of a study (`converge`, `choose`, `relax`, `single_point`, `difference`, `target`), with the same convention (plain functions, defaults everywhere, read by introspection). One rule does the rest: **an argument that is the result of another box is an arrow.** The capsule then reads as ten lines, and the board and the script are the same thing, which is also what would let a capsule's script be read back into a board.
+A decision is a step of its own: the machine applies the criterion and proposes, a person retains, and the value applies to every step after it. `Studies.py` is the engine: it resolves what each step inherits, writes the inputs, prepares them by dry run, shares a run between steps that need the same calculation, and makes a step wait for the relaxation or the decision it depends on. It was run for real: the ionisation energy of water in 11 runs and two waves (`examples/water-ionisation`), and a lattice of 48 runs (`workshop/library`).
 
-A decision is a box of its own, drawn as a diamond: the machine applies the criterion and proposes, a person retains. The capsule's own numbers make the point. The criterion "the triplet gap within 1 meV of the finest grid" accepts the coarsest spacing, 0.45 bohr, at 25 core-hours a pair; the researcher kept 0.35, at 63, because the calibration molecule had been run there. In the sketch the tolerance can be changed and another grid retained: the diamond changes colour, the script line says `by="you"`, and every box downstream turns to "to run", since the capsule only holds them at 0.35.
+The first drawing of this idea, the "Steps and decisions" view of the Study space, laid it over the 6a capsule. That was the wrong frame: it showed someone else's finished study, apart from what the user was building in the workshop.
 
-Each box has three faces: what it does and why, its settings with where each comes from (pre-filled, you, a decision, a link, a lesson learned from a failed attempt), and the PyBigDFT under the call. The failed attempt stays on the board, faded, with a dotted arrow to the boxes that inherit what it taught.
+### Workshop 2: one line from a system to a study
 
-None of the registry exists. Every number in the sketch is read from the capsule's logs.
+`workshop/` starts again from the construction itself. There is one place. The left column is the study in order: the system, then each step. A step is added from the registry, continues a step already there, holds only what it changes, and shows for every setting where its value comes from (inherited from a named step, a decision, you, adapted, default). Computing is per step or for everything that is ready, in waves. The result of each step appears under the scene as soon as it exists, and the scene shows the system as that step sees it, relaxed geometry included. Changing an upstream step puts everything that depends on it back to "ready to compute".
+
+Results are not simulated. The identity of a calculation is its input with BigDFT's defaults removed, plus the geometry it starts from. The page looks that identity up in a library of real runs (57 calculations on water); a calculation that is not there says so and shows nothing. The script the page writes for its example was executed as written, and `tools/check_workshop.js` verifies that the page still writes that script, sends the same runs and shows BigDFT's numbers.
+
+What this leaves open: who may retain a value against the criterion (anyone with a reason, today); retries when a run fails or does not converge; restart from wavefunctions between steps; loops over structures; and what a capsule becomes, which is probably just a study whose results are all there.
 
 ### Results: a view is a description, code is the exception
 
@@ -331,6 +335,14 @@ Real in the mock-up: the 311 variables and their tiering, the pack's container d
 Simulated: execution (no calculation runs; for the tetrapeptide 6a the Run tab replays the recorded run, labelled as such), result values of the other systems, isosurfaces (superposition of toy orbitals, marked "illustration"), times and costs (uncalibrated orders of magnitude), prices, people and example projects. The agent knows three moves. Notebooks an administrator adds are kept in that browser only: there is no server behind the mock-up. The page itself still executes nothing: a study other than the example is written, checked and not run. The HAPS service was not exercised: its rule on what a run may receive and its command were, in its image, not its transport (ebservice, buffers). The GPU and cluster targets of `config/haps.yaml` are placeholders.
 
 Verified: renders without error in Chromium, light and dark themes, at 1440, 1024, 768 and 400 px, with an automated pass for horizontal overflow, clipped text, small targets and equation errors on every block, tab, space and guide step; substitution → spin, paper → blueprint, capsule, run, agent approval, publish, notice → parameter, guided path and notebook import flows; behaviour when the 3D or math libraries fail to load. Equations were checked against their sources (Kohn-Sham with the density, the wavelet expansion of Genovese et al. 2008, the generalised Poisson equation, forces, the density kernel). Not verified: Safari and Firefox; the per-element localisation radii (approximate values); the generated inputs of the periodic and linear-scaling systems (only the water inputs were fed to BigDFT).
+
+### Workshop 2
+
+Real: the registry of steps and its engine, executed with BigDFT 1.9.1; the 57 recorded calculations on water and everything shown from them (energies, levels, forces, convergence traces, relaxed geometries, times); the script, which runs as written; the inheritance, decisions and waves, which the page and the engine compute the same way (checked by `tools/check_workshop.js`).
+
+Not real: execution from the page (a recorded result is shown at once, with the time BigDFT took); any system other than water and any setting outside the lattice (written and checked, shown as "no recorded result"). A study is not saved: reloading the page starts over.
+
+Verified: the same audit as the first workshop, at 1440, 1024, 768 and 400 px in both themes, on every step and tab of the example; building a study from nothing, changing an upstream step, deciding against the criterion, a system without results.
 
 ## 12. Questions to move forward
 

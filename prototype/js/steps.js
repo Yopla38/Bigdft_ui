@@ -144,7 +144,7 @@ window.OND = window.OND || {};
       h('div', { class: 'box-head' }, h('div', {}, h('p', { class: 'label' }, { decision: 'Decision', formula: 'Formula', series: 'Series', relax: 'Relaxation', run: sel === 'fail' ? 'Failed attempt, kept' : 'Calculation', structure: 'Structure', target: 'Criterion' }[n.type]), h('h3', {}, n.title)),
         h('div', { class: 'seg', role: 'group', 'aria-label': 'Face of the box' }, Object.entries(faces).map(([k, l]) => h('button', { type: 'button', 'aria-pressed': String(face === k), onclick: () => { face = k; render(); } }, l)))),
       ...(face === 'words' ? box.words.map((w) => h('p', { class: 'box-words' }, w)).concat(sel === 'et' || sel === 'verdict' ? [figure(sel)] : [])
-        : face === 'settings' ? (sel === 'choose' ? decisionPanel() : [h('dl', { class: 'box-set' }, box.settings.flatMap(([k, v, src]) => [h('dt', {}, k), h('dd', {}, h('span', {}, v), h('span', { class: 'src src-' + src }, TAG[src]))])),
+        : face === 'settings' ? (sel === 'choose' ? decisionPanel() : [h('dl', { class: 'box-set' }, box.settings.flatMap(([k, v, src]) => [h('dt', {}, k), h('dd', {}, h('span', {}, v), h('span', { class: 'prov-tag src-' + src }, TAG[src]))])),
           h('p', { class: 'figmeta' }, 'A pre-filled value can be changed; one that comes from a decision, a link or a lesson says where it comes from.')])
           : [h('p', { class: 'figmeta' }, sel === 'choose' || sel === 'target' || sel === 'structure' ? 'This box computes nothing.' : 'What the call on the right does, in PyBigDFT. Written once, in the registry; the board only shows it.'), h('pre', { class: 'code', html: code.map(paint).join('\n') })]));
 
