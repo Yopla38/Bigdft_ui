@@ -5,6 +5,11 @@ to a scratch copy and tested there; nothing was pushed.
 
 ## `haps-wavefunctions.patch`, for the HAPS of the PyBigDFT pack
 
+**Status, 2026-11-20: taken.** The demo's HAPS now holds this change on both sides
+(`haps/pybigdft_haps/inputs.py` for the runtime, `Pack_pybigdft/haps_bridge/inputs.py` for the
+bridge, which moved into the pack), and its `haps_info` says what it accepts. The patch is
+kept for a copy of the HAPS as it stood before; it no longer applies to the demo as it is.
+
 Lets a run restart from the wavefunctions of an earlier one through the HAPS. Written against
 the HAPS as it stands in the Exa-AToW demo (`haps/` of 2026-11-18: two applications, the dry
 run on `memguess`); it replaces the patch written for the earlier `Pack_pybigdft_HAPS`, which

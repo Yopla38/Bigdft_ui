@@ -8,29 +8,45 @@ page ──► serve.py ──► runner.py ──► MCP bridge ──► dry-r
                      PyBigDFT       (bridge.sh)    (ebservice, ebuffer, the two runtimes)
 ```
 
-No BigDFT here, no container, no image: PyBigDFT is installed without BigDFT (`pybigdft==1.9.6.1`, the version the pack runs). No account either: the bridge holds it.
+No BigDFT here, no container, no image: PyBigDFT is installed without BigDFT (`pybigdft==1.9.6.1`, the version the pack runs). `serve.py` and `runner.py` hold no account: the bridge does, a separate process.
 
 ## Run it
 
 Three things must be up. The first is the HAPS operator's; the other two are this directory's.
 
 ```bash
-# 1. The two HAPS, served: in the pack's HAPS directory, by whoever operates them
-./serve_remote.sh                        # or ./serve_local.sh for the local stack
+# 1. The two HAPS, served: by whoever operates them, on whatever machine (serve_remote.sh or serve_local.sh of the service)
 
 # 2. The workshop's bridge, on 8791, with this directory's work/ as its working directory
 cd backend
-./bridge.sh /path/to/haps ~/.config/haps/aqmo-test.env      # the same credentials file as serve_remote.sh
-./bridge.sh /path/to/haps                                   # with serve_local.sh: no file
+uv sync                                  # once
+./bridge.sh ~/.config/haps/aqmo-test.env # a remote HAPS: the file that holds your account on it
+./bridge.sh                              # a local demo HAPS (serve_local.sh): no file
 
 # 3. The page and its server
-uv sync                                  # once
 uv run python serve.py                   # http://localhost:8766
 ```
 
 `serve.py` says at start whether the bridge answers and whether wavefunctions travel through it. The page then shows "BigDFT on the HAPS" and a switch, "Recorded | Compute": on "Compute" every step is computed now; on "Recorded" it is the mock-up, with the library of recorded results. Opened with `tools/preview.py`, no server answers and the page is the mock-up.
 
-`/path/to/haps` is the directory that holds `haps.toml` and `pybigdft_haps/`. The bridge is that code, started a second time: the agent's bridge stays on 8790 with the agent's sandbox, this one has its own port and its own directory. Nothing is published by `bridge.sh` and nothing computes in it.
+### What the bridge is, and what it depends on
+
+The bridge is the user side of a HAPS: it logs in to ebservice, submits a job to a published application, moves its files through ebuffer. `haps_bridge/` is the PyBigDFT pack's bridge, copied here unchanged, and it runs with this directory's environment. It depends on three things, none of which is a path on this machine:
+
+- **the addresses of ebservice and ebuffer**, and **an account** on them: `haps.toml`, or the `HAPS_*` variables of the credentials file;
+- **the two applications as they are published**: their names, mime types and instance (`[application]` of `haps.toml`), and the publisher's email (`[maintainer]`);
+- **what the runtime accepts as input**, which `haps_bridge/inputs.py` states and the runtime holds a copy of.
+
+So the HAPS service and the pack can be renamed, moved, or on another machine: `bridge.sh` takes no directory. (Until 2026-11-20 it started the pack's bridge from the pack's directory, and broke each time that directory moved; a first argument that is a directory is now ignored, with a note.)
+
+`haps.toml` is this directory's own: the settings of the pack's bridge with the workshop's port (8791, so that the pack's bridge keeps 8790 and its sandbox), its working directory (`work/`) and a 10 s wait, after which `serve.py` follows the job itself and can stop it. The credentials file is the one the pack's bridge takes (its `haps_remote.env.example` lists the variables); the bridge submits with the **user** account, `HAPS_USER_USERNAME` and `HAPS_USER_PASSWORD`, and `bridge.sh` warns when the file names none. Nothing is published by `bridge.sh` and nothing computes in it.
+
+When the pack changes its bridge (a new rule on what a run may receive, a new tool), the copy is taken again:
+
+```bash
+./update_from_pack.sh /path/to/Pack_pybigdft            # says what differs
+./update_from_pack.sh /path/to/Pack_pybigdft --apply    # copies; then uv sync if the bridge needs a new library
+```
 
 Check the whole chain, from the model of the page to BigDFT and back (it computes: 18 runs, a few minutes):
 
@@ -63,7 +79,7 @@ A run that another step reads the wavefunctions of must have written them. If it
 | "BigDFT stopped (exit n): …" | the calculation started and ended in error | read `work/<study>/runs/log-NAME.yaml` |
 | "stopped by the HAPS…" | longer than `limits.max_timeout_s` of `config/haps.yaml` | `serve.py --timeout`, within what the runtime allows |
 | "the HAPS did not run it…", "no answer after…" | the service or the runtime, not the input | look at the runtime; then "Try again" |
-| "this HAPS does not take wavefunctions…" | the step starts from the wavefunctions of another, and the HAPS would drop them | apply `docs/patches/haps-wavefunctions.patch` to the HAPS |
+| "this HAPS does not take wavefunctions…" | the step starts from the wavefunctions of another, and the HAPS would drop them | an older HAPS: update it, or apply `docs/patches/haps-wavefunctions.patch` to it |
 | "The HAPS is not ready" (top of the page) | the bridge does not answer, or an application is not published | start `bridge.sh`; ask the operator of the HAPS |
 
 A run that failed is not sent again by itself: "Try again" on the step does it.
@@ -75,10 +91,12 @@ A run that failed is not sent again by itself: "Try again" on the step does it.
 | `serve.py` | The page and five addresses (`/api/info`, `/api/compute`, `/api/jobs/ID`, `/api/jobs/ID/cancel`, `/api/structure`). Local only, and only for its own page |
 | `runner.py` | One wave: rebuild the study from data, drop stale results, dry-run, send, read the logs |
 | `haps.py` | The client of the bridge: the tools it calls and how their answers are read |
-| `bridge.sh` | Starts the HAPS's own bridge a second time, on the workshop's port and directory |
+| `bridge.sh`, `haps.toml` | Starts the bridge on the workshop's port and directory; its settings |
+| `haps_bridge/` | Copied unchanged from the PyBigDFT pack: the MCP bridge to the HAPS (`haps_info`, `haps_dryrun`, `haps_bigdft`, `haps_result`, `haps_cancel`) |
+| `update_from_pack.sh` | Compares the copies below and above with the pack's, and takes them again |
 | `bigdft_bin/`, `bigdft_refused.sh`, `haps_dryrun_client.py` | Copied unchanged from the PyBigDFT pack (`tools/`): the stand-in `bigdft-tool` that sends PyBigDFT's dry run to the bridge, and `bigdft`, `abscalc`, `frequencies`, which refuse |
 | `xyz_downloader.py` | Copied unchanged from the pack too: asks PubChem for the 3D structure of a molecule and writes it in BigDFT's `.xyz`, unit included. `/api/structure` calls it and hands the text to the page; the files stay in `work/.structures/` |
-| `pyproject.toml`, `uv.lock` | The environment: PyBigDFT without BigDFT, the MCP client, PyYAML, and `ase` and `requests` for the downloader |
+| `pyproject.toml`, `uv.lock` | The environment: PyBigDFT without BigDFT, the MCP client and server, `haps-client` for the bridge, PyYAML, and `ase` and `requests` for the downloader |
 | `work/` | The studies (not in git) |
 
 ## Structures

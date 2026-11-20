@@ -1,6 +1,6 @@
 """The client of the HAPS MCP bridge: what the backend asks it, and how it reads the answers.
 
-The bridge (`pybigdft_haps.mcp_server`, in the HAPS repository) is the only
+The bridge (`haps_bridge/`, a copy of the PyBigDFT pack's; started by bridge.sh) is the only
 process that holds the HAPS credentials. It shares a working directory with the
 backend: a run is named by a directory relative to it, never by file content.
 The bridge answers in text written for an agent; this module turns that text

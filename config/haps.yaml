@@ -17,11 +17,11 @@ haps:
   cpu:
     label: CPU container
     detail: HAPS of the PyBigDFT pack
-    # The bridge workshop 2 computes through: its own (backend/bridge.sh), beside the agent's on
+    # The bridge workshop 2 computes through: its own (backend/bridge.sh), beside the pack's on
     # 8790, so that each has its working directory. backend/serve.py reads this address.
     mcp_url: http://127.0.0.1:8791/mcp
     # Where the two HAPS are published. The workshop never talks to these services: the bridge
-    # does, and takes their addresses and its account from the HAPS settings (haps.toml, or the
+    # does, and takes their addresses and its account from its settings (backend/haps.toml, or the
     # HAPS_* variables of a file kept outside any repository). Written here for the reader; these
     # are the local stack's (`./serve_local.sh`).
     ebservice_url: http://127.0.0.1:8100/api/v1
@@ -38,10 +38,10 @@ haps:
     # setting, not ours: a shared server may cap it (500 MB on the test server, in memory).
     limits: {max_timeout_s: 3600, max_parallel: 2, output_reserve_mb: 1024, buffer_lifespan_s: 3600}
     accepts:
-      # data-NAME/wavefunction-* beside NAME.yaml, to restart from an earlier run. True once
-      # docs/patches/haps-wavefunctions.patch is applied to the HAPS, bridge and runtime; the
-      # HAPS as published refuses them. This line is what the mock-up shows: the backend does
-      # not trust it, it asks the bridge (haps_info) before each wave.
+      # data-NAME/wavefunction-* beside NAME.yaml, to restart from an earlier run. True for the
+      # pack's HAPS since 2026-11-20 (bridge and runtime); an older copy needs
+      # docs/patches/haps-wavefunctions.patch. This line is what the mock-up shows: the backend
+      # does not trust it, it asks the bridge (haps_info) before each wave.
       wavefunctions: true
     estimate: {credits_per_core_hour: 1, relative_speed: 1}
 

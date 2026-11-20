@@ -4,7 +4,8 @@
 #
 # PyBigDFT WITHOUT BigDFT (pure Python): the study engine writes the inputs and
 # reads the logs here; the dry run and the calculation go to the two HAPS
-# through the MCP bridge. Pinned to the version the pack runs: the dry run
+# through the MCP bridge (haps_bridge/, started by ./bridge.sh from this same
+# environment). Pinned to the version the pack runs: the dry run
 # checks what this version writes against BigDFT 1.9.1.
 
 [project]
@@ -13,7 +14,8 @@ version = "0"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "pybigdft==1.9.6.1",
-    "mcp>=2,<3",          # the client of the bridge; haps_dryrun_client.py is written for 2.x
+    "mcp>=2,<3",          # the client of the bridge, and the bridge itself; haps_dryrun_client.py is written for 2.x
+    "haps-client>=0.5.0", # haps_bridge/: submits to ebservice, moves files through ebuffer
     "pyyaml",
     "ase",                # xyz_downloader.py: reads PubChem's SDF
     "requests",           # xyz_downloader.py: asks PubChem

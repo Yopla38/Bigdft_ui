@@ -41,16 +41,17 @@ The two are separate pages. Workshop 2 starts again from one idea: you are build
 
 ## Compute for real with workshop 2
 
-With the two HAPS of the PyBigDFT pack served (its `serve_remote.sh` or `serve_local.sh`):
+With the two HAPS served, wherever they are (`serve_remote.sh` or `serve_local.sh` of the service):
 
 ```bash
 cd backend
-./bridge.sh /path/to/haps [credentials.env]   # the workshop's own MCP bridge, on 8791
-uv sync && uv run python serve.py             # http://localhost:8766: the same page, computing
+uv sync                                       # once: the environment of the bridge and of the server
+./bridge.sh [credentials.env]                 # the workshop's MCP bridge to the HAPS, on 8791
+uv run python serve.py                        # http://localhost:8766: the same page, computing
 node ../tools/check_live.js                   # the example, computed, against the recorded run (a few minutes)
 ```
 
-`backend/README.md` has the details. A step that starts from the wavefunctions of another needs `docs/patches/haps-wavefunctions.patch` applied to the HAPS; without it the page refuses the step rather than let BigDFT start from scratch.
+`backend/README.md` has the details. A step that starts from the wavefunctions of another needs a HAPS that takes them: the pack's does since 2026-11-20 (`docs/patches/haps-wavefunctions.patch` is the change, for an older copy). On a HAPS that does not, the page refuses the step rather than let BigDFT start from scratch.
 
 ## Regenerate what workshop 2 reads
 

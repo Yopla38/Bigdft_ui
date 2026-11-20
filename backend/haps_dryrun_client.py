@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None, environ: Mapping[str, str] | None = None
     except Exception as exc:                      # the bridge is down, the network…
         print(f"[ERROR] bigdft-tool: the HAPS bridge at "
               f"{env.get('PYBIGDFT_HAPS_MCP_URL') or DEFAULT_URL} did not answer "
-              f"({type(exc).__name__}: {exc}). Is ../haps/serve_local.sh running?",
+              f"({type(exc).__name__}: {exc}). Is the pack's ./haps_bridge.sh running?",
               file=sys.stderr)
         return NOT_RUN
     print(answer)

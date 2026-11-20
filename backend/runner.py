@@ -265,7 +265,7 @@ def wave(study, wanted: dict[str, str], request: dict, status: Status, registry:
     # would start from scratch and say so in a warning nobody reads: refuse it here instead.
     for name in [n for n in asked if runs[n]["wavefunctions_from"] and not bridge.get("wavefunctions")]:
         say(name, state="failed", text="this HAPS does not take wavefunctions: the run would start from scratch "
-            f"without saying so. Apply {PATCH} to the HAPS (bridge and runtime), or start this step from nothing")
+            f"without saying so. Update the HAPS (bridge and runtime; {PATCH} is the change), or start this step from nothing")
         del asked[name]
 
     def go(names: set[str], note: str = "") -> None:

@@ -1,0 +1,75 @@
+# Where workshop 2's BigDFT runs go: the settings of its HAPS bridge
+# (haps_bridge/, started by ./bridge.sh).
+#
+# The bridge is the USER side of a HAPS: it submits jobs to ebservice and moves
+# files through ebuffer, over HTTP(S). The HAPS itself (the runtimes, BigDFT) is
+# a separate service, on whatever machine [servers] names. Nothing of it is read
+# from this machine: no path to it appears here or in bridge.sh.
+#
+# Every value can be overridden by an environment variable named
+# HAPS_<SECTION>_<KEY>, e.g.
+#
+#     HAPS_SERVERS_EBSERVICE_URL=https://ebservice-test.aqmo.org/api/v1
+#     HAPS_USER_PASSWORD=...
+#
+# Credentials for a real server go in a file OUTSIDE this repository, handed to
+# ./bridge.sh: the same file the PyBigDFT pack's own bridge takes (its
+# haps_remote.env.example lists the variables). Only keys present below can be
+# overridden.
+#
+# The defaults below reach a LOCAL demo HAPS (`./serve_local.sh` of the service).
+
+[servers]
+ebservice_url = "http://127.0.0.1:8100/api/v1"
+ebuffer_url   = "http://127.0.0.1:8101/api/v1"
+insecure_skip_tls_verify = false
+
+# YOUR account on the HAPS: it submits the jobs. These are the local demo's.
+[user]
+username = "agent"
+password = "agent-local-demo"
+
+# WHOSE applications to use: the email of the account that published them.
+# Empty: any.
+[maintainer]
+email = "maintainer@haps.localhost"
+
+# WHICH applications: name and mime type as the HAPS publishes them. On a shared
+# server the publisher sets an instance, and the mime types become
+# <mime_type>-<instance>: ask the publisher for it. Empty: the local demo.
+[application]
+compute_name = "bigdft"
+compute_mime_type = "application/x-bigdft"
+dryrun_name = "bigdft-dryrun"
+dryrun_mime_type = "application/x-bigdft-dryrun"
+instance = ""
+
+# The dry runs, when they go to a HAPS of their own. Empty: the same as
+# [servers], [user] and [maintainer].
+[dryrun]
+ebservice_url = ""
+ebuffer_url   = ""
+user_username = ""
+user_password = ""
+maintainer_email = ""
+
+[mcp]
+host = "127.0.0.1"
+# bridge.sh sets the port from `mcp_url` of ../config/haps.yaml, the address
+# serve.py reads too: 8791, beside the pack's own bridge on 8790.
+port = 8791
+# Where serve.py writes the studies: inputs are packed from here, outputs
+# written back here. serve.py refuses to compute when the two differ.
+workdir = "work"
+# How long one tool call waits for a job before handing back its id. Short:
+# serve.py follows the job itself, and can stop it.
+wait_s = 10
+# The same, for a dry run (haps_dryrun).
+dryrun_wait_s = 60
+# Room reserved for a job's outputs (a buffer has a fixed size). A server caps
+# it: aqmo-test refuses more than 500 MB, and keeps buffers in memory.
+output_reserve_mb = 1024
+# The same, for a dry run: a log and a minimal input, a few hundred kB.
+dryrun_output_reserve_mb = 16
+# A buffer is destroyed after this, whatever happens (server max: 3600).
+buffer_lifespan_s = 3600
