@@ -23,17 +23,24 @@
   const sub = (s) => String(s).replace(/\d/g, (d) => '₀₁₂₃₄₅₆₇₈₉'[d]);
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const sci = (v) => { const [m, e] = Number(v).toExponential(1).split('e'); return m + '×10' + String(+e).replace('-', '⁻').replace(/\d/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); };
-  function typeset(el, tries = 0) {
-    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]).catch(() => {});
-    else if (tries < 25) setTimeout(() => typeset(el, tries + 1), 400);
+  /* An equation. MathJax comes from the network, after the page: until it is there, and without it, the same
+     thing is shown in plain characters. Nothing is typeset in place, so no TeX source is ever on screen. */
+  let mathReady = false;
+  function math(tex, plain, display) {
+    if (mathReady) { try { return h('span', { class: 'math', title: plain }, MathJax.tex2svg(tex, { display: !!display })); } catch (e) { /* in plain characters */ } }
+    return h('span', { class: 'math plain' }, display ? plain.split('   ·   ').map((line) => h('span', {}, line)) : plain);
   }
+  (function waitForMath(tries) {
+    if (window.MathJax && MathJax.tex2svg && MathJax.startup && MathJax.startup.promise) MathJax.startup.promise.then(() => { document.head.appendChild(MathJax.svgStylesheet()); mathReady = true; refresh(); });
+    else if (tries < 75) setTimeout(() => waitForMath(tries + 1), 400);
+  })(0);
 
-  const M = OND.model, L = OND.live, S = OND.structures, study = M.study, P = M.P;
+  const M = OND.model, L = OND.live, S = OND.structures, Q = OND.equations, study = M.study, P = M.P;
   const bp = OND.Blueprint(), st = bp.st;                 // the settings of the selected calculation, edited in place
   const stage = OND.Stage($('#stage'));
   const SCHEMA = OND.schema.variables;
   const ui = { said: null, sel: 'system', tab: 'results', main: 'graph', inset: true, zoom: 'fit', depth: 0, view: { grid: false, ghosts: true, vdw: false }, drag: false, loading: false, query: '', acts: {}, palette: false, geo: '', moved: {}, reveal: true };
-  OND.board.init({ h, typeset });
+  OND.board.init({ h, math });
 
   const KIND = { structure: 'Structure', combination: 'Result', system: 'System', calculation: 'Calculation', relax: 'Relaxation', converge: 'Convergence series', vary: 'Series', choose: 'Decision', difference: 'Result', levels: 'Result', target: 'Criterion' };
   const ROLE = {
@@ -116,6 +123,21 @@
   function formulaOf(step, name) {
     return M.termsOf(step).map((t, i) => (t.c < 0 ? (i ? ' − ' : '−') : i ? ' + ' : '') + (Math.abs(t.c) === 1 ? '' : +Math.abs(t.c).toPrecision(6) + ' × ') + (t.step ? name(t.step) : '?')).join('') || 'nothing yet';
   }
+  /* What a step computes, as an equation: alone in the settings of the step, with the energies and the value in
+     its results. The legend says which step each symbol is the energy of. */
+  function equation(step, full, e) {
+    e = e || Q.of(step);
+    if (!e) return null;
+    const tex = full ? e.tex : e.definition;
+    const copy = h('button', { class: 'btn small', type: 'button', title: 'Copy the equation as LaTeX', onclick: (ev) => {
+      const b = ev.currentTarget, done = (said) => { b.textContent = said; setTimeout(() => { b.textContent = 'Copy LaTeX'; }, 1800); };
+      try { navigator.clipboard.writeText(tex).then(() => done('Copied'), () => done('Copy refused by the browser')); } catch (err) { done('Copy refused by the browser'); }
+    } }, 'Copy LaTeX');
+    return h('div', { class: 'eq' },
+      h('div', { class: 'eq-head' }, h('p', {}, e.head || (e.name ? e.name[0].toUpperCase() + e.name.slice(1) : M.isSeries(step) ? 'What this series follows' : 'What this step computes')), copy),
+      h('div', { class: 'eq-math' }, math(tex, e.plain, true)),
+      h('dl', { class: 'eq-where' }, e.where.filter((w) => full || !w.computed).flatMap((w) => [h('dt', {}, math(w.tex, w.plain)), h('dd', {}, w.text)])));
+  }
   function summaryOf(step) {
     const L = step.links, t = (id) => (M.byId(id) ? M.byId(id).title : '?');
     if (M.isCalc(step)) {
@@ -132,6 +154,12 @@
     if (step.kind === 'difference') return t(L.a) + ' − ' + t(L.b);
     if (step.kind === 'target') return step.params.value + ' ± ' + step.params.within + ' ' + step.params.unit;
     return '';
+  }
+  /* The equation of a box of the graph: the right-hand side of a difference or of a short sum. */
+  function texOf(step) {
+    if (step.kind !== 'difference' && !(step.kind === 'combination' && M.termsOf(step).length <= 3)) return null;
+    const e = Q.of(step);
+    return e ? e.short : null;
   }
   function resultOf(step) {
     const s = M.status(step);
@@ -364,6 +392,7 @@
       number(step, 'forcemax', 'Stop when the largest force is below (Ha/bohr)'), number(step, 'nsteps', 'Maximum number of steps')));
     kids.push(h('div', { class: 'seg', id: 'depth', role: 'group', 'aria-label': 'Depth of settings', style: 'margin:12px 0 2px' }, [[0, 'Settings'], [3, 'PyBigDFT actions'], [2, 'All variables']].map(([d, l]) => h('button', { type: 'button', 'aria-pressed': String(ui.depth === d), onclick: () => { ui.depth = d; refresh(); } }, l))));
     if (ui.depth === 0) for (const [id, label, role] of SECTIONS) kids.push(h('details', { class: 'sec', open: ui.open === id, ontoggle: (e) => { if (e.target.open) ui.open = id; else if (ui.open === id) ui.open = null; } }, h('summary', {}, label, h('span', {}, role)), controls(id).map(ctl)));
+    if (ui.depth === 0) kids.push(equation(step));
     else if (ui.depth === 3) kids.push(h('p', { class: 'count' }, 'The ' + OND.actions.list.length + ' input actions of ' + OND.actions.version.split(',')[0] + ', drawn from its registry. One applied here belongs to this step and to those that continue it.'), ...OND.actions.list.map(actionCard));
     else {
       const q = ui.query.toLowerCase(), rows = SCHEMA.filter((x) => (q ? (x.p + ' ' + x.c).toLowerCase().includes(q) : x.t < 2));
@@ -422,7 +451,7 @@
             lacking.length ? 'Add the atoms of “' + of.title + '” and fill' : 'Fill from “' + of.title + '”'))));
       }
       kids.push(field('Unit', seg([['eV', 'eV'], ['kJ/mol', 'kJ/mol'], ['Ha', 'Ha']], step.params.unit, (u) => { step.params.unit = u; M.touch(); refresh(); })),
-        stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Judged against'));
+        stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Judged against'), equation(step));
     } else if (M.isCalc(step)) kids.push(...calcPanel(step));
     else if (M.isSeries(step)) {
       const setting = M.settingVaried(step), conv = step.kind === 'converge', text = setting === 'xc';
@@ -435,7 +464,7 @@
         text ? field('Values', h('div', { class: 'pick' }, XCS.map((x) => h('button', { class: 'tog', type: 'button', 'aria-pressed': String(step.params.values.includes(x)), onclick: () => { const v = XCS.filter((y) => (y === x) !== step.params.values.includes(y)); if (v.length) { step.params.values = v; M.touch(); } refresh(true); } }, x))))
           : field(conv ? 'Values, from the cheapest to the most accurate' : 'Values', h('input', { type: 'text', value: step.params.values.join(', '), 'aria-label': 'Values', onchange: (e) => { const v = parseList(e.target.value); if (v && v.length > (conv ? 1 : 0)) { step.params.values = v; M.touch(); } refresh(true); } }), conv ? 'The last one is the reference.' : null),
         conv ? number(step, 'within', 'Converged when within (meV' + (step.links.relative_to ? '' : ' per atom') + ')', 'of the reference', 1000) : stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Each value judged against'),
-        computeRow(step));
+        equation(step), computeRow(step));
     } else if (step.kind === 'choose') {
       const among = M.byId(step.links.among);
       kids.push(stepSelect(step, 'among', M.isSeries, null, 'Decides on'), ...decisionTable(step));
@@ -448,7 +477,7 @@
     } else if (step.kind === 'difference') {
       kids.push(stepSelect(step, 'a', M.isCalc, null, 'Energy of'), stepSelect(step, 'b', M.isCalc, null, 'minus energy of'),
         field('Unit', seg([['eV', 'eV'], ['kJ/mol', 'kJ/mol'], ['Ha', 'Ha']], step.params.unit, (u) => { step.params.unit = u; M.touch(); refresh(); })),
-        stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Judged against'));
+        stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Judged against'), equation(step));
     } else if (step.kind === 'target') {
       kids.push(number(step, 'value', 'Reference value'), number(step, 'within', 'Agreement within ±'),
         field('Unit', seg([['eV', 'eV'], ['kJ/mol', 'kJ/mol'], ['Ha', 'Ha']], step.params.unit, (u) => { step.params.unit = u; M.touch(); refresh(); })),
@@ -560,6 +589,24 @@
     l.gap ? ['Gap, as BigDFT prints it', l.gap.map((g) => fx(g, 3)).join(' (↑), ') + (l.gap.length > 1 ? ' (↓)' : '') + ' eV'] : ['Gap', 'not in this log: no empty state was computed'],
     ['Levels', l.occupied.up.length + l.occupied.down.length + ' occupied' + (l.empty.up.length + l.empty.down.length ? ', ' + (l.empty.up.length + l.empty.down.length) + ' empty' : '')]];
 
+  /* Every equation of the study, in the order of its steps. Calculations that solve the same equations with the
+     same settings share one block. */
+  function equations() {
+    const groups = [];
+    for (const step of study.steps) {
+      const e = Q.of(step);
+      if (!e) continue;
+      /* calculations are compared without the size of their basis, which is each run's own and is in its results */
+      const said = M.isCalc(step) ? e.definition + e.where.filter((w) => !w.computed).map((w) => w.text).join() : null, same = said && groups.find((g) => g.said === said);
+      if (same) same.steps.push(step); else groups.push({ said, steps: [step] });
+    }
+    $('#equations').replaceChildren(
+      h('p', { class: 'figmeta' }, groups.length ? 'What the study computes, step by step: the equations BigDFT solves for each calculation, written with its settings, and what is then computed from the energies. The numbers are those of the results, where there are results.'
+        : 'Nothing to write yet: add a calculation.'),
+      ...groups.map((g) => h('section', { class: 'eq-of' },
+        h('div', { class: 'eq-steps' }, g.steps.map((x) => h('button', { class: 'chip-step' + (x.id === ui.sel ? ' on' : ''), type: 'button', title: 'Select this step', onclick: () => select(x.id) }, (M.at(x) + 1) + ' · ' + x.title))),
+        equation(g.steps[0], !g.said))));
+  }
   function results() {
     const step = sel(), host = $('#results'), sys = study.sys;
     if (!step) {
@@ -571,7 +618,7 @@
     }
     const s = M.status(step), kids = [];
     if (M.isCalc(step)) {
-      if (s.state !== 'done') kids.push(...waiting(step));
+      if (s.state !== 'done') kids.push(...waiting(step), equation(step));
       else {
         const run = M.runOf(step).run, homo = run.levels ? Math.max(...run.levels.up.concat(run.levels.down.length ? run.levels.down : [-1e9]).filter(Number.isFinite)) : null;
         const scf = { title: '', caption: '', panels: [{ title: step.kind === 'relax' ? 'Self-consistency of the first geometry' : 'Self-consistency', x: { label: 'Iteration', min: 0, fmt: (v) => String(Math.round(v)) }, y: { label: 'Wavefunction residue', log: true }, series: [{ name: 'residue', slot: 0, marker: true, pts: run.scf }], hlines: [{ y: run.gnrm_cv, label: 'criterion' }] }] };
@@ -586,10 +633,11 @@
         if (step.links.wavefunctions) { const twin = study.steps.find((x) => x !== step && M.isCalc(x) && !x.links.wavefunctions && M.status(x).state === 'done' && M.keyOf(x) === fromScratch(M.keyOf(step)));
           left.push(h('p', { class: 'say' }, h('b', {}, 'Started from the wavefunctions of “' + M.byId(step.links.wavefunctions).title + '”. '), 'It converged in ' + run.iters + ' iterations' + (twin ? ', for ' + M.runOf(twin).run.iters + ' from scratch in “' + twin.title + '”, to the same energy within ' + sci(Math.max(Math.abs(run.energy - M.runOf(twin).run.energy), 1e-12)) + ' Ha.' : '. Add the same step without the wavefunctions to compare.'))); }
         if (run.gap) left.push(facts(levelFacts(M.levels({ links: { of: step.id } }))));
-        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, left), h('div', { style: 'display:grid;gap:12px;min-width:0' }, right)), real(run), logViews(run));
+        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, left), h('div', { style: 'display:grid;gap:12px;min-width:0' }, right)), real(run), equation(step, true), logViews(run));
       }
     } else if (step.kind === 'vary') {
       const ser = M.series(step);
+      kids.push(equation(step));
       if (!ser.complete) kids.push(...waiting(step));
       else {
         const t = ser.target, what = ser.relative ? 'E(“' + M.byId(step.links.of).title + '”) − E(“' + M.byId(step.links.relative_to).title + '”)' : 'total energy of “' + M.byId(step.links.of).title + '”';
@@ -612,6 +660,7 @@
         h('div', { style: 'min-width:0' }, levelDiagram(l))), h('p', { class: 'figmeta' }, 'Read from the log of “' + of.title + '”: ', h('code', {}, 'log.evals'), ', ', h('code', {}, 'log.fermi_level'), l.gap ? ', and the gap BigDFT prints after the empty states.' : '.'));
     } else if (step.kind === 'converge') {
       const ser = M.series(step);
+      kids.push(equation(step));
       if (!ser.complete) kids.push(...waiting(step));
       else {
         const unit = ser.relative ? 'eV' : 'meV per atom', ref = ser.rows[ser.rows.length - 1].quantity, y = (r) => (ser.relative ? r.quantity : (r.quantity - ref) * 1000);
@@ -627,27 +676,27 @@
       kids.push(h('p', { class: 'say' }, M.retained(step) == null ? h('b', {}, 'No decision yet. ') : h('b', {}, 'Kept: ' + M.retained(step) + '. '), 'A decision is a step of the study: the series proposes, a person keeps. Every calculation after it uses the kept value.'), ...decisionTable(step));
     } else if (step.kind === 'difference') {
       const d = M.difference(step);
-      if (!d) kids.push(...waiting(step));
+      if (!d) kids.push(...waiting(step), equation(step));
       else {
         const left = [h('p', { class: 'big' }, fx(d.value, d.unit === 'Ha' ? 6 : 3), h('small', {}, d.unit)),
-          h('p', { class: 'say' }, 'E(“' + M.byId(step.links.a).title + '”) − E(“' + M.byId(step.links.b).title + '”). ', d.target ? h('b', {}, d.agrees ? 'Within the target. ' : 'Outside the target. ') : null, d.target ? fx(d.value - d.target.value, 3) + ' ' + d.unit + ' from ' + d.target.value + ' ± ' + d.target.within + (d.target.source ? ' (' + d.target.source + ').' : '.') : 'No target is attached to this result.')];
+          h('p', { class: 'say' }, d.target ? h('b', {}, d.agrees ? 'Within the target. ' : 'Outside the target. ') : null, d.target ? fx(d.value - d.target.value, 3) + ' ' + d.unit + ' from ' + d.target.value + ' ± ' + d.target.within + (d.target.source ? ' (' + d.target.source + ').' : '.') : 'No target is attached to this result.')];
         const right = d.target ? [figure({ kind: 'interval', title: '', caption: '', x: { label: step.title + ' (' + d.unit + ')', unit: d.unit, fmt: (v) => v.toFixed(2) }, band: { x0: d.target.value - d.target.within, x1: d.target.value + d.target.within, mid: d.target.value, label: 'target ' + d.target.value + ' ± ' + d.target.within },
           rows: study.steps.filter((x) => x.kind === 'difference' && x.links.against === step.links.against && M.difference(x)).map((x) => ({ label: x.title, value: M.difference(x).value, text: fx(M.difference(x).value, 3) + ' ' + d.unit })) })] : [];
-        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, left), h('div', { style: 'min-width:0' }, right)));
+        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px;min-width:0' }, left), h('div', { style: 'min-width:0' }, right)), equation(step, true));
       }
     } else if (step.kind === 'combination') {
       const d = M.combination(step);
-      if (!d) kids.push(...waiting(step));
+      if (!d) kids.push(...waiting(step), equation(step));
       else {
         const digits = d.unit === 'Ha' ? 6 : 3;
         const left = [h('p', { class: 'big' }, fx(d.value, digits), h('small', {}, d.unit)),
-          h('p', { class: 'say' }, formulaOf(step, (x) => 'E(“' + x.title + '”)') + '. ', d.target ? h('b', {}, d.agrees ? 'Within the target. ' : 'Outside the target. ') : null, d.target ? fx(d.value - d.target.value, 3) + ' ' + d.unit + ' from ' + d.target.value + ' ± ' + d.target.within + (d.target.source ? ' (' + d.target.source + ').' : '.') : 'No target is attached to it.'),
+          h('p', { class: 'say' }, d.target ? h('b', {}, d.agrees ? 'Within the target. ' : 'Outside the target. ') : null, d.target ? fx(d.value - d.target.value, 3) + ' ' + d.unit + ' from ' + d.target.value + ' ± ' + d.target.within + (d.target.source ? ' (' + d.target.source + ').' : '.') : 'No target is attached to it.'),
           h('div', { class: 'scroll-x' }, h('table', {}, h('thead', {}, h('tr', {}, ['', 'Calculation', 'Computed on', 'Energy (Ha)', 'Counts for (' + d.unit + ')'].map((c) => h('th', {}, c)))),
             h('tbody', {}, d.terms.map((t) => h('tr', {}, h('td', { class: 'num' }, (t.c > 0 ? '+' : '−') + +Math.abs(t.c).toPrecision(6)), h('td', {}, t.step.title), h('td', {}, M.sysOf(t.step).formula), h('td', { class: 'num' }, fx(M.energy(t.step), 6)), h('td', { class: 'num' }, fx(t.c * M.energy(t.step) * M.HA[d.unit], digits)))))))];
         const spins = [...new Set(d.terms.filter((t) => S.isAtom(M.sysOf(t.step))).map((t) => OND.chem.EL[M.sysOf(t.step).atoms[0].el]))];
         const right = d.target ? [figure({ kind: 'interval', title: '', caption: '', x: { label: step.title + ' (' + d.unit + ')', unit: d.unit, fmt: (v) => v.toFixed(2) }, band: { x0: d.target.value - d.target.within, x1: d.target.value + d.target.within, mid: d.target.value, label: 'target ' + d.target.value + ' ± ' + d.target.within },
           rows: [{ label: step.title, value: d.value, text: fx(d.value, 3) + ' ' + d.unit }] })] : [];
-        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px;min-width:0' }, left), h('div', { style: 'min-width:0' }, right)),
+        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px;min-width:0' }, left), h('div', { style: 'min-width:0' }, right)), equation(step, true),
           spins.length ? h('p', { class: 'figmeta' }, 'The atoms are computed spin-polarised, in their ground state by Hund’s rule (' + spins.map((el) => el.name.toLowerCase() + ': ' + el.unp + ' unpaired').join(', ') + '). Without it an atom’s energy is too high and the sum too large.') : null);
       }
     } else if (step.kind === 'structure') {
@@ -684,6 +733,7 @@
       line.innerHTML = esc(text).replace(/(#.*)$/, '<span class="c">$1</span>').replace(/("[^"]*")/g, '<span class="s">$1</span>') || ' ';
       return line;
     }));
+    if (ui.tab === 'equations') equations();
     if (ui.tab === 'log') {
       const VERDICT = { done: '<span class="ok">[OK]</span>', failed: '<span class="err">[FAILED]</span>', refused: '<span class="err">[REFUSED]</span>', waiting: '<span class="err">[WAITING]</span>', stopped: '<span class="c">[STOPPED]</span>', checking: '<span class="c">[dry run]</span>', sent: '<span class="c">[sent]</span>', running: '<span class="c">[running]</span>' };
       const notes = (r) => (r.relax ? '  <span class="c"># relaxation</span>' : '') + (r.restart ? '  <span class="c"># reads data-' + esc(r.name) + '/wavefunction*, copied from the run it starts from</span>' : '');
@@ -712,7 +762,7 @@
     for (const s of study.steps) {
       const c = depth(s), L = s.links, parent = M.byId(L.on || L.after || L.of || L.among || L.a || L.term1), st = M.status(s), res = resultOf(s);
       row[s.id] = put(c, s.kind === 'target' || s.kind === 'structure' ? 1 : parent ? row[parent.id] : 0);
-      nodes.push({ id: s.id, col: c, row: row[s.id], type: TYPE[s.kind], title: s.title, sub: summaryOf(s), res: st.state === 'done' || (s.kind === 'choose' && M.retained(s) != null) ? res : '', say: st.state === 'given' ? '' : st.text, state: st.state });
+      nodes.push({ id: s.id, col: c, row: row[s.id], type: TYPE[s.kind], title: s.title, sub: summaryOf(s), tex: texOf(s), res: st.state === 'done' || (s.kind === 'choose' && M.retained(s) != null) ? res : '', say: st.state === 'given' ? '' : st.text, state: st.state });
     }
     for (const n of nodes) if (ui.moved[n.id]) Object.assign(n, ui.moved[n.id]);
     const edges = study.steps.flatMap((s) => {

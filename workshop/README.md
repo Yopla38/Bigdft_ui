@@ -16,7 +16,7 @@ The first workshop (`prototype/`) is untouched. This one reuses its 3D scene, fi
 |---|---|
 | Centre | **The study as a graph: one box per step.** A box says what the step is, what it continues, what it gave and where it stands. The arrows are the links between steps, one line style per kind of link. The system stays in sight in a corner, in 3D, as the selected step sees it; it can be hidden, and "3D system" shows it in full |
 | Left | The same study as a list, in order, and "Add a step": the steps of the registry |
-| Below | The result of the selected step, its `input.yaml`, the script of the whole study, the log of what was sent |
+| Below | The result of the selected step, its `input.yaml`, the script of the whole study, its equations, the log of what was sent |
 | Right | The selected step: what it continues, what it changes, and for every setting where its value comes from |
 
 A study is mostly a chain, longer than the screen. The graph wraps like a line of text: it is cut into bands of as many boxes as fit, one band under the other. Boxes can be dragged; "+" on the selected box adds a step after it.
@@ -71,6 +71,24 @@ Three things a step can do besides inheriting:
 - **Vary any setting.** A series varies one argument of one input action. The list offered is drawn from PyBigDFT's registry: every argument that writes one setting. `converge` is for what converges (grid spacing, extents, criterion); `vary` lays values side by side without a criterion (functionals), judged against a target if there is one.
 - **Read more than an energy.** `levels` reads the levels of a calculation; with an `empty_states` step before it, the gap.
 
+## What a step computes, as an equation
+
+Every step that computes is shown with its equations, typeset (`js/equations.js` writes the TeX, MathJax draws it): in the settings of the step, in its results, and in its box of the graph for a difference or a sum of three terms at most. The Equations tab holds those of the whole study, in the order of its steps, calculations that solve the same equations with the same settings sharing one block. "Copy LaTeX" gives the source.
+
+**A calculation** is shown with what BigDFT solves for it, as the first workshop did for a blueprint: the Kohn-Sham equation, the density, the expansion of an orbital on scaling functions and wavelets. They are written with the settings the step is run with, inherited ones and decisions included: the functional names the exchange-correlation term (a hybrid or Hartree-Fock is an operator, and the legend says how much exact exchange it holds); the charge and the unpaired electrons are the numbers the density integrates to, with one equation per spin when the calculation is polarised; an implicit solvent adds the generalised Poisson equation, the D3 correction its term, the linear-scaling mode the density kernel, a relaxation the forces and its criterion. Once computed, the size of the basis is written with the grid points of its log, `N_dof = N_c + 7 N_f`.
+
+**A difference, a combination and a series** compute something from the energies of other steps. Their equation is written from the study, never typed: its terms are the links of the step, and each energy is named by what it is the energy of — the structure and its charge, `E(H₂O⁺)`; the multiplicity when two terms differ only by it; the title of the step when nothing else tells them apart. A legend says which step each symbol comes from. Once the step is computed, the equation goes on with the energies it was computed from, in hartree, and the value:
+
+```
+E_I^vert = E(H₂O⁺) − E(H₂O)
+         = −16.756986 − (−17.218714) Ha
+         = 0.461728 Ha = 12.564 eV
+```
+
+The left-hand side is named only when the terms define it: the cation minus the neutral on one structure is an ionisation energy (`E_I`), vertical when both energies are taken at one geometry, adiabatic when each is relaxed; a triplet minus a singlet is `E_T`; the atoms minus the molecule is `E_at`. Anything else is `ΔE`. A convergence is written with what it follows and its criterion, `|ΔE(h) − ΔE(h_ref)| ≤ 10 meV`.
+
+MathJax is loaded from the network after the page. Until it is there, and without it, the same equation is shown in plain characters; no TeX source is ever on screen.
+
 ## Results are drawn from PyBigDFT's registry of log attributes
 
 PyBigDFT reads a log through one table, `BigDFT.Logfiles.BUILTIN`: each entry is an attribute of a `Logfile` (`log.energy`, `log.forces`, `log.evals`, 37 in PyBigDFT 0.9) with the paths where its value may be in the log. `tools/build_logviews.py` turns that table, as recorded in the pack's image, into `js/logviews.js`, and `tools/build_library.py` reads each run's log through it.
@@ -114,6 +132,7 @@ The example ("Load an example": the ionisation energy of water, sixteen steps) w
 | `js/app.js` | The interface |
 | `js/board.js` | The graph: boxes, bands, arrows |
 | `js/structures.js` | Structures that are not built in: an atom, an `.xyz` file, a fetched molecule; and what BigDFT reads of any structure. No DOM |
+| `js/equations.js` | What a step computes, as TeX and in plain characters: the equations BigDFT solves for a calculation, and what a difference, a combination or a series computes from energies. No DOM |
 | `js/live.js` | Computing for real: asks the page's server wave after wave, hands the results to the model. No DOM |
 | `js/steps.js` | Generated: the registry of steps |
 | `js/logviews.js` | Generated: the registry of log attributes |
@@ -125,7 +144,7 @@ The example ("Load an example": the ionisation energy of water, sixteen steps) w
 
 - On recorded results: they exist for water only, on the lattice above, and nothing is executed. The log shows the call that would be sent to the HAPS, and the recorded outcome.
 - Computing for real: any setting is computed, but only water went through the chain; the other systems are written the same way and were not run.
-- On the HAPS, wavefunctions travel only with `docs/patches/haps-wavefunctions.patch` applied to the pack.
+- On the HAPS, wavefunctions travel only if it takes them: the pack's does since 2026-11-20; an older copy needs `docs/patches/haps-wavefunctions.patch`.
 - Levels are numbers and a ladder. Orbitals and densities as volumes are not shown: no cube file is produced or read.
 - No retry on failure, no loop over structures: each structure is a step, and so is each calculation on it.
 - An isolated atom is computed spin-polarised in its Hund ground state, with the occupations BigDFT chooses: the workshop does not set them, and for an open p shell the energy depends on them by tenths of an eV. An atomisation energy is to be read with that in mind.

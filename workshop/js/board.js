@@ -125,7 +125,7 @@ window.OND = window.OND || {};
       const p = pos(n);
       const card = h('button', { class: 'node t-' + n.type + ' s-' + n.state, type: 'button', 'aria-pressed': String(n.id === sel), 'data-node': n.id, style: 'left:' + p.x + 'px;top:' + p.y + 'px', title: n.title + (n.sub ? ' · ' + n.sub : '') },
         h('span', { class: 'node-head' }, h('i', { class: 'node-ico', html: '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON[n.type] + '</svg>' }), h('b', {}, n.title), h('span', { class: 'pdot ' + (n.state === 'given' ? 'done' : n.state) })),
-        h('span', { class: 'node-sub' }, n.sub || ''),
+        n.tex ? h('span', { class: 'node-sub node-tex' }, ctx.math(n.tex, n.sub || '')) : h('span', { class: 'node-sub' }, n.sub || ''),
         h('span', { class: 'node-res' + (n.res ? '' : ' none') }, n.res || n.say || ''));
       let start = null;
       card.addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY, dx: n.dx || 0, dy: n.dy || 0, moved: false }; card.setPointerCapture(e.pointerId); });

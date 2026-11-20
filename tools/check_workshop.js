@@ -21,7 +21,7 @@ const EXAMPLE = path.join(ROOT, 'examples', 'water-ionisation');
 
 global.window = global;
 for (const f of ['prototype/js/chem', 'prototype/js/targets', 'prototype/js/actions', 'prototype/js/schema', 'prototype/js/blueprint',
-  'workshop/js/structures', 'workshop/js/steps', 'workshop/js/library', 'workshop/js/model']) require(path.join(ROOT, f + '.js'));
+  'workshop/js/structures', 'workshop/js/steps', 'workshop/js/library', 'workshop/js/model', 'workshop/js/equations']) require(path.join(ROOT, f + '.js'));
 const M = global.OND.model;
 
 let failed = 0;
@@ -73,6 +73,35 @@ for (const s of M.study.steps.filter((x) => x.kind === 'choose')) check('the dec
 for (const s of M.study.steps.filter((x) => x.kind === 'difference')) {
   const name = M.nameOf(s), shown = M.difference(s), given = number(name, 'value'), verdict = (section(name).match(/agrees: (\w+)/) || [])[1];
   check(name + ': ' + given + ' eV' + (verdict ? ', within the target: ' + verdict : ''), shown && close(shown.value, given, 5e-8) && (verdict === undefined || String(shown.agrees) === verdict), 'page shows ' + JSON.stringify(shown));
+}
+/* The equation a result is shown with must say what the result is: named for what its terms are, written with
+   the energies of the real runs, ending on the value the engine found. */
+const Q = global.OND.equations;
+const CALLED = { ionisation_energy: 'vertical ionisation energy', ionisation_adiabatic: 'adiabatic ionisation energy', ionisation_pbe0: 'vertical ionisation energy' };
+for (const s of M.study.steps.filter((x) => x.kind === 'difference')) {
+  const name = M.nameOf(s), e = Q.of(s), given = number(name, 'value');
+  const energies = [s.links.a, s.links.b].map((id) => number(M.nameOf(M.byId(id)), 'energy_Ha').toFixed(6));
+  check('the equation of ' + name + ' (' + CALLED[name] + '), from ' + energies.join(' and ') + ' Ha',
+    e && e.name === CALLED[name] && e.definition.endsWith('= E(\\mathrm{H_{2}O^{+}}) - E(\\mathrm{H_{2}O})') && e.tex.includes('&= ' + energies[0] + ' - (' + energies[1] + ')\\ \\mathrm{Ha}')
+      && e.tex.endsWith('= ' + given.toFixed(3) + '\\ \\mathrm{eV}\\end{aligned}'), 'page writes ' + (e && e.tex));
+}
+{
+  const e = Q.of(M.study.steps.find((x) => x.kind === 'converge'));
+  check('the convergence is written with what it follows and its criterion',
+    e && e.tex === '\\begin{aligned}&\\Delta E(h) = E(\\mathrm{H_{2}O^{+}};h) - E(\\mathrm{H_{2}O};h)\\\\[3pt]&\\lvert \\Delta E(h) - \\Delta E(h_{\\mathrm{ref}})\\rvert \\le 10\\ \\mathrm{meV}\\end{aligned}', 'page writes ' + (e && e.tex));
+}
+/* A calculation is written with the settings it is run with: its functional, the electrons it holds, its grid;
+   and, once computed, with the grid points its own log reports. */
+{
+  const of = (name) => Q.of(step(name)), cation = of('cation'), neutral = of('ground_state'), hybrid = of('pbe0'), relaxed = of('relaxed'), run = M.runOf(step('relaxed')).run;
+  check('a calculation is written with its functional, its electrons and its grid',
+    neutral && neutral.definition.includes('V_{xc}^{\\mathrm{PBE}}[\\rho]') && neutral.definition.includes('\\mathrm d\\mathbf r=8') && !neutral.definition.includes('\\sigma')
+      && cation.definition.includes('V_{xc,\\sigma}^{\\mathrm{PBE}}[\\rho_\\uparrow,\\rho_\\downarrow]') && cation.definition.includes('\\mathrm d\\mathbf r=7') && cation.definition.includes('(\\rho_\\uparrow-\\rho_\\downarrow)\\,\\mathrm d\\mathbf r=1')
+      && hybrid.definition.includes('\\hat V_{xc}^{\\mathrm{PBE0}}') && neutral.where.some((w) => w.text.includes('spacing ' + M.valuesOf(step('ground_state')).hgrid + ' bohr')),
+    'page writes ' + (neutral && neutral.definition) + '\n        and ' + (cation && cation.definition));
+  check('a relaxation adds the forces and its criterion, and the basis of its run: ' + run.nc + ' + 7 × ' + run.nf + ' coefficients',
+    relaxed && relaxed.definition.includes('\\le ' + step('relaxed').params.forcemax + '\\ \\mathrm{Ha/bohr}') && !relaxed.definition.includes('N_{\\mathrm{dof}}')
+      && relaxed.tex.includes('N_{\\mathrm{dof}}=N_c+7N_f=' + run.nc + '+7\\times' + run.nf + '=' + (run.nc + 7 * run.nf)), 'page writes ' + (relaxed && relaxed.tex));
 }
 for (const s of M.study.steps.filter((x) => x.kind === 'levels')) {
   const name = M.nameOf(s), shown = M.levels(s), homo = number(name, 'homo_eV'), gap = number(name, 'gap_eV');

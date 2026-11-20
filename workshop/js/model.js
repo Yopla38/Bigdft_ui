@@ -109,6 +109,8 @@ window.OND = window.OND || {};
   }
   /* Charge and spin of a step: what the wavefunctions of another step must share to be read. */
   const electronsOf = (step) => memo('el:' + step.id, () => { const v = resolveInto(scratch, step).st.v; return [v.charge, v.nspin, v.nspin === 1 ? 0 : v.mpol].join(); });
+  /* The settings a calculation is run with, once everything it inherits and every decision before it is applied. */
+  const valuesOf = (step) => memo('v:' + step.id, () => Object.assign({}, resolveInto(scratch, step).st.v));
   function cannotRead(step) {
     const from = byId(step.links.wavefunctions);
     if (!from) return null;
@@ -498,7 +500,7 @@ window.OND = window.OND || {};
     study.name = 'Ionisation energy of water'; touch(); return ground;
   }
 
-  OND.model = { study, HA, P, REG, CALC, SERIES, RELAX_KEYS, LIB, VARIABLE, touch, byId, at, isCalc, isSeries, nameOf, memberName, settingOf, settingVaried, vary, ownOf, chain, decisionsBefore, resolveInto, undecided, geometryFrom, ownerOf,
+  OND.model = { study, HA, P, REG, CALC, SERIES, RELAX_KEYS, LIB, VARIABLE, touch, byId, at, isCalc, isSeries, nameOf, memberName, settingOf, settingVaried, vary, ownOf, chain, decisionsBefore, resolveInto, electronsOf, valuesOf, undecided, geometryFrom, ownerOf,
     cannotRead, keyOf, runOf, runsOf, members, series, retained, status, energy, levels, difference, combination, termsOf, setTerms, atomisationTerms, addAtoms, atomCalc, sysOf, readyRuns, compute, cannotAdd, add, remove, dependents, setSystem, setStructure, reset, script, changesOf, calls, plan, example, TITLES,
     live, setLive, mark, receive };
 })(window.OND);
