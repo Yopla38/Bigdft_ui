@@ -161,7 +161,11 @@ window.OND = window.OND || {};
       const sys = st.sys, v = st.v, out = [], has = (t) => sys.traits.includes(t), comp = OND.chem.composition(sys);
       const n = sys.atoms.length, ne = OND.chem.electrons(sys, v.charge);
       out.push(['xc', 'PBE', 'PBE is the usual trade-off between cost and reliability for structures and energies.', ['Structure and energy', 'recommendedFunctional', 'PBE']]);
-      if (ne % 2) {
+      const lone = n === 1 && v.charge === 0 ? OND.chem.EL[sys.atoms[0].el] : null;      // an isolated neutral atom
+      if (lone && lone.unp) {
+        out.push(['nspin', 2, 'An isolated ' + lone.name.toLowerCase() + ' atom has ' + lone.unp + ' unpaired electron' + (lone.unp > 1 ? 's' : '') + ': computed without spin its energy is too high, and an atomisation energy built on it too large.', ['Isolated atom', 'requires', 'Collinear spin']]);
+        out.push(['mpol', lone.unp, 'Hund’s rule for the ground state of the atom.', ['Isolated atom', 'groundStateMoment', lone.unp + ' µB']]);
+      } else if (ne % 2) {
         out.push(['nspin', 2, ne + ' electrons: an odd count requires a spin-polarised treatment.', ['Odd electron count', 'requires', 'Collinear spin']]);
         out.push(['mpol', 1, 'Magnetic moment with the parity of the electron count.', ['Collinear spin', 'initialMoment', '1 µB']]);
       }

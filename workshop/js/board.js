@@ -16,6 +16,7 @@ window.OND = window.OND || {};
   const LINKS = {
     settings: ['same settings', ''],
     geometry: ['relaxed geometry', ''],
+    structure: ['computed on', '10 3 2 3'],
     wavefunctions: ['wavefunctions', '7 4'],
     energies: ['results read', ''],
     choice: ['decision applied', '2 4'],
@@ -23,7 +24,8 @@ window.OND = window.OND || {};
   };
   const ICON = { structure: '<circle cx="6" cy="12" r="3"/><circle cx="14.5" cy="6" r="2.3"/><circle cx="14" cy="15.5" r="1.8"/><path d="M8.6 10.4l3.8-3M8.9 13l3.4 1.7"/>', series: '<path d="M4 15V9M8 15V5M12 15v-4M16 15V7"/>', run: '<path d="M6 4l9 6-9 6z"/>', relax: '<path d="M3 6c3 0 3 8 7 8s4-5 7-5"/><circle cx="10" cy="14" r="1.3"/>', formula: '<path d="M5 6h10M5 10h7M5 14h10"/>', decision: '<path d="M10 3l7 7-7 7-7-7z"/>', target: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/>', levels: '<path d="M4 15h12M4 11h12M4 5h12" /><path d="M4 8h12" stroke-dasharray="2 2.5"/>' };
   const CW = 196, CH = 92, PX = 236, PY = 114, PADX = 26, PADY = 16, GAP = 40, LANE = PX - CW;
-  const ZOOMS = [1, 0.9, 0.8, 0.72];       // under the last one the titles of the boxes no longer read
+  const ZOOMS = [1, 0.9, 0.8, 0.72];       // sizes tried for reading; under the last one the titles of the boxes no longer read
+  const SMALLEST = 0.05;
 
   /* An orthogonal path with rounded corners through the given points. */
   function rounded(pts, r) {
@@ -55,14 +57,26 @@ window.OND = window.OND || {};
   /* nodes: { id, col, row, type, title, sub, res, say, state }   edges: [from, to, type]
      opt: { onAdd(id): a "+" on the selected box; onMove(node); reveal: keep the selected box in sight;
             avoid: { w, h } a corner at the bottom right of the host that something else covers;
-            zoom: a number, or 'fit' for the largest size at which the whole study shows }
-     Returns the zoom used. */
+            zoom: 'fit' the largest size that still reads, the chain cut to the width (it scrolls if it must);
+                  'all' the whole study in sight, however small, cut into bands the way that shows it largest;
+                  a number: that size, and nothing else changes;
+            per: with a number, the columns of a band. Zooming is then only a change of size: the chain is
+                 not cut again, so no box changes place }
+     Returns { z, per }: the zoom and the columns per band that were used. */
   function draw(host, nodes, edges, sel, onSelect, opt = {}) {
     const { h } = ctx, avoid = opt.avoid || { w: 0, h: 0 };
-    const per = (z) => Math.max(2, Math.floor((host.clientWidth / z - PADX * 2 + LANE) / PX));
-    let z = opt.zoom;
-    if (!z || z === 'fit') z = ZOOMS.find((q) => layout(nodes, per(q)).H * q <= host.clientHeight) || ZOOMS[ZOOMS.length - 1];
-    const L = layout(nodes, per(z)), at = new Map(nodes.map((n) => [n.id, L.place(n)]));
+    const fits = (z) => Math.max(2, Math.floor((host.clientWidth / z - PADX * 2 + LANE) / PX));
+    let z = opt.zoom, per = opt.per;
+    if (z === 'all') {
+      let best = null;
+      for (let p = 2; p <= Math.max(2, ...nodes.map((n) => n.col + 1)); p++) {
+        const l = layout(nodes, p), q = Math.min(1, (host.clientWidth - 4) / l.W, (host.clientHeight - 4) / l.H);
+        if (!best || q > best.z + 1e-9) best = { z: q, per: p };
+      }
+      z = Math.max(SMALLEST, best.z); per = best.per;
+    } else if (!z || z === 'fit') { z = ZOOMS.find((q) => layout(nodes, fits(q)).H * q <= host.clientHeight) || ZOOMS[ZOOMS.length - 1]; per = fits(z); }
+    else { z = Math.max(SMALLEST, z); per = per || fits(z); }
+    const L = layout(nodes, per), at = new Map(nodes.map((n) => [n.id, L.place(n)]));
     const pos = (n) => { const p = at.get(n.id); return { x: p.x + (n.dx || 0), y: p.y + (n.dy || 0), band: p.band }; };
     const W = L.W, H = L.H + avoid.h / z;                     // room to scroll the last boxes out of the covered corner
     const svgNS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(svgNS, 'svg');
@@ -141,8 +155,8 @@ window.OND = window.OND || {};
       const floor = host.clientHeight - (x + w - host.scrollLeft > host.clientWidth - avoid.w ? avoid.h : 0);
       if (y < host.scrollTop + 8) host.scrollTop = y - 16; else if (y + t > host.scrollTop + floor - 8) host.scrollTop = y + t - floor + 16;
     }
-    return z;
+    return { z, per };
   }
 
-  OND.board = { init(context) { ctx = context; }, draw, LINKS };
+  OND.board = { init(context) { ctx = context; }, draw, LINKS, SMALLEST };
 })(window.OND);

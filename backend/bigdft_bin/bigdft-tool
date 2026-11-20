@@ -1,0 +1,5 @@
+#!/bin/sh
+# The pack's bigdft-tool: the dry run (-a memory-estimation) goes to the
+# dry-run HAPS through the HAPS MCP bridge. See ../haps_dryrun_client.py.
+# run_pybigdft puts this directory first on PATH and in BIGDFT_ROOT.
+exec "${PYBIGDFT_PYTHON:-python3}" "$(dirname "$0")/../haps_dryrun_client.py" "$@"

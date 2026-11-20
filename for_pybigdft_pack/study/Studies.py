@@ -1,4 +1,4 @@
-"""A study: steps built on one structure, prepared here and computed elsewhere.
+"""A study: steps built on a structure, prepared here and computed elsewhere.
 
     from Studies import Study
     study  = Study(structure, name="water")
@@ -88,7 +88,7 @@ class Study(object):
         import StudyActions
 
         self.name, self.run_dir, self._building, self._undecided = name, run_dir, None, False
-        self.structure = self._read(structure)
+        self.system = self._read(structure)       # the structure the study is built on; `structure` is a step of the registry
         self.steps = OrderedDict()
         for action in dir(StudyActions):          # the registry, as methods: study.relax(...) is StudyActions.relax(study, ...)
             func = getattr(StudyActions, action)
@@ -129,6 +129,8 @@ class Study(object):
         calc = CALC
         if kind in calc and "after" in link and link["after"].kind not in calc:
             raise ValueError("%r continues %r, which is not a calculation" % (step.name, link["after"].name))
+        if "on" in link and link["on"].kind != "structure":
+            raise ValueError("%r is computed on %r, which is not a structure" % (step.name, link["on"].name))
         if "wavefunctions" in link and link["wavefunctions"].kind not in calc:
             raise ValueError("%r starts from the wavefunctions of %r, which is not a calculation" % (step.name, link["wavefunctions"].name))
         if kind == "relax" and "after" not in link and not step.actions:
@@ -146,6 +148,13 @@ class Study(object):
             for role in ("a", "b"):
                 if link[role].kind not in calc:
                     raise ValueError("%r compares %r, which has no energy" % (step.name, link[role].name))
+        if kind == "combination":
+            terms = [link[role] for role in sorted(link) if role.startswith("term")]
+            if not terms:
+                raise ValueError("%r combines nothing" % step.name)
+            for term in terms:
+                if term.kind not in calc:
+                    raise ValueError("%r combines %r, which has no energy" % (step.name, term.name))
         if "against" in link and link["against"].kind != "target":
             raise ValueError("against of %r is not a target" % step.name)
 
@@ -156,6 +165,19 @@ class Study(object):
             chain.append(step)
             step = step.links.get("after")
         return chain[::-1]
+
+    def _on(self, step):
+        """The structure step a calculation is computed on: its own, or the nearest one up the steps it
+        continues. None: the structure of the study."""
+        for ancestor in reversed(self._chain(step)):
+            if "on" in ancestor.links:
+                return ancestor.links["on"]
+        return None
+
+    def structure_of(self, step):
+        """The structure a calculation is computed on, as it was given."""
+        on = self._on(step)
+        return self.system if on is None else on.params["structure"]
 
     def _decisions(self, before):
         """Settings retained by the decisions taken before a step, as (action, argument, value)."""
@@ -204,16 +226,21 @@ class Study(object):
             apply_action(inp, "write_orbitals_on_disk", True)
         xc = str(inp.get("dft", {}).get("ixc", ""))
         if xc in ("PBE0", "B3LYP", "HF", "-406", "-402", "100"):       # no pseudopotential is registered for a hybrid
-            for element in sorted({k for at in self.structure["positions"] for k in at}):
+            for element in sorted({k for at in self.structure_of(step)["positions"] for k in at}):
                 inp.setdefault("psppar." + element, {"Pseudopotential XC": 11})
         return inp
 
     def _geometry_from(self, step):
-        """The relaxation whose final geometry a step starts from, if any."""
+        """The relaxation whose final geometry a step starts from, if any. A step computed on another
+        structure (``on``) starts from that structure as given: what was relaxed before it is another system."""
+        if "on" in step.links:
+            return None
         chain = self._chain(step)[:-1]
         for ancestor in reversed(chain):
             if ancestor.kind == "relax":
                 return ancestor
+            if "on" in ancestor.links:
+                return None
         return None
 
     def runs(self):
@@ -231,11 +258,12 @@ class Study(object):
             writes = asked.get("output", {}).pop("orbitals", None)       # writing its wavefunctions changes nothing of a run
             if asked.get("output") == {}:
                 del asked["output"]
-            print_ = hashlib.sha256(json.dumps([asked, source_run, orbitals_run], sort_keys=True).encode()).hexdigest()[:16]
+            on = self._on(step)
+            print_ = hashlib.sha256(json.dumps([asked, source_run, orbitals_run, on and on.name], sort_keys=True).encode()).hexdigest()[:16]
             if undecided:
                 print_ = "undecided-" + name     # its input is not known yet: it is nobody's twin
             run = {"name": seen.get(print_, name), "own_name": name, "step": step.name, "member": member, "input": inp,
-                   "geometry_from": source_run, "wavefunctions_from": orbitals_run, "fingerprint": print_, "alias": print_ in seen, "undecided": undecided}
+                   "structure": on and on.name, "geometry_from": source_run, "wavefunctions_from": orbitals_run, "fingerprint": print_, "alias": print_ in seen, "undecided": undecided}
             if run["alias"] and writes:           # its twin is the one computed: that one writes them
                 next(r for r in out if r["name"] == run["name"] and not r["alias"])["input"] = inp
             seen.setdefault(print_, name)
@@ -285,8 +313,11 @@ class Study(object):
                 "positions": [{k: v for k, v in at.items() if k != "force"} for at in final["positions"]]}
 
     # ------------------------------------------------------------------ the two verbs
-    def prepare(self, verbose=True):
-        """Write and dry-run every run that can be; say which names to send, which wait, which are refused."""
+    def prepare(self, verbose=True, only=None):
+        """Write and dry-run every run that can be; say which names to send, which wait, which are refused.
+
+        ``only`` names the runs to look at: the others are left as they are, neither dry-run nor listed.
+        A dry run is a round trip to the dry-run HAPS; a caller that sends one step does not pay for all."""
         from BigDFT.Calculators import SystemCalculator
         code = SystemCalculator(omp="1", dry_run=True, verbose=False)
         ready, waiting, refused, done = [], [], OrderedDict(), []
@@ -294,13 +325,15 @@ class Study(object):
             name = run["name"]
             if run["alias"] or name in ready or name in waiting or name in refused:
                 continue
+            if only is not None and name not in only:
+                continue
             if self._log(name) is not None:
                 done.append(name)
                 continue                                   # computed: a dry run would overwrite its log
             if run["undecided"]:
                 waiting.append(name)                       # a decision it depends on needs results first
                 continue
-            posinp = self.structure
+            posinp = self.structure_of(self.steps[run["step"]])
             if run["geometry_from"]:
                 posinp = self._relaxed(run["geometry_from"])
                 if posinp is None:
@@ -340,7 +373,10 @@ class Study(object):
         BigDFT only warns when the files are missing, and starts from scratch."""
         if not glob.glob(self._path(os.path.join("data-" + origin, "wavefunction*"))):
             return ("%r was computed without writing its wavefunctions: remove log-%s.yaml to compute it again" % (origin, origin))
-        source = next(r for r in self.runs() if r["name"] == origin and not r["alias"])["input"].get("dft", {})
+        read = next(r for r in self.runs() if r["name"] == origin and not r["alias"])
+        if read["structure"] != run["structure"]:
+            return "the wavefunctions of %r are for another structure" % origin
+        source = read["input"].get("dft", {})
         mine = run["input"].get("dft", {})
         for key, what in (("qcharge", "charge"), ("nspin", "spin treatment"), ("mpol", "number of unpaired electrons")):
             if mine.get(key) != source.get(key):
@@ -370,7 +406,7 @@ class Study(object):
     def series(self, step):
         """The table of a series, and for a convergence the value it proposes."""
         building = getattr(self, "_building", None)
-        runs, natoms = (building if building is not None else self.runs()), len(self.structure["positions"])
+        runs, natoms = (building if building is not None else self.runs()), len(self.structure_of(step.links["of"])["positions"])
         rows = []
         for value in step.params["values"]:
             e = {}
@@ -425,6 +461,17 @@ class Study(object):
                     t = step.links["against"].params
                     result.update(target=t["value"], within=t["within"], agrees=abs(value - t["value"]) <= t["within"])
                 out[step.name] = result
+            elif step.kind == "combination":
+                terms = [(c, step.links["term%d" % (i + 1)]) for i, c in enumerate(step.params["coefficients"])]
+                energies = [self.energy(term) for _, term in terms]
+                value = None if any(e is None for e in energies) else sum(c * e for (c, _), e in zip(terms, energies)) * HA[step.params["unit"]]
+                result = {"value": value, "unit": step.params["unit"], "terms": [[c, term.name] for c, term in terms]}
+                if "against" in step.links and value is not None:
+                    t = step.links["against"].params
+                    result.update(target=t["value"], within=t["within"], agrees=abs(value - t["value"]) <= t["within"])
+                out[step.name] = result
+            elif step.kind == "structure":
+                out[step.name] = {"atoms": len(step.params["structure"]["positions"]), "source": step.params["source"]}
             elif step.kind == "target":
                 out[step.name] = dict(step.params)
         if verbose:
@@ -435,10 +482,10 @@ class Study(object):
     def write_manifest(self):
         """What the study is and which run is which: for whoever reads the logs afterwards."""
         runs = [{"name": r["name"], "own_name": r["own_name"], "step": r["step"], "member": r["member"], "alias": r["alias"], "undecided": r["undecided"],
-                 "geometry_from": r["geometry_from"], "wavefunctions_from": r["wavefunctions_from"], "input": json.loads(json.dumps(dict(r["input"]), default=str))} for r in self.runs()]
+                 "structure": r["structure"], "geometry_from": r["geometry_from"], "wavefunctions_from": r["wavefunctions_from"], "input": json.loads(json.dumps(dict(r["input"]), default=str))} for r in self.runs()]
         steps = [{"name": s.name, "kind": s.kind, "links": {k: v.name for k, v in s.links.items()}, "actions": s.actions,
                   "keys": s.keys, "params": s.params} for s in self.steps.values()]
         if not os.path.isdir(self.run_dir):
             os.makedirs(self.run_dir)
         with open(self._path("manifest.json"), "w") as f:
-            json.dump({"study": self.name, "structure": self.structure, "steps": steps, "runs": runs}, f, indent=1, default=str)
+            json.dump({"study": self.name, "structure": self.system, "steps": steps, "runs": runs}, f, indent=1, default=str)

@@ -21,7 +21,7 @@ const EXAMPLE = path.join(ROOT, 'examples', 'water-ionisation');
 
 global.window = global;
 for (const f of ['prototype/js/chem', 'prototype/js/targets', 'prototype/js/actions', 'prototype/js/schema', 'prototype/js/blueprint',
-  'workshop/js/steps', 'workshop/js/library', 'workshop/js/model']) require(path.join(ROOT, f + '.js'));
+  'workshop/js/structures', 'workshop/js/steps', 'workshop/js/library', 'workshop/js/model']) require(path.join(ROOT, f + '.js'));
 const M = global.OND.model;
 
 let failed = 0;

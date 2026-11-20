@@ -1,0 +1,23 @@
+# What lets workshop 2 compute for real: the environment of backend/serve.py.
+#
+#     uv sync          # in this directory
+#
+# PyBigDFT WITHOUT BigDFT (pure Python): the study engine writes the inputs and
+# reads the logs here; the dry run and the calculation go to the two HAPS
+# through the MCP bridge. Pinned to the version the pack runs: the dry run
+# checks what this version writes against BigDFT 1.9.1.
+
+[project]
+name = "ondelette-backend"
+version = "0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pybigdft==1.9.6.1",
+    "mcp>=2,<3",          # the client of the bridge; haps_dryrun_client.py is written for 2.x
+    "pyyaml",
+    "ase",                # xyz_downloader.py: reads PubChem's SDF
+    "requests",           # xyz_downloader.py: asks PubChem
+]
+
+[tool.uv]
+package = false

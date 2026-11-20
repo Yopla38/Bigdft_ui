@@ -1,0 +1,3 @@
+#!/bin/sh
+# BigDFT's computing executables do not exist here: the HAPS computes.
+exec sh "$(dirname "$0")/../bigdft_refused.sh" "$(basename "$0")"

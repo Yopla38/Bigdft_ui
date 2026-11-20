@@ -472,6 +472,22 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
 .node-add{position:absolute;z-index:3;width:calc(26px / var(--z,1));height:calc(26px / var(--z,1));margin:calc(-2px / var(--z,1)) 0 0 calc(-2px / var(--z,1));border-radius:50%;background:var(--accent);color:var(--accent-ink);font:600 calc(16px / var(--z,1))/1 var(--sans);display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.3)}
 .edge.geometry{stroke-width:2.6}.edge.settings{stroke-width:1.6}
 .pdot.refused{background:none;box-shadow:inset 0 0 0 2px var(--neg)}
+/* ---- computing for real: a run on its way, a run that did not come back ---- */
+.pdot.running{background:var(--accent);animation:onway 1.2s ease-in-out infinite}.pdot.failed{background:none;box-shadow:inset 0 0 0 2px var(--err)}
+@keyframes onway{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.pdot.running{animation:none}}
+.node.s-running{border-color:var(--accent)}.node.s-failed{border-color:var(--err);border-style:dashed;background:var(--panel)}
+.pill.live{border-color:var(--ok);color:var(--fg)}.pill.down{border-color:var(--err);color:var(--fg)}.pill.busy{border-color:var(--accent);color:var(--fg)}
+.wave .err{color:var(--err)}
+/* ---- structures and sums of energies ---- */
+.figmeta.err{color:var(--err)}
+.row2{display:flex;gap:6px;min-width:0}.row2 input{flex:1 1 auto;min-width:0}
+.field2 input[type=file]{font-size:12px;color:var(--fg-2);max-width:100%}
+.terms{display:grid;gap:6px}.term{display:grid;grid-template-columns:5.5ch auto minmax(0,1fr) auto;gap:6px;align-items:center;font-size:12px;color:var(--fg-3)}
+.term input{min-width:0;text-align:right}.term select{min-width:0}
+.edge.structure{stroke-width:1.6}
+.top-right .seg{flex-wrap:nowrap}
+.top.with-mode .study-name{width:min(24ch,22vw)}
 /* ---- what the log holds: views drawn from PyBigDFT's registry of log attributes ---- */
 .logviews{display:grid;gap:0;border-top:1px solid var(--line);margin-top:4px}
 .logviews > summary{cursor:pointer;padding:10px 0;font-weight:600;font-size:13px;display:flex;gap:10px;align-items:baseline;justify-content:space-between;list-style:none}
@@ -505,10 +521,12 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
     <input class="study-name" id="study-name" type="text" value="Untitled study" maxlength="60" aria-label="Name of the study">
     <span class="sp"></span>
     <div class="top-right">
+      <div class="seg" id="mode" hidden role="group" aria-label="Where the results come from"><button type="button" data-mode="recorded" aria-pressed="true">Recorded</button><button type="button" data-mode="live" aria-pressed="false">Compute</button></div>
       <span class="pill example" id="honest" title="A web page cannot start BigDFT. The results shown were computed with BigDFT 1.9.1 for this mock-up, for water; a step whose calculation is not among them says so.">Mock-up · real results for water</span>
       <span class="pill num" id="progress"></span>
       <button class="btn" id="example" type="button">Load an example</button>
       <button class="btn" id="restart" type="button">Start over</button>
+      <button class="btn" id="stop" type="button" hidden>Stop</button>
       <button class="btn cta" id="compute-all" type="button">Compute what is ready</button>
     </div>
   </header>
@@ -532,7 +550,7 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
         <div class="edge-legend" id="graph-legend" aria-label="What the arrows mean"></div>
         <div class="zoom" id="zoom" role="group" aria-label="Size of the graph">
           <button class="btn small" id="zoom-out" type="button" aria-label="Smaller boxes">−</button>
-          <button class="btn small" id="zoom-fit" type="button" aria-pressed="true" title="Fit the width, as far as the boxes still read">Fit</button>
+          <button class="btn small" id="zoom-fit" type="button" aria-pressed="false" title="The whole study in sight. Again: back to reading size. Ctrl + wheel zooms too">Fit</button>
           <button class="btn small" id="zoom-in" type="button" aria-label="Larger boxes">+</button>
         </div>
       </div>
@@ -595,9 +613,11 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
 <script src="shared/blueprint.js"></script>
 <script src="shared/schema.js"></script>
 <script src="shared/figure.js"></script>
+<script src="js/structures.js"></script>
 <script src="js/steps.js"></script>
 <script src="js/logviews.js"></script>
 <script src="js/library.js"></script>
 <script src="js/board.js"></script>
 <script src="js/model.js"></script>
+<script src="js/live.js"></script>
 <script src="js/app.js"></script>

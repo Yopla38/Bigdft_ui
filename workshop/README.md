@@ -3,8 +3,9 @@
 One place, one study. You define a system, add a calculation, compute it, look at the result, add the next step. Each step continues what is already there. There is no separate "Study" space and no capsule: the graph in the centre is the study, and it is also the script.
 
 ```bash
-python tools/preview.py 8766 workshop     # http://localhost:8766
+python tools/preview.py 8766 workshop     # http://localhost:8766, on recorded results
 node tools/check_workshop.js              # the page against a real BigDFT run
+cd backend && uv run python serve.py      # the same page, computing on the HAPS (see backend/README.md)
 ```
 
 The first workshop (`prototype/`) is untouched. This one reuses its 3D scene, figures, parameter schema, checks and registries through `workshop/shared`, a link to `prototype/js`.
@@ -35,12 +36,34 @@ They are not written in the page. `tools/build_steps.py` reads `for_pybigdft_pac
 
 | Family | Steps |
 |---|---|
+| Structures | `structure` |
 | Calculations | `calculation`, `relax` |
 | Pre-filled calculations | `ionised`, `triplet`, `hybrid`, `empty_states` |
 | Series and decisions | `converge`, `vary`, `choose` |
-| Results | `difference`, `levels`, `target` |
+| Results | `difference`, `combination`, `levels`, `target` |
 
 The settings of a calculation are the first workshop's: the essential controls, the input actions of `BigDFT.InputActions`, and all 311 variables.
+
+## More than one structure
+
+A study starts on one system, and can name others: a `structure` step is a second molecule, a fragment, an isolated atom. A calculation is placed **on** it ("Computed on"), and when it also continues another calculation it is *the same calculation on another structure*: its functional, its grid and its extents, which is what an energy difference between two systems needs. Only what belongs to a system is advised again there: the spin of an isolated atom follows Hund's rule (oxygen: two unpaired electrons), because an atom computed without it is too high in energy and every atomisation energy built on it too large.
+
+A structure, the system of the study included, comes from one of four places:
+
+| Source | |
+|---|---|
+| The built-in systems | water, C₆₀, benzene on graphene, silicon, a peptide |
+| One atom | an element of the first three rows |
+| A file of your disk | an `.xyz`, read in the page (`js/structures.js`). A plain `.xyz` is in angstroem; BigDFT's own names its unit and its cell on the first two lines, and is read as it says |
+| A molecule by its name | its 3D structure from PubChem, fetched by the server with the pack's `xyz_downloader.py`. Only when the page is served by `backend/serve.py` |
+
+Whatever the source, the script writes the structure as BigDFT reads it, positions in angstroem **with their unit**: a plain `.xyz` handed to BigDFT would be read in bohr, silently.
+
+`combination` sums energies with coefficients. On a molecule, "As an atomisation energy" adds what is missing — each atom as a structure, the same calculation on it — and fills the sum: every one is an ordinary step, written in the script. Computed through the page for water with PBE at 0.40 bohr, at the built geometry: E(O) + 2 E(H) − E(H₂O) = 9.814 eV.
+
+## The graph
+
+Zooming changes the size and nothing else: the bands keep their columns, so no box changes place, and there is no smallest size (the buttons, or Ctrl + wheel). "Fit" shows the whole study, cut into bands the way that shows it largest; pressed again it goes back to reading size.
 
 Three things a step can do besides inheriting:
 
@@ -56,7 +79,13 @@ Under the figures of a computed calculation, "Everything the log holds" shows ev
 
 ## What "compute" does here
 
-A web page cannot start BigDFT. So that computing is not a simulation, the calculations a study on water can reach were run once with BigDFT 1.9.1, through the registry of steps itself, and bundled by `tools/build_library.py` into `js/library.js`: 131 calculations, 21 of them relaxations. They come from `library/lattice.py` (48 runs), `library/lattice2.py` (98), `examples/water-ionisation` (18) and `examples/water-study` (9); two runs that are the same calculation are kept once. The logs of the lattices are in `library/runs.tgz` and `library/runs2.tgz`; the library rebuilds from them, byte for byte (the command is in the root README).
+There are two answers, and the page says which one it is giving (top right).
+
+**Served as files** (`tools/preview.py`), it is a mock-up on recorded results, described below.
+
+**Served by `backend/serve.py`**, it computes: "Compute this step" sends the runs of the step through the server to the HAPS. BigDFT checks each input first (a dry run on the dry-run HAPS), then runs it; the page follows the wave run by run and shows the result read from the log that came back, with the same views. A switch, "Recorded | Compute", goes back to the mock-up. What decides a wave, an identity or a stale result is the same code in both cases (`js/model.js`); only where a result comes from changes (`js/live.js`). The server is sent the study as data, the list of calls the script is written from, never the script. `backend/README.md` says how to start it and what a failure looks like.
+
+The rest of this section is the mock-up. A web page cannot start BigDFT. So that computing is not a simulation, the calculations a study on water can reach were run once with BigDFT 1.9.1, through the registry of steps itself, and bundled by `tools/build_library.py` into `js/library.js`: 131 calculations, 21 of them relaxations. They come from `library/lattice.py` (48 runs), `library/lattice2.py` (98), `examples/water-ionisation` (18) and `examples/water-study` (9); two runs that are the same calculation are kept once. The logs of the lattices are in `library/runs.tgz` and `library/runs2.tgz`; the library rebuilds from them, byte for byte (the command is in the root README).
 
 A step is looked up by the **identity of its calculation**: its input with BigDFT's defaults removed, the geometry it starts from, and the run whose wavefunctions it reads. If the calculation is in the library, its real result is shown. If it is not, the step says "no recorded result" and shows nothing. No number is invented.
 
@@ -72,6 +101,8 @@ Other systems and other settings are written and checked, not computed.
 
 ## Checked against a real run
 
+`tools/check_live.js` does for the computing page what `check_workshop.js` does for the mock-up, and computes: it sends the example through the server with the code of the page, and compares every energy BigDFT gives with the recorded run.
+
 The example ("Load an example": the ionisation energy of water, sixteen steps) was written with the interface, saved as `examples/water-ionisation/study.py` and executed with BigDFT. `tools/check_workshop.js` rebuilds it with the model of the page and checks that the page writes that script character for character, sends the same 18 runs under the same names in the same 3 waves, starts the same 2 from wavefunctions, and shows the numbers BigDFT gave.
 
 ## Files
@@ -82,6 +113,8 @@ The example ("Load an example": the ionisation energy of water, sixteen steps) w
 | `js/model.js` | The study: steps, inheritance, decisions, identity, status, waves, script. No DOM |
 | `js/app.js` | The interface |
 | `js/board.js` | The graph: boxes, bands, arrows |
+| `js/structures.js` | Structures that are not built in: an atom, an `.xyz` file, a fetched molecule; and what BigDFT reads of any structure. No DOM |
+| `js/live.js` | Computing for real: asks the page's server wave after wave, hands the results to the model. No DOM |
 | `js/steps.js` | Generated: the registry of steps |
 | `js/logviews.js` | Generated: the registry of log attributes |
 | `js/library.js` | Generated: the recorded results |
@@ -90,9 +123,11 @@ The example ("Load an example": the ionisation energy of water, sixteen steps) w
 
 ## Limits
 
-- Results exist for water only, on the lattice above.
-- Nothing is executed from the page. The log shows the call that would be sent to the HAPS, and the recorded outcome.
+- On recorded results: they exist for water only, on the lattice above, and nothing is executed. The log shows the call that would be sent to the HAPS, and the recorded outcome.
+- Computing for real: any setting is computed, but only water went through the chain; the other systems are written the same way and were not run.
 - On the HAPS, wavefunctions travel only with `docs/patches/haps-wavefunctions.patch` applied to the pack.
 - Levels are numbers and a ladder. Orbitals and densities as volumes are not shown: no cube file is produced or read.
-- No retry on failure, no loop over structures.
-- A study lives in the page: reloading starts over. The script is what to keep.
+- No retry on failure, no loop over structures: each structure is a step, and so is each calculation on it.
+- An isolated atom is computed spin-polarised in its Hund ground state, with the occupations BigDFT chooses: the workshop does not set them, and for an open p shell the energy depends on them by tenths of an eV. An atomisation energy is to be read with that in mind.
+- Elements beyond argon are not known to the page yet: a file that holds one is refused, with the list of those that are.
+- A study lives in the page: reloading starts over. The script is what to keep. Computed for real, its runs are kept by the server: build the same study again and they come back without being computed.

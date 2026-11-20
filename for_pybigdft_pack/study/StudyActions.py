@@ -1,6 +1,7 @@
 """Steps of a study: the registry.
 
-A study is a sequence of steps built on one structure. This module holds the
+A study is a sequence of steps built on a structure, and on any other
+structure it names along the way. This module holds the
 steps a study can be made of, the way ``BigDFT.InputActions`` holds the actions
 an input file can be made of, and with the same convention: plain functions
 whose first argument is the study, defaults for everything, and each of them
@@ -11,7 +12,8 @@ which boxes exist and how to draw them.
 A step returns a handle. **Passing that handle to another step is the link
 between them**: ``after=`` continues a calculation, ``of=`` varies it, ``among=``
 decides on a series, ``a=`` and ``b=`` compare, ``wavefunctions=`` starts a
-calculation from the wavefunctions of another.
+calculation from the wavefunctions of another, ``on=`` computes it on another
+structure.
 
 A calculation step is described by *input actions*: keyword arguments named
 after the functions of ``BigDFT.InputActions``. ``set_xc="PBE"`` calls
@@ -21,6 +23,13 @@ argument. A step that continues another one inherits all its actions and adds
 its own.
 
 We now list the available steps, in order of category.
+
+Structures
+----------
+
+.. autosummary::
+
+   structure
 
 Calculations
 ------------
@@ -55,21 +64,48 @@ Results
 .. autosummary::
 
    difference
+   combination
    levels
    target
 """
 
 
-def calculation(study, name, after=None, wavefunctions=None, keys=None, **actions):
+def structure(study, name, posinp, source=""):
+    """Another structure in the study: a second molecule, a fragment, an isolated atom.
+
+    A study is built on one structure, given when it is created. Some
+    quantities need more than one: an atomisation energy needs the molecule and
+    each of its atoms, a reaction energy every species. This step names such a
+    structure; a calculation is computed on it with ``on=``.
+
+    Args:
+       name (str): name of the structure.
+       posinp (dict): the structure, as BigDFT reads it:
+          ``{"units": "angstroem", "positions": [{"O": [0.0, 0.0, 0.0]}]}``,
+          with ``cell`` for a periodic one. A file name (.xyz, .yaml) is read.
+       source (str): where it comes from: a file, a database, a construction.
+    """
+    return study.add("structure", name, params={"structure": study._read(posinp), "source": source})
+
+
+def calculation(study, name, after=None, wavefunctions=None, keys=None, on=None, **actions):
     """One BigDFT calculation: an energy, at a fixed geometry.
 
     The first calculation of a study carries its settings. Any other one
     continues a step (``after``): it inherits every setting of that step and
     adds or changes some. After a relaxation it starts from the relaxed geometry.
 
+    With ``on``, it is computed on another structure of the study, as that
+    structure was given. With ``after`` as well it is the same calculation on
+    another structure: same functional, same grid, which is what an energy
+    difference between two systems needs. The steps that continue it stay on
+    that structure.
+
     Args:
        name (str): name of the step; it becomes the name of the run.
        after (Step): the step this one continues. None for the first one.
+       on (Step): the structure it is computed on. None: the structure of the
+          step it continues, or of the study.
        wavefunctions (Step): start from the wavefunctions of this step instead
           of from scratch. That step then writes them, and they are copied
           beside this run. Same charge and spin as this one; the functional and
@@ -78,7 +114,7 @@ def calculation(study, name, after=None, wavefunctions=None, keys=None, **action
           for what no input action covers.
        **actions: input actions, by name, with their argument.
     """
-    return study.add("calculation", name, after=after, wavefunctions=wavefunctions, actions=actions, keys=keys)
+    return study.add("calculation", name, after=after, wavefunctions=wavefunctions, on=on, actions=actions, keys=keys)
 
 
 def relax(study, name, after=None, method="SQNM", nsteps=300, forcemax=2.0e-4, wavefunctions=None, keys=None, **actions):
@@ -246,6 +282,26 @@ def difference(study, name, a, b, unit="eV", against=None):
        against (Step): a target to judge the result with.
     """
     return study.add("difference", name, a=a, b=b, against=against, params={"unit": unit})
+
+
+def combination(study, name, terms, unit="eV", against=None):
+    """A sum of energies with coefficients: an atomisation, a formation or a reaction energy.
+
+    ``terms`` pairs a coefficient with a calculation. The atomisation energy of
+    water is ``[(1, oxygen_atom), (2, hydrogen_atom), (-1, water)]``: what the
+    atoms hold apart, minus what the molecule holds. It has a meaning only if
+    every term is computed the same way: same functional, same grid, same
+    pseudopotentials. A calculation made with ``after=`` and ``on=`` is.
+
+    Args:
+       name (str): name of the result.
+       terms (list): pairs ``(coefficient, step)``.
+       unit (str): "eV", "kJ/mol" or "Ha".
+       against (Step): a target to judge the result with.
+    """
+    terms = [(float(c), step) for c, step in terms]
+    links = {"term%d" % (i + 1): step for i, (_, step) in enumerate(terms)}
+    return study.add("combination", name, against=against, params={"coefficients": [c for c, _ in terms], "unit": unit}, **links)
 
 
 def levels(study, name, of):

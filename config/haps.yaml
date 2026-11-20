@@ -17,21 +17,31 @@ haps:
   cpu:
     label: CPU container
     detail: HAPS of the PyBigDFT pack
-    # The local stack of the pack (`./serve_local.sh`). Change these three lines
-    # to point at a deployment: nothing else depends on where the services are.
+    # The bridge workshop 2 computes through: its own (backend/bridge.sh), beside the agent's on
+    # 8790, so that each has its working directory. backend/serve.py reads this address.
+    mcp_url: http://127.0.0.1:8791/mcp
+    # Where the two HAPS are published. The workshop never talks to these services: the bridge
+    # does, and takes their addresses and its account from the HAPS settings (haps.toml, or the
+    # HAPS_* variables of a file kept outside any repository). Written here for the reader; these
+    # are the local stack's (`./serve_local.sh`).
     ebservice_url: http://127.0.0.1:8100/api/v1
     ebuffer_url: http://127.0.0.1:8101/api/v1
-    mcp_url: http://127.0.0.1:8790/mcp
+    # Two applications, one runtime each: the calculation (`bigdft -n NAME`) and the dry run
+    # (`memguess NPROC NAME dd l`). On a shared server an instance is appended to the mime types.
     application: {name: bigdft, mime_type: application/x-bigdft}
+    dryrun: {name: bigdft-dryrun, mime_type: application/x-bigdft-dryrun}
     credentials: {username: HAPS_USER_USERNAME, password: HAPS_USER_PASSWORD}
     image: bigdft/runtime@sha256:6f16f65f5b33ffe83e53d3c228c21a1e8eb97d0b426f4fad0c805d0bc0540336
     bigdft: 1.9.1
     gpu: false
+    # max_timeout_s is what backend/serve.py gives a run. output_reserve_mb is the bridge's
+    # setting, not ours: a shared server may cap it (500 MB on the test server, in memory).
     limits: {max_timeout_s: 3600, max_parallel: 2, output_reserve_mb: 1024, buffer_lifespan_s: 3600}
     accepts:
-      # data-NAME/wavefunction-* beside NAME.yaml, to restart from an earlier run.
-      # True with docs/patches/haps-wavefunctions.patch applied to the pack; the
-      # pack as published refuses them, and this must then be false.
+      # data-NAME/wavefunction-* beside NAME.yaml, to restart from an earlier run. True once
+      # docs/patches/haps-wavefunctions.patch is applied to the HAPS, bridge and runtime; the
+      # HAPS as published refuses them. This line is what the mock-up shows: the backend does
+      # not trust it, it asks the bridge (haps_info) before each wave.
       wavefunctions: true
     estimate: {credits_per_core_hour: 1, relative_speed: 1}
 

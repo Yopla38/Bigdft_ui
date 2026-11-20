@@ -22,7 +22,7 @@ study.difference("ionisation_energy", vertical, relaxed, against=experiment)
 
 Three rules do the work:
 
-1. **Passing a step to another step is the link.** `after=` continues a calculation, `wavefunctions=` starts it from the wavefunctions of another, `of=` varies it, `among=` decides on a series, the two arguments of `difference` compare.
+1. **Passing a step to another step is the link.** `after=` continues a calculation, `wavefunctions=` starts it from the wavefunctions of another, `on=` computes it on another structure, `of=` varies it, `among=` decides on a series, the two arguments of `difference` compare.
 2. **A calculation is described by input actions.** A keyword argument named after a function of `BigDFT.InputActions` calls it: `set_xc="PBE"`, `set_rmult={"coarse": 5, "fine": 8}`, `spin_polarize=1`. A step that continues another inherits its actions and adds its own. `keys=` reaches any input variable no action covers.
 3. **A decision applies to what follows.** `choose` retains a value of the setting a series varied; every calculation written after it uses that value. Left without `retained=`, it takes the value the criterion proposes; if none passes, the steps after it wait.
 
@@ -30,6 +30,7 @@ Three rules do the work:
 
 | Family | Step | What it is |
 |---|---|---|
+| Structures | `structure` | Another structure in the study: a second molecule, a fragment, an isolated atom |
 | Calculations | `calculation` | One BigDFT calculation: an energy, at a fixed geometry |
 | | `relax` | Relax the geometry. A step placed `after` it starts from the relaxed geometry |
 | Pre-filled | `ionised` | The same system with an electron removed |
@@ -40,10 +41,25 @@ Three rules do the work:
 | | `vary` | The same calculation for several values of one setting, side by side: functionals, for instance |
 | | `choose` | Decide on the value of a setting, for every step that follows |
 | Results | `difference` | The energy of one step minus the energy of another, judged against a target |
+| | `combination` | A sum of energies with coefficients: an atomisation, a formation or a reaction energy |
 | | `levels` | The highest occupied level of a calculation, and its gap if empty states were computed |
 | | `target` | A reference value and the window that counts as agreement, set before computing |
 
 A series varies the argument of one input action. For an action with several arguments, name the one that moves: `converge(..., action="set_rmult", argument="coarse", values=(4, 5, 6, 7))`; the others keep what the calculation gives to that action.
+
+### More than one structure
+
+```python
+oxygen = study.structure("oxygen", {"units": "angstroem", "positions": [{"O": [0, 0, 0]}]})
+hydrogen = study.structure("hydrogen", {"units": "angstroem", "positions": [{"H": [0, 0, 0]}]})
+o = study.calculation("o_atom", after=water, on=oxygen, spin_polarize=2)
+h = study.calculation("h_atom", after=water, on=hydrogen, spin_polarize=1)
+study.combination("atomisation_energy", [(1, o), (2, h), (-1, water)])
+```
+
+`on=` computes a calculation on another structure, as that structure was given. With `after=` as well it inherits every action of the step it continues: the same functional and the same grid on both, which an energy difference needs. The steps that continue it stay on that structure; a relaxed geometry is not carried across (it is another system), and neither are wavefunctions. The spin of an atom is not guessed by the engine: say it (`spin_polarize`), as the workshop does from Hund's rule.
+
+The structure the study is created with is `study.system`; `study.structure(...)` is the step.
 
 ### Starting from the wavefunctions of another step
 
@@ -65,6 +81,8 @@ state = study.prepare()      # inputs written, dry run of each: ready, waiting, 
 # on the HAPS:  haps_bigdft(names=state["ready"], directory="runs")
 study.analyse()              # what every step gives, in order
 ```
+
+`prepare(only={...})` looks at the named runs alone: a dry run is a round trip to the dry-run HAPS, and a caller that sends one step does not pay for all (`backend/runner.py` does this for workshop 2).
 
 `prepare` is called again after each wave: a calculation that starts from a relaxed geometry is "waiting" until the relaxation has run, and a calculation after an undecided `choose` waits for the series. `run_here.py study.py` loops prepare, `bigdft -n NAME`, analyse where BigDFT itself can run; it stands in for the HAPS in tests.
 
@@ -88,4 +106,4 @@ What the engine takes care of, each learned from a real run:
 - No retry when a run fails or does not converge; the step is reported and what depends on it waits.
 - A series varies one argument of one action. No loop over structures.
 - `levels` reads what BigDFT prints. Orbitals as volumes (cube files) are not handled.
-- The HAPS call itself is not made by `Study`: it prepares and analyses, the caller sends.
+- The HAPS call itself is not made by `Study`: it prepares and analyses, the caller sends. `backend/runner.py` is such a caller.

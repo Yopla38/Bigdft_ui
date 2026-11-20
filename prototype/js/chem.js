@@ -12,16 +12,31 @@ window.OND = window.OND || {};
    * used only for the live estimate; the run reads them from the pseudopotential. */
   /* H, C, N, O and S carry the radii BigDFT 1.9.5 printed for the HGH-K PBE
    * pseudopotentials of a real run (tools/build_results.py reads them from the
-   * log). B, Si and P are approximate: no run of ours has printed them yet. */
+   * log). The radii of the others are approximate: no run of ours has printed
+   * them yet. They cover the first three rows, which is what a structure read
+   * from a file or fetched by name usually holds.
+   * unp: unpaired electrons of the isolated atom in its ground state (Hund's
+   * rule). An atom computed without them is not the atom: its energy is too
+   * high, and every atomisation energy built on it too large. */
   const EL = {
-    H:  { z: 1,  val: 1, rcov: 0.31, rc: 1.4634, rf: 0.2000, color: 0xdfe5e8, name: 'Hydrogen' },
-    B:  { z: 5,  val: 3, rcov: 0.84, rc: 1.60, rf: 0.23, color: 0xe7a39a, name: 'Boron' },
-    C:  { z: 6,  val: 4, rcov: 0.76, rc: 1.5844, rf: 0.2915, color: 0x566067, name: 'Carbon' },
-    N:  { z: 7,  val: 5, rcov: 0.71, rc: 1.3703, rf: 0.2455, color: 0x3f74e0, name: 'Nitrogen' },
-    O:  { z: 8,  val: 6, rcov: 0.66, rc: 1.2156, rf: 0.2113, color: 0xe0503f, name: 'Oxygen' },
-    Si: { z: 14, val: 4, rcov: 1.11, rc: 1.71, rf: 0.32, color: 0xc9a56d, name: 'Silicon' },
-    P:  { z: 15, val: 5, rcov: 1.07, rc: 1.63, rf: 0.30, color: 0xe58a2b, name: 'Phosphorus' },
-    S:  { z: 16, val: 6, rcov: 1.05, rc: 1.3823, rf: 0.3648, color: 0xe2c53a, name: 'Sulfur' },
+    H:  { z: 1,  val: 1, unp: 1, rcov: 0.31, rc: 1.4634, rf: 0.2000, color: 0xdfe5e8, name: 'Hydrogen' },
+    He: { z: 2,  val: 2, unp: 0, rcov: 0.28, rc: 1.30, rf: 0.20, color: 0xbfe9ef, name: 'Helium' },
+    Li: { z: 3,  val: 1, unp: 1, rcov: 1.28, rc: 2.20, rf: 0.40, color: 0xb98ae6, name: 'Lithium' },
+    Be: { z: 4,  val: 2, unp: 0, rcov: 0.96, rc: 1.90, rf: 0.33, color: 0xa9cf4a, name: 'Beryllium' },
+    B:  { z: 5,  val: 3, unp: 1, rcov: 0.84, rc: 1.60, rf: 0.23, color: 0xe7a39a, name: 'Boron' },
+    C:  { z: 6,  val: 4, unp: 2, rcov: 0.76, rc: 1.5844, rf: 0.2915, color: 0x566067, name: 'Carbon' },
+    N:  { z: 7,  val: 5, unp: 3, rcov: 0.71, rc: 1.3703, rf: 0.2455, color: 0x3f74e0, name: 'Nitrogen' },
+    O:  { z: 8,  val: 6, unp: 2, rcov: 0.66, rc: 1.2156, rf: 0.2113, color: 0xe0503f, name: 'Oxygen' },
+    F:  { z: 9,  val: 7, unp: 1, rcov: 0.57, rc: 1.15, rf: 0.20, color: 0x8fd16a, name: 'Fluorine' },
+    Ne: { z: 10, val: 8, unp: 0, rcov: 0.58, rc: 1.10, rf: 0.20, color: 0xa9d8ea, name: 'Neon' },
+    Na: { z: 11, val: 1, unp: 1, rcov: 1.66, rc: 2.30, rf: 0.45, color: 0x9d6fe0, name: 'Sodium' },
+    Mg: { z: 12, val: 2, unp: 0, rcov: 1.41, rc: 2.10, rf: 0.40, color: 0x86c93f, name: 'Magnesium' },
+    Al: { z: 13, val: 3, unp: 1, rcov: 1.21, rc: 1.90, rf: 0.35, color: 0xb9a3a3, name: 'Aluminium' },
+    Si: { z: 14, val: 4, unp: 2, rcov: 1.11, rc: 1.71, rf: 0.32, color: 0xc9a56d, name: 'Silicon' },
+    P:  { z: 15, val: 5, unp: 3, rcov: 1.07, rc: 1.63, rf: 0.30, color: 0xe58a2b, name: 'Phosphorus' },
+    S:  { z: 16, val: 6, unp: 2, rcov: 1.05, rc: 1.3823, rf: 0.3648, color: 0xe2c53a, name: 'Sulfur' },
+    Cl: { z: 17, val: 7, unp: 1, rcov: 1.02, rc: 1.30, rf: 0.33, color: 0x43c95a, name: 'Chlorine' },
+    Ar: { z: 18, val: 8, unp: 0, rcov: 1.06, rc: 1.25, rf: 0.30, color: 0x7fc6d6, name: 'Argon' },
   };
 
 
@@ -175,8 +190,9 @@ window.OND = window.OND || {};
 
   const builders = { h2o: water, c60, 'gr-bz': grapheneBenzene, si64: silicon, ala20: () => helix(20), '6a': peptide6a };
 
-  function build(id) {
-    const sys = builders[id]();
+  /* Finish a system for the scene and the settings: centre it, number its atoms.
+   * `origin` is what was subtracted: an atom is at p + origin in the frame it was given in. */
+  function finish(sys) {
     // centre isolated directions on the origin; periodic ones keep the cell frame
     const c = [0, 0, 0];
     for (const at of sys.atoms) for (let i = 0; i < 3; i++) c[i] += at.p[i] / sys.atoms.length;
@@ -185,6 +201,7 @@ window.OND = window.OND || {};
     sys.atoms.forEach((at, i) => { at.i = i; at.src = at.el; });
     return sys;
   }
+  const build = (id) => finish(builders[id]());
 
   /* Bonds from covalent radii, with minimum image in periodic directions. */
   function bonds(sys) {
@@ -211,7 +228,7 @@ window.OND = window.OND || {};
   }
 
   OND.chem = {
-    BOHR, EL, build, bonds, electrons, composition,
+    BOHR, EL, build, finish, bonds, electrons, composition,
     list: [['h2o', 'Water'], ['c60', 'C₆₀ fullerene'], ['gr-bz', 'Benzene on graphene'], ['si64', 'Crystalline silicon'], ['ala20', 'α-helix peptide'], ['6a', 'Tetrapeptide 6a']],
     vec: { sub, add, mul, dot, cross, len, unit },
   };

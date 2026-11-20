@@ -24,6 +24,7 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `examples/water-study/` | A study built with the mock-up's builder and run with BigDFT 1.9.1: board, generated script, inputs, logs, two attempts |
 | `prototype/` | The first workshop: immersive mock-up (single page, three.js, no build step) |
 | `workshop/` | **Workshop 2**: one study built step by step, from a system to its results. Each step continues the previous one; the steps come from the registry of steps; results are real BigDFT runs. See its README |
+| `backend/` | What lets workshop 2 **compute for real**: a local server between the page and the HAPS, which prepares the runs with the registry of steps, has BigDFT dry-run them, sends them and reads the logs. See its README |
 | `for_pybigdft_pack/study/` | The registry of steps (`StudyActions.py`) and its engine (`Studies.py`): a study as a script, prepared here, computed on the HAPS, analysed here. See its README |
 | `examples/water-ionisation/` | A study written by workshop 2 and run as written with BigDFT 1.9.1: script, inputs, logs, analysis |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
@@ -37,6 +38,19 @@ node tools/check_workshop.js              # workshop 2 against a real BigDFT run
 ```
 
 The two are separate pages. Workshop 2 starts again from one idea: you are building a calculation, then a study, in one continuous line. It reuses the first workshop's scene, figures, checks and registries.
+
+## Compute for real with workshop 2
+
+With the two HAPS of the PyBigDFT pack served (its `serve_remote.sh` or `serve_local.sh`):
+
+```bash
+cd backend
+./bridge.sh /path/to/haps [credentials.env]   # the workshop's own MCP bridge, on 8791
+uv sync && uv run python serve.py             # http://localhost:8766: the same page, computing
+node ../tools/check_live.js                   # the example, computed, against the recorded run (a few minutes)
+```
+
+`backend/README.md` has the details. A step that starts from the wavefunctions of another needs `docs/patches/haps-wavefunctions.patch` applied to the HAPS; without it the page refuses the step rather than let BigDFT start from scratch.
 
 ## Regenerate what workshop 2 reads
 

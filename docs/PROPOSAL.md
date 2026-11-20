@@ -344,7 +344,9 @@ Verified: renders without error in Chromium, light and dark themes, at 1440, 102
 
 Real: the registry of steps and its engine, executed with BigDFT 1.9.1; the recorded calculations on water and everything shown from them (energies, levels, gaps, forces, dipoles, convergence traces, relaxed geometries, times, and every attribute PyBigDFT reads from their logs); the script, which runs as written; the inheritance, decisions and waves, which the page and the engine compute the same way (checked by `tools/check_workshop.js`).
 
-Not real: execution from the page (a recorded result is shown at once, with the time BigDFT took); any system other than water and any setting outside the lattice (written and checked, shown as "no recorded result"). A study is not saved: reloading the page starts over.
+Not real, when the page is served as files: execution (a recorded result is shown at once, with the time BigDFT took); any system other than water and any setting outside the lattice (written and checked, shown as "no recorded result"). A study is not saved: reloading the page starts over.
+
+Real since `backend/`: served by its local server, the page computes. A step is prepared with the registry of steps, its input checked by BigDFT on the dry-run HAPS (`memguess`), the calculation run on the HAPS (`bigdft -n NAME`), and the log that comes back read into the same views. The example was computed this way from the model of the page (`tools/check_live.js`): 18 runs in the 3 waves of the recorded run, every energy within 10⁻¹¹ Ha of it, the two hybrid calculations restarted from wavefunctions that travelled through the HAPS. This was done on a local stack of the HAPS (ebservice, ebuffer, both runtimes, the bridge, BigDFT 1.9.1 in its image), not on a remote server. Only water went through it.
 
 Verified: the same audit as the first workshop, at 1440, 1024, 768 and 400 px in both themes, on every step and tab of the example; building a study from nothing, changing an upstream step, deciding against the criterion, a system without results.
 
