@@ -79,6 +79,7 @@
    "keys": {},
    "params": {
     "action": "set_hgrid",
+    "argument": null,
     "values": [
      0.5,
      0.45,
@@ -169,6 +170,88 @@
    "params": {
     "unit": "eV"
    }
+  },
+  {
+   "name": "functionals",
+   "kind": "vary",
+   "links": {
+    "of": "cation",
+    "relative_to": "ground_state",
+    "against": "experiment"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "action": "set_xc",
+    "argument": null,
+    "values": [
+     "LDA",
+     "PBE",
+     "PBE0"
+    ]
+   }
+  },
+  {
+   "name": "pbe0",
+   "kind": "calculation",
+   "links": {
+    "after": "relaxed",
+    "wavefunctions": "relaxed"
+   },
+   "actions": {
+    "set_xc": "PBE0"
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "cation_pbe0",
+   "kind": "calculation",
+   "links": {
+    "after": "cation_vertical",
+    "wavefunctions": "cation_vertical"
+   },
+   "actions": {
+    "set_xc": "PBE0"
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "ionisation_pbe0",
+   "kind": "difference",
+   "links": {
+    "a": "cation_pbe0",
+    "b": "pbe0",
+    "against": "experiment"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {
+    "unit": "eV"
+   }
+  },
+  {
+   "name": "empty_states",
+   "kind": "calculation",
+   "links": {
+    "after": "relaxed"
+   },
+   "actions": {
+    "extract_virtual_states": 4
+   },
+   "keys": {},
+   "params": {}
+  },
+  {
+   "name": "levels",
+   "kind": "levels",
+   "links": {
+    "of": "empty_states"
+   },
+   "actions": {},
+   "keys": {},
+   "params": {}
   }
  ],
  "runs": [
@@ -180,6 +263,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -199,6 +283,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -225,6 +310,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.5,
@@ -251,6 +337,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.5,
@@ -274,6 +361,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.45,
@@ -300,6 +388,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.45,
@@ -323,6 +412,7 @@
    "alias": true,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -349,6 +439,7 @@
    "alias": true,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -372,6 +463,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.35,
@@ -398,6 +490,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.35,
@@ -417,6 +510,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": null,
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -432,6 +526,9 @@
      "betax": 4.0,
      "frac_fluct": 1.0,
      "forcemax": 0.0002
+    },
+    "output": {
+     "orbitals": "binary"
     }
    }
   },
@@ -443,6 +540,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": "relaxed",
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -454,6 +552,9 @@
      "qcharge": 1,
      "nspin": 2,
      "mpol": 1
+    },
+    "output": {
+     "orbitals": "binary"
     }
    }
   },
@@ -465,6 +566,7 @@
    "alias": false,
    "undecided": false,
    "geometry_from": "relaxed",
+   "wavefunctions_from": null,
    "input": {
     "dft": {
      "hgrids": 0.4,
@@ -483,6 +585,251 @@
      "betax": 4.0,
      "frac_fluct": 1.0,
      "forcemax": 0.0002
+    }
+   }
+  },
+  {
+   "name": "cation-xcLDA",
+   "own_name": "cation-xcLDA",
+   "step": "cation",
+   "member": [
+    "functionals",
+    "of",
+    "LDA"
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "LDA",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state-xcLDA",
+   "own_name": "ground_state-xcLDA",
+   "step": "ground_state",
+   "member": [
+    "functionals",
+    "relative_to",
+    "LDA"
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "LDA"
+    }
+   }
+  },
+  {
+   "name": "cation",
+   "own_name": "cation-xcPBE",
+   "step": "cation",
+   "member": [
+    "functionals",
+    "of",
+    "PBE"
+   ],
+   "alias": true,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    }
+   }
+  },
+  {
+   "name": "ground_state",
+   "own_name": "ground_state-xcPBE",
+   "step": "ground_state",
+   "member": [
+    "functionals",
+    "relative_to",
+    "PBE"
+   ],
+   "alias": true,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE"
+    }
+   }
+  },
+  {
+   "name": "cation-xcPBE0",
+   "own_name": "cation-xcPBE0",
+   "step": "cation",
+   "member": [
+    "functionals",
+    "of",
+    "PBE0"
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE0",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1
+    },
+    "psppar.H": {
+     "Pseudopotential XC": 11
+    },
+    "psppar.O": {
+     "Pseudopotential XC": 11
+    }
+   }
+  },
+  {
+   "name": "ground_state-xcPBE0",
+   "own_name": "ground_state-xcPBE0",
+   "step": "ground_state",
+   "member": [
+    "functionals",
+    "relative_to",
+    "PBE0"
+   ],
+   "alias": false,
+   "undecided": false,
+   "geometry_from": null,
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE0"
+    },
+    "psppar.H": {
+     "Pseudopotential XC": 11
+    },
+    "psppar.O": {
+     "Pseudopotential XC": 11
+    }
+   }
+  },
+  {
+   "name": "pbe0",
+   "own_name": "pbe0",
+   "step": "pbe0",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": "relaxed",
+   "wavefunctions_from": "relaxed",
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE0",
+     "inputpsiid": 2
+    },
+    "psppar.H": {
+     "Pseudopotential XC": 11
+    },
+    "psppar.O": {
+     "Pseudopotential XC": 11
+    }
+   }
+  },
+  {
+   "name": "cation_pbe0",
+   "own_name": "cation_pbe0",
+   "step": "cation_pbe0",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": "relaxed",
+   "wavefunctions_from": "cation_vertical",
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE0",
+     "qcharge": 1,
+     "nspin": 2,
+     "mpol": 1,
+     "inputpsiid": 2
+    },
+    "psppar.H": {
+     "Pseudopotential XC": 11
+    },
+    "psppar.O": {
+     "Pseudopotential XC": 11
+    }
+   }
+  },
+  {
+   "name": "empty_states",
+   "own_name": "empty_states",
+   "step": "empty_states",
+   "member": null,
+   "alias": false,
+   "undecided": false,
+   "geometry_from": "relaxed",
+   "wavefunctions_from": null,
+   "input": {
+    "dft": {
+     "hgrids": 0.4,
+     "rmult": [
+      5,
+      8
+     ],
+     "ixc": "PBE",
+     "norbv": -4,
+     "nvirt": 4,
+     "itermax_virt": 150
     }
    }
   }

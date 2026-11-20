@@ -1,0 +1,16 @@
+dft:
+  hgrids: 0.4
+  inputpsiid: 2
+  ixc: PBE0
+  mpol: 1
+  nspin: 2
+  qcharge: 1
+  rmult: [5, 8]
+posinp:
+  positions:
+  - O: [-0.00021322191307602618, -0.002713209010964541, 5.428558457416436e-19]
+  - H: [0.768643768008964, 0.58733799041857, -4.202033039809258e-19]
+  - H: [-0.7684305460958752, 0.587175218592385, -4.203263976852526e-19]
+  units: angstroem
+psppar.H: {Pseudopotential XC: 11}
+psppar.O: {Pseudopotential XC: 11}

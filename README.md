@@ -42,11 +42,13 @@ The two are separate pages. Workshop 2 starts again from one idea: you are build
 
 ```bash
 python tools/build_steps.py                       # the steps, from for_pybigdft_pack/study/StudyActions.py
-mkdir -p /tmp/lattice && tar -xzf workshop/library/runs.tgz -C /tmp/lattice
-python tools/build_library.py /tmp/lattice examples/water-study/attempt-2/runs    # the recorded results
+python tools/build_logviews.py                    # the result views, from BigDFT.Logfiles.BUILTIN as recorded in for_pybigdft_pack/build
+mkdir -p /tmp/lattice /tmp/lattice2
+tar -xzf workshop/library/runs.tgz -C /tmp/lattice && tar -xzf workshop/library/runs2.tgz -C /tmp/lattice2
+python tools/build_library.py examples/water-ionisation/runs /tmp/lattice examples/water-study/attempt-2/runs /tmp/lattice2    # the recorded results
 ```
 
-To record more results, run a study through the registry (`workshop/library/lattice.py` is the one behind the library) and pass its `runs` directory to `build_library.py`.
+To record more results, run a study through the registry (`workshop/library/lattice.py` and `lattice2.py` are the ones behind the library) and pass its `runs` directory to `build_library.py`. `tools/update_version.sh` regenerates the steps and the views with everything else.
 
 ## Moving to another version of BigDFT or PyBigDFT
 

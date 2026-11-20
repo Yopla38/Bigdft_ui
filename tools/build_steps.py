@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REGISTRY = ROOT / "for_pybigdft_pack/study/StudyActions.py"
-LINKS = ("after", "of", "relative_to", "among", "a", "b", "against")
+LINKS = ("after", "wavefunctions", "of", "relative_to", "among", "a", "b", "against")
 
 
 class Recorder:

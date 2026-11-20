@@ -10,7 +10,8 @@ which boxes exist and how to draw them.
 
 A step returns a handle. **Passing that handle to another step is the link
 between them**: ``after=`` continues a calculation, ``of=`` varies it, ``among=``
-decides on a series, ``a=`` and ``b=`` compare.
+decides on a series, ``a=`` and ``b=`` compare, ``wavefunctions=`` starts a
+calculation from the wavefunctions of another.
 
 A calculation step is described by *input actions*: keyword arguments named
 after the functions of ``BigDFT.InputActions``. ``set_xc="PBE"`` calls
@@ -37,6 +38,7 @@ Pre-filled calculations
    ionised
    triplet
    hybrid
+   empty_states
 
 Series and decisions
 --------------------
@@ -44,6 +46,7 @@ Series and decisions
 .. autosummary::
 
    converge
+   vary
    choose
 
 Results
@@ -52,11 +55,12 @@ Results
 .. autosummary::
 
    difference
+   levels
    target
 """
 
 
-def calculation(study, name, after=None, keys=None, **actions):
+def calculation(study, name, after=None, wavefunctions=None, keys=None, **actions):
     """One BigDFT calculation: an energy, at a fixed geometry.
 
     The first calculation of a study carries its settings. Any other one
@@ -66,14 +70,18 @@ def calculation(study, name, after=None, keys=None, **actions):
     Args:
        name (str): name of the step; it becomes the name of the run.
        after (Step): the step this one continues. None for the first one.
+       wavefunctions (Step): start from the wavefunctions of this step instead
+          of from scratch. That step then writes them, and they are copied
+          beside this run. Same charge and spin as this one; the functional and
+          the grid may differ.
        keys (dict): input keys written directly, ``{"dft": {"itermax": 200}}``,
           for what no input action covers.
        **actions: input actions, by name, with their argument.
     """
-    return study.add("calculation", name, after=after, actions=actions, keys=keys)
+    return study.add("calculation", name, after=after, wavefunctions=wavefunctions, actions=actions, keys=keys)
 
 
-def relax(study, name, after=None, method="SQNM", nsteps=300, forcemax=2.0e-4, keys=None, **actions):
+def relax(study, name, after=None, method="SQNM", nsteps=300, forcemax=2.0e-4, wavefunctions=None, keys=None, **actions):
     """Relax the geometry: move the atoms until the forces vanish.
 
     Continues a calculation with the same settings and optimises its geometry.
@@ -85,10 +93,11 @@ def relax(study, name, after=None, method="SQNM", nsteps=300, forcemax=2.0e-4, k
        method (str): optimiser. SQNM suits molecules.
        nsteps (int): maximum number of steps.
        forcemax (float): stop when the largest force is below this, in Ha/bohr.
+       wavefunctions (Step): start the first geometry from the wavefunctions of this step.
        keys (dict): input keys written directly.
        **actions: further input actions.
     """
-    return study.add("relax", name, after=after, actions=actions, keys=keys,
+    return study.add("relax", name, after=after, wavefunctions=wavefunctions, actions=actions, keys=keys,
                      params={"method": method, "nsteps": nsteps, "forcemax": forcemax})
 
 
@@ -125,7 +134,7 @@ def triplet(study, name, after):
                        keys={"dft": {"itermax": 200, "nrepmax": 5}})
 
 
-def hybrid(study, name, after, xc="PBE0"):
+def hybrid(study, name, after, xc="PBE0", wavefunctions=None):
     """The same calculation with a hybrid functional, at the same geometry.
 
     Hybrids cost much more than PBE: the usual practice is to relax with PBE
@@ -136,12 +145,30 @@ def hybrid(study, name, after, xc="PBE0"):
        name (str): name of the step.
        after (Step): the calculation or the relaxation to recompute.
        xc (str): "PBE0", "B3LYP" or "HF".
+       wavefunctions (Step): start from the wavefunctions of this step, usually
+          the one it continues: the hybrid then converges in fewer iterations.
     """
-    return calculation(study, name, after=after, set_xc=xc)
+    return calculation(study, name, after=after, wavefunctions=wavefunctions, set_xc=xc)
+
+
+def empty_states(study, name, after, number=4):
+    """The same calculation, followed by its first empty states: what a gap needs.
+
+    A ground state only gives the occupied levels. This continues ``after``
+    and, once converged, computes the lowest empty levels in the same
+    potential. BigDFT then prints the gap between the highest occupied level
+    and the lowest empty one.
+
+    Args:
+       name (str): name of the step.
+       after (Step): the calculation whose empty states are wanted.
+       number (int): how many empty states.
+    """
+    return calculation(study, name, after=after, extract_virtual_states=number)
 
 
 def converge(study, name, of, action="set_hgrid", values=(0.50, 0.45, 0.40, 0.35), within=1.0e-3,
-             relative_to=None, per_atom=True):
+             relative_to=None, per_atom=True, argument=None):
     """Vary one setting of a calculation and see when the result stops changing.
 
     Runs the calculation ``of`` once per value. The values go from the cheapest
@@ -160,9 +187,34 @@ def converge(study, name, of, action="set_hgrid", values=(0.50, 0.45, 0.40, 0.35
        within (float): tolerance, in eV (per atom for a total energy).
        relative_to (Step): a second calculation; the criterion is then on E(of) - E(relative_to).
        per_atom (bool): divide a total energy by the number of atoms. Ignored with relative_to.
+       argument (str): for an action with several arguments, the one that is
+          varied: ``action="set_rmult", argument="coarse"``. The other
+          arguments keep what the calculation gives to that action.
     """
     return study.add("converge", name, of=of, relative_to=relative_to,
-                     params={"action": action, "values": list(values), "within": within, "per_atom": per_atom})
+                     params={"action": action, "argument": argument, "values": list(values), "within": within, "per_atom": per_atom})
+
+
+def vary(study, name, of, action="set_xc", values=("LDA", "PBE", "PBE0"), relative_to=None, argument=None, against=None):
+    """The same calculation for several values of one setting, side by side.
+
+    A series without a criterion: for what does not converge towards anything,
+    such as the functional. Runs ``of`` once per value and lays the results
+    side by side. With ``relative_to``, the quantity compared is the difference
+    between the two calculations, both varied. With ``against``, each value is
+    judged with the target. A decision step can then retain one of the values.
+
+    Args:
+       name (str): name of the step.
+       of (Step): the calculation to vary.
+       action (str): the input action whose argument is varied.
+       values (tuple): its values.
+       relative_to (Step): a second calculation; what is compared is then E(of) - E(relative_to).
+       argument (str): for an action with several arguments, the one that is varied.
+       against (Step): a target to judge each value with.
+    """
+    return study.add("vary", name, of=of, relative_to=relative_to, against=against,
+                     params={"action": action, "argument": argument, "values": list(values)})
 
 
 def choose(study, name, among, retained=None, because=""):
@@ -170,12 +222,13 @@ def choose(study, name, among, retained=None, because=""):
 
     The series ``among`` proposes a value; this step retains one. Left alone it
     retains the proposal. A person may retain another value and say why: the
-    reason is kept with the study. Every step defined after this one uses the
-    retained value.
+    reason is kept with the study. A series made with ``vary`` proposes
+    nothing: the value is then always a person's. Every step defined after
+    this one uses the retained value.
 
     Args:
        name (str): name of the step.
-       among (Step): the convergence series the decision is taken on.
+       among (Step): the series the decision is taken on.
        retained: the value kept. None keeps what the series proposes.
        because (str): the reason, when it is not the proposal.
     """
@@ -193,6 +246,20 @@ def difference(study, name, a, b, unit="eV", against=None):
        against (Step): a target to judge the result with.
     """
     return study.add("difference", name, a=a, b=b, against=against, params={"unit": unit})
+
+
+def levels(study, name, of):
+    """The energy levels of a calculation: the highest occupied one, and the gap if empty states were computed.
+
+    Reads what the calculation already holds; nothing more is run. The gap is
+    the one BigDFT prints, so ``of`` must be a calculation with empty states
+    for it to exist.
+
+    Args:
+       name (str): name of the result.
+       of (Step): the calculation or the relaxation whose levels are read.
+    """
+    return study.add("levels", name, of=of)
 
 
 def target(study, name, value, within, unit="eV", source=""):

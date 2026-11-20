@@ -22,7 +22,7 @@ def main(script):
         state = study.prepare(verbose=False)
         print("wave %d: ready %s | waiting %s | refused %s" % (wave, state["ready"], state["waiting"], dict(state["refused"])))
         sys.stdout.flush()
-        if state["refused"] or not state["ready"]:
+        if not state["ready"]:
             break
         for name in state["ready"]:
             start = time.time()

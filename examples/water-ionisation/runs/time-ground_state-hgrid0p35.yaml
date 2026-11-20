@@ -1,501 +1,501 @@
 ---
  INIT: #                      % ,  Time (s)
    Classes:
-     Flib LowLevel      : [ 9.3,  4.06E-02]
-     Communications     : [ 0.0,  4.05E-05]
-     BLAS-LAPACK        : [ 0.1,  6.19E-04]
-     PS Computation     : [ 28.2,  0.12]
-     Potential          : [ 21.7,  9.51E-02]
-     Convolutions       : [ 10.1,  4.43E-02]
-     Other              : [ 0.1,  3.68E-04]
-     Initialization     : [ 5.2,  2.28E-02]
-     Total              : [ 74.7,  0.44]
+     Flib LowLevel      : [ 8.1,  6.41E-02]
+     Communications     : [ 0.0,  4.22E-05]
+     BLAS-LAPACK        : [ 0.4,  3.45E-03]
+     PS Computation     : [ 34.2,  0.27]
+     Potential          : [ 18.7,  0.15]
+     Convolutions       : [ 11.1,  8.83E-02]
+     Other              : [ 0.1,  5.60E-04]
+     Initialization     : [ 4.8,  3.77E-02]
+     Total              : [ 77.4,  0.79]
    Categories: #Ordered by time consumption
-     Exchange-Correlation:
-       Data             : [ 21.7,  9.51E-02]
-       Class            : Potential
-       Info             : Operations needed to construct local XC potential
      PSolver Computation:
-       Data             : [ 15.2,  6.67E-02]
+       Data             : [ 20.3,  0.16]
        Class            : PS Computation
        Info             : 3D SG_FFT and related operations
+     Exchange-Correlation:
+       Data             : [ 18.7,  0.15]
+       Class            : Potential
+       Info             : Operations needed to construct local XC potential
      PSolver Kernel Creation:
-       Data             : [ 13.0,  5.71E-02]
+       Data             : [ 13.9,  0.11]
        Class            : PS Computation
        Info             : ISF operations and creation of the kernel
      ApplyLocPotKin:
-       Data             : [ 6.7,  2.93E-02]
+       Data             : [ 7.5,  5.96E-02]
+       Class            : Convolutions
+       Info             : OpenCL ported
+     Rho_comput:
+       Data             : [ 3.6,  2.86E-02]
        Class            : Convolutions
        Info             : OpenCL ported
      Array allocations:
-       Data             : [ 4.2,  1.82E-02]
+       Data             : [ 3.5,  2.81E-02]
        Class            : Flib LowLevel
        Info             : Heap storage allocation and associated profiling
      Init to Zero:
-       Data             : [ 3.8,  1.68E-02]
+       Data             : [ 3.5,  2.78E-02]
        Class            : Flib LowLevel
        Info             : Memset of storage space
-     Rho_comput:
-       Data             : [ 3.4,  1.51E-02]
-       Class            : Convolutions
-       Info             : OpenCL ported
      wavefunction:
-       Data             : [ 2.9,  1.28E-02]
+       Data             : [ 2.7,  2.11E-02]
        Class            : Initialization
        Info             : Miscellaneous
      CrtLocPot:
-       Data             : [ 1.7,  7.55E-03]
+       Data             : [ 1.1,  9.05E-03]
        Class            : Initialization
        Info             : Miscellaneous
-     Vector copy:
-       Data             : [ 0.8,  3.41E-03]
-       Class            : Flib LowLevel
-       Info             : Memory copy of arrays (excluded allocations)
      CrtDescriptors:
-       Data             : [ 0.5,  2.23E-03]
+       Data             : [ 0.9,  7.39E-03]
        Class            : Initialization
        Info             : RMA Pattern
-     Routine Profiling:
-       Data             : [ 0.5,  2.12E-03]
+     Vector copy:
+       Data             : [ 0.6,  5.00E-03]
        Class            : Flib LowLevel
-       Info             : Profiling performances for debugging
+       Info             : Memory copy of arrays (excluded allocations)
      Blas (d-s-c-z)GeMM:
-       Data             : [ 0.1,  6.19E-04]
+       Data             : [ 0.4,  3.45E-03]
        Class            : BLAS-LAPACK
        Info             : Blas General Matrix-Matrix multiplications of any float type
+     Routine Profiling:
+       Data             : [ 0.4,  3.20E-03]
+       Class            : Flib LowLevel
+       Info             : Profiling performances for debugging
      ApplyProj:
-       Data             : [ 0.1,  3.02E-04]
+       Data             : [ 0.1,  4.73E-04]
        Class            : Other
        Info             : RMA pattern
      Input_comput:
-       Data             : [ 0.0,  1.76E-04]
+       Data             : [ 0.0,  2.13E-04]
        Class            : Initialization
        Info             : Miscellaneous
-     Allreduce, Large Size:
-       Data             : [ 0.0,  3.60E-05]
-       Class            : Communications
-       Info             : Allreduce operations for more than 5 elements
      ionic_energy:
-       Data             : [ 0.0,  3.24E-05]
+       Data             : [ 0.0,  4.77E-05]
        Class            : Other
        Info             : Miscellaneous
+     Allreduce, Large Size:
+       Data             : [ 0.0,  3.72E-05]
+       Class            : Communications
+       Info             : Allreduce operations for more than 5 elements
      calc_bounds:
-       Data             : [ 0.0,  1.76E-05]
+       Data             : [ 0.0,  2.05E-05]
        Class            : Other
        Info             : Miscellaneous
      Un-TransSwitch:
-       Data             : [ 0.0,  1.19E-05]
+       Data             : [ 0.0,  1.48E-05]
        Class            : Other
        Info             : RMA pattern
      Pot_after_comm:
        Data             : [ 0.0,  4.29E-06]
        Class            : Other
        Info             : global_to_loca
-     Allreduce, Small Size:
+     Pot_commun:
        Data             : [ 0.0,  2.62E-06]
        Class            : Communications
-       Info             : Allreduce operations for less than 5 elements
-     Pot_commun:
-       Data             : [ 0.0,  1.91E-06]
-       Class            : Communications
        Info             : AllGathrv grid
+     Allreduce, Small Size:
+       Data             : [ 0.0,  2.38E-06]
+       Class            : Communications
+       Info             : Allreduce operations for less than 5 elements
  WFN_OPT: #                   % ,  Time (s)
    Classes:
-     Flib LowLevel      : [ 10.6,  0.23]
-     Communications     : [ 0.0,  3.96E-05]
-     BLAS-LAPACK        : [ 0.1,  3.06E-03]
-     PS Computation     : [ 17.3,  0.38]
-     Potential          : [ 44.0,  0.95]
-     Convolutions       : [ 26.4,  0.57]
-     Linear Algebra     : [ 0.2,  3.80E-03]
-     Other              : [ 0.5,  1.17E-02]
-     Total              : [ 99.2,  2.2]
+     Flib LowLevel      : [ 10.3,  0.37]
+     Communications     : [ 0.0,  6.56E-05]
+     BLAS-LAPACK        : [ 0.1,  2.85E-03]
+     PS Computation     : [ 19.7,  0.71]
+     Potential          : [ 38.5,  1.4]
+     Convolutions       : [ 29.9,  1.1]
+     Linear Algebra     : [ 0.1,  5.04E-03]
+     Other              : [ 0.5,  1.75E-02]
+     Total              : [ 99.0,  3.6]
    Categories: #Ordered by time consumption
      Exchange-Correlation:
-       Data             : [ 44.0,  0.95]
+       Data             : [ 38.5,  1.4]
        Class            : Potential
        Info             : Operations needed to construct local XC potential
      PSolver Computation:
-       Data             : [ 17.3,  0.38]
+       Data             : [ 19.7,  0.71]
        Class            : PS Computation
        Info             : 3D SG_FFT and related operations
      Precondition:
-       Data             : [ 11.9,  0.26]
+       Data             : [ 13.4,  0.48]
        Class            : Convolutions
        Info             : OpenCL ported
      ApplyLocPotKin:
-       Data             : [ 9.2,  0.20]
+       Data             : [ 10.9,  0.39]
        Class            : Convolutions
        Info             : OpenCL ported
      Rho_comput:
-       Data             : [ 5.3,  0.11]
+       Data             : [ 5.6,  0.20]
        Class            : Convolutions
        Info             : OpenCL ported
      Array allocations:
-       Data             : [ 4.6,  0.10]
+       Data             : [ 4.2,  0.15]
        Class            : Flib LowLevel
        Info             : Heap storage allocation and associated profiling
      Init to Zero:
-       Data             : [ 4.3,  9.23E-02]
+       Data             : [ 4.1,  0.15]
        Class            : Flib LowLevel
        Info             : Memset of storage space
      Routine Profiling:
-       Data             : [ 1.1,  2.34E-02]
+       Data             : [ 1.2,  4.17E-02]
        Class            : Flib LowLevel
        Info             : Profiling performances for debugging
      Vector copy:
-       Data             : [ 0.7,  1.51E-02]
+       Data             : [ 0.7,  2.69E-02]
        Class            : Flib LowLevel
        Info             : Memory copy of arrays (excluded allocations)
      Diis:
-       Data             : [ 0.4,  7.76E-03]
+       Data             : [ 0.4,  1.36E-02]
        Class            : Other
        Info             : Other
-     ApplyProj:
-       Data             : [ 0.2,  3.70E-03]
-       Class            : Other
-       Info             : RMA pattern
      Chol_comput:
-       Data             : [ 0.2,  3.70E-03]
+       Data             : [ 0.1,  4.90E-03]
        Class            : Linear Algebra
        Info             : ALLReduce orbs
+     ApplyProj:
+       Data             : [ 0.1,  3.61E-03]
+       Class            : Other
+       Info             : RMA pattern
      Blas (d-s-c-z)GeMM:
-       Data             : [ 0.1,  3.06E-03]
+       Data             : [ 0.1,  2.85E-03]
        Class            : BLAS-LAPACK
        Info             : Blas General Matrix-Matrix multiplications of any float type
      Un-TransSwitch:
-       Data             : [ 0.0,  1.59E-04]
+       Data             : [ 0.0,  1.66E-04]
        Class            : Other
        Info             : RMA pattern
      LagrM_comput:
-       Data             : [ 0.0,  1.03E-04]
+       Data             : [ 0.0,  1.39E-04]
        Class            : Linear Algebra
        Info             : DGEMM
      Pot_after_comm:
-       Data             : [ 0.0,  5.60E-05]
+       Data             : [ 0.0,  6.63E-05]
        Class            : Other
        Info             : global_to_loca
      Pot_commun:
-       Data             : [ 0.0,  3.96E-05]
+       Data             : [ 0.0,  6.56E-05]
        Class            : Communications
        Info             : AllGathrv grid
  LAST: #                      % ,  Time (s)
    Classes:
-     Flib LowLevel      : [ 10.6,  3.10E-02]
-     Communications     : [ 0.0,  2.12E-05]
-     BLAS-LAPACK        : [ 0.1,  2.45E-04]
-     PS Computation     : [ 27.4,  8.06E-02]
-     Potential          : [ 31.7,  9.30E-02]
-     Convolutions       : [ 13.9,  4.07E-02]
-     Other              : [ 0.1,  2.68E-04]
-     Finalization       : [ 2.9,  8.39E-03]
-     Total              : [ 86.5,  0.29]
+     Flib LowLevel      : [ 10.8,  5.23E-02]
+     Communications     : [ 0.0,  3.19E-05]
+     BLAS-LAPACK        : [ 0.1,  4.62E-04]
+     PS Computation     : [ 32.0,  0.15]
+     Potential          : [ 26.5,  0.13]
+     Convolutions       : [ 18.1,  8.76E-02]
+     Other              : [ 0.1,  3.16E-04]
+     Finalization       : [ 2.2,  1.06E-02]
+     Total              : [ 89.8,  0.48]
    Categories: #Ordered by time consumption
-     Exchange-Correlation:
-       Data             : [ 31.7,  9.30E-02]
-       Class            : Potential
-       Info             : Operations needed to construct local XC potential
      PSolver Computation:
-       Data             : [ 27.4,  8.06E-02]
+       Data             : [ 32.0,  0.15]
        Class            : PS Computation
        Info             : 3D SG_FFT and related operations
+     Exchange-Correlation:
+       Data             : [ 26.5,  0.13]
+       Class            : Potential
+       Info             : Operations needed to construct local XC potential
      Rho_comput:
-       Data             : [ 7.6,  2.24E-02]
+       Data             : [ 11.0,  5.29E-02]
        Class            : Convolutions
        Info             : OpenCL ported
      ApplyLocPotKin:
-       Data             : [ 6.2,  1.83E-02]
+       Data             : [ 7.2,  3.47E-02]
        Class            : Convolutions
        Info             : OpenCL ported
      Array allocations:
-       Data             : [ 5.7,  1.69E-02]
+       Data             : [ 5.9,  2.84E-02]
        Class            : Flib LowLevel
        Info             : Heap storage allocation and associated profiling
      Init to Zero:
-       Data             : [ 3.7,  1.08E-02]
+       Data             : [ 3.8,  1.84E-02]
        Class            : Flib LowLevel
        Info             : Memset of storage space
      Forces:
-       Data             : [ 2.9,  8.39E-03]
+       Data             : [ 2.2,  1.06E-02]
        Class            : Finalization
        Info             : Miscellaneous
      Routine Profiling:
-       Data             : [ 0.6,  1.91E-03]
+       Data             : [ 0.6,  2.84E-03]
        Class            : Flib LowLevel
        Info             : Profiling performances for debugging
      Vector copy:
-       Data             : [ 0.5,  1.41E-03]
+       Data             : [ 0.6,  2.71E-03]
        Class            : Flib LowLevel
        Info             : Memory copy of arrays (excluded allocations)
-     ApplyProj:
-       Data             : [ 0.1,  2.57E-04]
-       Class            : Other
-       Info             : RMA pattern
      Blas (d-s-c-z)GeMM:
-       Data             : [ 0.1,  1.81E-04]
+       Data             : [ 0.1,  3.80E-04]
        Class            : BLAS-LAPACK
        Info             : Blas General Matrix-Matrix multiplications of any float type
+     ApplyProj:
+       Data             : [ 0.1,  3.01E-04]
+       Class            : Other
+       Info             : RMA pattern
      Lapack (dsy-ssy-che-zhe)eev:
-       Data             : [ 0.0,  6.37E-05]
+       Data             : [ 0.0,  8.15E-05]
        Class            : BLAS-LAPACK
        Info             : Lapack Eigenvalue Problem
      Allreduce, Large Size:
-       Data             : [ 0.0,  1.74E-05]
+       Data             : [ 0.0,  2.62E-05]
        Class            : Communications
        Info             : Allreduce operations for more than 5 elements
-     Pot_after_comm:
-       Data             : [ 0.0,  6.20E-06]
-       Class            : Other
-       Info             : global_to_loca
      Un-TransSwitch:
-       Data             : [ 0.0,  4.77E-06]
+       Data             : [ 0.0,  9.06E-06]
        Class            : Other
        Info             : RMA pattern
+     Pot_after_comm:
+       Data             : [ 0.0,  6.68E-06]
+       Class            : Other
+       Info             : global_to_loca
      Pot_commun:
-       Data             : [ 0.0,  3.81E-06]
+       Data             : [ 0.0,  5.72E-06]
        Class            : Communications
        Info             : AllGathrv grid
  SUMMARY: #                   % ,  Time (s)
-   INIT                 : [ 15.1,  0.44]
-   WFN_OPT              : [ 74.8,  2.2]
-   LAST                 : [ 10.1,  0.29]
-   Total                : [ 100.0,  2.9]
+   INIT                 : [ 16.2,  0.79]
+   WFN_OPT              : [ 73.9,  3.6]
+   LAST                 : [ 9.9,  0.48]
+   Total                : [ 100.0,  4.9]
  Routines timing and number of calls:
- - Main_program: [ 2.95, 1, ~*]
+ - Main_program: [ 4.96, 1, ~*]
    Subroutines:
-   - process_run (id="ground_state-hgrid0p35"): [ 2.90, 1,  98.30%*]
+   - process_run (id="ground_state-hgrid0p35"): [ 4.90, 1,  98.75%*]
      Subroutines:
-     - bigdft_state: [ 2.90, 1,  100.00%*]
+     - bigdft_state: [ 4.90, 1,  99.96%*]
        Subroutines:
-       - quantum_mechanical_state: [ 2.90, 1,  100.00%*]
+       - quantum_mechanical_state: [ 4.90, 1,  99.96%*]
          Subroutines:
-         - cluster: [ 2.90, 1,  99.98%]
+         - cluster: [ 4.90, 1,  99.94%]
            Subroutines:
-           - kswfn_optimization_loop: [ 2.35, 1,  80.91%]
+           - kswfn_optimization_loop: [ 3.90, 1,  79.61%]
              Subroutines:
-             - psitohpsi: [ 2.03, 11,  86.44%]
+             - psitohpsi: [ 3.33, 11,  85.34%]
                Subroutines:
-               - exchange_and_correlation: [ 1.18, 11,  57.98%]
+               - exchange_and_correlation: [ 1.72, 11,  51.57%]
                  Subroutines:
-                 - xc_energy_new: [ 1.03, 11,  87.17%]
+                 - xc_energy_new: [ 1.48, 11,  85.88%]
                    Subroutines:
-                   - xc_getvxc: [ 0.573, 11,  55.64%]
-                   - vxcpostprocessing: [ 0.402, 11,  39.03%]
-               - Electrostatic_Solver: [ 0.453, 11,  22.31%]
+                   - xc_getvxc: [ 0.864, 11,  58.41%]
+                   - vxcpostprocessing: [ 0.540, 11,  36.49%]
+               - Electrostatic_Solver: [ 0.850, 11,  25.54%]
                  Subroutines:
-                 - apply_kernel: [ 0.440, 11,  97.21%]
+                 - apply_kernel: [ 0.832, 11,  97.94%]
                    Subroutines:
                    - G_PoissonSolver:
-                     -  0.419
+                     -  0.802
                      - 11
-                     -  95.18%
-                     - Flops: 17305689591
+                     -  96.39%
+                     - Flops: 18620031941
                        ReadB: 346295488
                        WriteB: 171072000
-               - LocalHamiltonianApplication: [ 0.234, 11,  11.51%]
+               - LocalHamiltonianApplication: [ 0.460, 11,  13.81%]
                  Subroutines:
-                 - psir_to_vpsi: [ 2.385E-02, 44,  10.19%]
+                 - psir_to_vpsi: [ 4.412E-02, 44,  9.59%]
                    Subroutines:
-                   - apply_potential_lr_bounds: [ 2.116E-02, 44,  88.74%]
-                 - orbital_basis_associate: [ 3.350E-04, 11,  0.14%]
-               - daub_to_isf: [ 9.197E-02, 44,  4.53%]
-               - NonLocalHamiltonianApplication: [ 6.256E-03, 11,  0.31%]
+                   - apply_potential_lr_bounds: [ 3.986E-02, 44,  90.34%]
+                 - orbital_basis_associate: [ 4.793E-04, 11,  0.10%]
+               - daub_to_isf: [ 0.168, 44,  5.04%]
+               - NonLocalHamiltonianApplication: [ 6.663E-03, 11,  0.20%]
                  Subroutines:
-                 - crtproj: [ 1.152E-03, 11,  18.42%]
-                 - orbital_basis_associate: [ 6.690E-04, 11,  10.69%]
-                 - deallocate_work_arrays_sumrho: [ 7.968E-05, 11,  1.27%]
-               - initialize_work_arrays_sumrho: [ 7.425E-04, 11,  0.04%]
-               - full_local_potential: [ 6.823E-04, 11,  0.03%]
-               - deallocate_work_arrays_sumrho: [ 4.975E-04, 11,  0.02%]
-               - SynchronizeHamiltonianApplication: [ 1.461E-04, 11,  0.01%]
-               - free_full_potential: [ 7.888E-05, 11,  0.00%]
-             - calculate_energy_and_gradient: [ 0.299, 10,  12.71%]
+                 - crtproj: [ 1.303E-03, 11,  19.55%]
+                 - orbital_basis_associate: [ 8.820E-04, 11,  13.24%]
+                 - deallocate_work_arrays_sumrho: [ 1.167E-04, 11,  1.75%]
+               - initialize_work_arrays_sumrho: [ 1.324E-03, 11,  0.04%]
+               - full_local_potential: [ 9.575E-04, 11,  0.03%]
+               - deallocate_work_arrays_sumrho: [ 7.937E-04, 11,  0.02%]
+               - SynchronizeHamiltonianApplication: [ 2.223E-04, 11,  0.01%]
+               - free_full_potential: [ 1.778E-04, 11,  0.01%]
+             - calculate_energy_and_gradient: [ 0.547, 10,  14.02%]
                Subroutines:
-               - preconditionall2: [ 0.294, 10,  98.46%]
+               - preconditionall2: [ 0.542, 10,  99.11%]
                  Subroutines:
-                 - precondition_preconditioner: [ 0.130, 40,  44.05%]
+                 - precondition_preconditioner: [ 0.234, 40,  43.09%]
                    Subroutines:
-                   - prec_diag: [ 0.124, 40,  95.44%]
-                 - compress_forstandard: [ 9.603E-03, 280,  3.27%]
-                 - calculate_rmr_new: [ 6.542E-03, 240,  2.23%]
-                 - finalise_precond_residue: [ 9.195E-04, 40,  0.31%]
-               - toglobal_and_transpose: [ 1.571E-04, 10,  0.05%]
-             - hpsitopsi: [ 1.468E-02, 10,  0.62%]
-             - last_orthon: [ 4.340E-04, 1,  0.02%]
-             - timing_dump_results: [ 3.637E-04, 1,  0.02%]
-             - total_energies: [ 1.028E-04, 11,  0.00%]
-             - eigensystem_info: [ 3.835E-05, 1,  0.00%]
-           - input_wf: [ 0.290, 1,  9.98%]
+                   - prec_diag: [ 0.227, 40,  96.88%]
+                 - compress_forstandard: [ 1.545E-02, 280,  2.85%]
+                 - calculate_rmr_new: [ 1.222E-02, 240,  2.25%]
+                 - finalise_precond_residue: [ 1.481E-03, 40,  0.27%]
+               - toglobal_and_transpose: [ 1.685E-04, 10,  0.03%]
+             - hpsitopsi: [ 2.329E-02, 10,  0.60%]
+             - last_orthon: [ 8.949E-04, 1,  0.02%]
+             - timing_dump_results: [ 5.953E-04, 1,  0.02%]
+             - total_energies: [ 9.941E-05, 11,  0.00%]
+             - eigensystem_info: [ 5.900E-05, 1,  0.00%]
+           - input_wf: [ 0.529, 1,  10.79%]
              Subroutines:
-             - updatePotential: [ 0.145, 1,  49.85%]
+             - updatePotential: [ 0.269, 1,  50.80%]
                Subroutines:
-               - XC_potential: [ 0.107, 1,  74.04%]
+               - XC_potential: [ 0.169, 1,  62.72%]
                  Subroutines:
-                 - xc_energy_new: [ 9.278E-02, 1,  86.71%]
+                 - xc_energy_new: [ 0.145, 1,  86.07%]
                    Subroutines:
-                   - xc_getvxc: [ 5.007E-02, 1,  53.97%]
-                   - vxcpostprocessing: [ 3.798E-02, 1,  40.94%]
-               - Electrostatic_Solver: [ 3.672E-02, 1,  25.32%]
+                   - xc_getvxc: [ 8.401E-02, 1,  57.94%]
+                   - vxcpostprocessing: [ 5.375E-02, 1,  37.07%]
+               - Electrostatic_Solver: [ 9.658E-02, 1,  35.90%]
                  Subroutines:
-                 - apply_kernel: [ 3.574E-02, 1,  97.33%]
+                 - apply_kernel: [ 9.364E-02, 1,  96.96%]
                    Subroutines:
                    - G_PoissonSolver:
-                     -  3.420E-02
+                     -  9.146E-02
                      - 1
-                     -  95.70%
-                     - Flops: 1395464134
+                     -  97.67%
+                     - Flops: 2705824132
                        ReadB: 31481408
                        WriteB: 15552000
-             - FullHamiltonianApplication: [ 3.165E-02, 1,  10.91%]
+             - FullHamiltonianApplication: [ 6.330E-02, 1,  11.97%]
                Subroutines:
-               - LocalHamiltonianApplication: [ 3.108E-02, 1,  98.19%]
+               - LocalHamiltonianApplication: [ 6.231E-02, 1,  98.43%]
                  Subroutines:
-                 - psir_to_vpsi: [ 3.077E-03, 6,  9.90%]
+                 - psir_to_vpsi: [ 6.858E-03, 6,  11.01%]
                    Subroutines:
-                   - apply_potential_lr_bounds: [ 2.708E-03, 6,  88.00%]
-                 - orbital_basis_associate: [ 4.097E-05, 1,  0.13%]
-               - NonLocalHamiltonianApplication: [ 4.919E-04, 1,  1.55%]
+                   - apply_potential_lr_bounds: [ 6.351E-03, 6,  92.60%]
+                 - orbital_basis_associate: [ 5.151E-05, 1,  0.08%]
+               - NonLocalHamiltonianApplication: [ 7.384E-04, 1,  1.17%]
                  Subroutines:
-                 - crtproj: [ 9.596E-05, 1,  19.51%]
-                 - orbital_basis_associate: [ 4.696E-05, 1,  9.55%]
-                 - deallocate_work_arrays_sumrho: [ 5.541E-06, 1,  1.13%]
-               - SynchronizeHamiltonianApplication: [ 5.473E-06, 1,  0.02%]
-             - daub_to_isf: [ 1.130E-02, 6,  3.90%]
-             - LDiagHam: [ 9.690E-04, 1,  0.33%]
+                 - crtproj: [ 1.302E-04, 1,  17.63%]
+                 - orbital_basis_associate: [ 5.784E-05, 1,  7.83%]
+                 - deallocate_work_arrays_sumrho: [ 7.289E-06, 1,  0.99%]
+               - SynchronizeHamiltonianApplication: [ 1.056E-05, 1,  0.02%]
+             - daub_to_isf: [ 2.221E-02, 6,  4.20%]
+             - LDiagHam: [ 3.904E-03, 1,  0.74%]
                Subroutines:
-               - toglobal_and_transpose: [ 2.182E-05, 2,  2.25%]
-             - check_linear_and_create_Lzd: [ 2.505E-04, 1,  0.09%]
-             - local_potential_dimensions: [ 1.630E-04, 3,  0.06%]
-             - orbitals_descriptors: [ 1.282E-04, 1,  0.04%]
-             - orbitals_communicators: [ 8.962E-05, 1,  0.03%]
-             - initialize_work_arrays_sumrho: [ 5.658E-05, 1,  0.02%]
-             - deallocate_work_arrays_sumrho: [ 4.651E-05, 1,  0.02%]
-             - full_local_potential: [ 2.757E-05, 1,  0.01%]
-             - free_full_potential: [ 6.439E-06, 1,  0.00%]
-             - total_energies: [ 5.583E-06, 1,  0.00%]
-           - kswfn_post_treatments: [ 0.108, 1,  3.71%]
+               - toglobal_and_transpose: [ 3.370E-05, 2,  0.86%]
+             - check_linear_and_create_Lzd: [ 3.548E-04, 1,  0.07%]
+             - local_potential_dimensions: [ 1.391E-04, 3,  0.03%]
+             - orbitals_communicators: [ 1.351E-04, 1,  0.03%]
+             - initialize_work_arrays_sumrho: [ 1.325E-04, 1,  0.03%]
+             - orbitals_descriptors: [ 1.192E-04, 1,  0.02%]
+             - deallocate_work_arrays_sumrho: [ 6.596E-05, 1,  0.01%]
+             - full_local_potential: [ 3.053E-05, 1,  0.01%]
+             - total_energies: [ 8.206E-06, 1,  0.00%]
+             - free_full_potential: [ 7.923E-06, 1,  0.00%]
+           - kswfn_post_treatments: [ 0.183, 1,  3.73%]
              Subroutines:
-             - Electrostatic_Solver: [ 4.772E-02, 1,  44.19%]
+             - Electrostatic_Solver: [ 9.137E-02, 1,  49.93%]
                Subroutines:
-               - apply_kernel: [ 4.690E-02, 1,  98.29%]
+               - apply_kernel: [ 8.993E-02, 1,  98.43%]
                  Subroutines:
                  - G_PoissonSolver:
-                   -  4.533E-02
+                   -  8.760E-02
                    - 1
-                   -  96.65%
-                   - Flops: 746257663
+                   -  97.41%
+                   - Flops: 2048652957
                      ReadB: 31481408
                      WriteB: 15552000
-             - calculate_dipole_moment: [ 3.520E-02, 1,  32.59%]
-             - calculate_forces: [ 9.097E-03, 1,  8.42%]
+             - calculate_dipole_moment: [ 4.285E-02, 1,  23.41%]
+             - daub_to_isf: [ 2.201E-02, 4,  12.03%]
+             - calculate_forces: [ 1.341E-02, 1,  7.33%]
                Subroutines:
-               - local_forces: [ 7.611E-03, 1,  83.67%]
-               - nonlocal_forces: [ 1.341E-03, 1,  14.74%]
+               - local_forces: [ 9.565E-03, 1,  71.33%]
+               - nonlocal_forces: [ 3.601E-03, 1,  26.85%]
                  Subroutines:
-                 - crtproj: [ 3.871E-04, 4,  28.87%]
-                 - deallocate_work_arrays_sumrho: [ 2.736E-05, 4,  2.04%]
-             - daub_to_isf: [ 8.139E-03, 4,  7.54%]
-             - orbital_basis_associate: [ 7.271E-05, 1,  0.07%]
-             - initialize_work_arrays_sumrho: [ 6.722E-05, 1,  0.06%]
-             - deallocate_work_arrays_sumrho: [ 4.613E-05, 1,  0.04%]
-           - system_initialization: [ 9.966E-02, 1,  3.44%]
+                 - crtproj: [ 8.491E-04, 4,  23.58%]
+                 - deallocate_work_arrays_sumrho: [ 3.365E-05, 4,  0.93%]
+             - orbital_basis_associate: [ 1.029E-04, 1,  0.06%]
+             - initialize_work_arrays_sumrho: [ 9.359E-05, 1,  0.05%]
+             - deallocate_work_arrays_sumrho: [ 6.977E-05, 1,  0.04%]
+           - system_initialization: [ 0.172, 1,  3.52%]
              Subroutines:
-             - pkernel_set: [ 6.392E-02, 1,  64.14%]
+             - pkernel_set: [ 0.122, 1,  70.71%]
                Subroutines:
-               - mpi_environment_set: [ 5.817E-06, 1,  0.01%]
-             - createProjectorsArrays: [ 4.638E-03, 1,  4.65%]
+               - mpi_environment_set: [ 8.099E-06, 1,  0.01%]
+             - createWavefunctionsDescriptors: [ 7.808E-03, 1,  4.54%]
                Subroutines:
-               - gaussian_basis_from_psp: [ 9.406E-05, 3,  2.03%]
-               - set_wfd_to_wfd: [ 6.760E-05, 1,  1.46%]
+               - fill_logrid: [ 1.245E-03, 2,  15.95%]
+               - segkeys: [ 1.861E-04, 2,  2.38%]
+               - num_segkeys: [ 7.526E-05, 2,  0.96%]
+             - createProjectorsArrays: [ 6.425E-03, 1,  3.74%]
+               Subroutines:
+               - fill_logrid: [ 8.347E-05, 2,  1.30%]
+               - set_wfd_to_wfd: [ 7.687E-05, 1,  1.20%]
                  Subroutines:
-                 - init_tolr: [ 4.626E-05, 1,  68.43%]
-               - fill_logrid: [ 6.126E-05, 2,  1.32%]
-               - segkeys: [ 2.431E-05, 2,  0.52%]
-               - num_segkeys: [ 2.125E-05, 2,  0.46%]
-               - transform_keyglob_to_keygloc: [ 1.716E-05, 2,  0.37%]
-               - init_lr: [ 9.464E-06, 1,  0.20%]
-             - check_communications: [ 3.087E-03, 1,  3.10%]
-             - createWavefunctionsDescriptors: [ 2.529E-03, 1,  2.54%]
+                 - init_tolr: [ 5.074E-05, 1,  66.01%]
+               - gaussian_basis_from_psp: [ 6.778E-05, 3,  1.06%]
+               - transform_keyglob_to_keygloc: [ 3.569E-05, 2,  0.56%]
+               - segkeys: [ 3.021E-05, 2,  0.47%]
+               - num_segkeys: [ 2.935E-05, 2,  0.46%]
+               - init_lr: [ 1.254E-05, 1,  0.20%]
+             - check_communications: [ 3.692E-03, 1,  2.15%]
+             - orbitals_communicators: [ 2.370E-04, 1,  0.14%]
                Subroutines:
-               - fill_logrid: [ 8.022E-04, 2,  31.72%]
-               - segkeys: [ 1.689E-04, 2,  6.68%]
-               - num_segkeys: [ 6.006E-05, 2,  2.37%]
-             - orbitals_communicators: [ 1.777E-04, 1,  0.18%]
+               - kpts_to_procs_via_obj: [ 1.324E-04, 1,  55.87%]
+             - orbitals_descriptors: [ 1.807E-04, 1,  0.11%]
                Subroutines:
-               - kpts_to_procs_via_obj: [ 1.049E-04, 1,  59.04%]
-             - orbitals_descriptors: [ 1.237E-04, 1,  0.12%]
-               Subroutines:
-               - kpts_to_procs_via_obj: [ 1.787E-05, 2,  14.45%]
-             - orbital_basis_associate: [ 7.924E-05, 1,  0.08%]
-             - chess_fill_variables: [ 6.108E-05, 1,  0.06%]
-             - init_lr: [ 1.980E-05, 1,  0.02%]
-             - mpi_environment_set: [ 5.843E-06, 1,  0.01%]
-           - createEffectiveIonicPotential: [ 4.871E-02, 1,  1.68%]
+               - kpts_to_procs_via_obj: [ 2.657E-05, 2,  14.70%]
+             - chess_fill_variables: [ 8.986E-05, 1,  0.05%]
+             - orbital_basis_associate: [ 5.847E-05, 1,  0.03%]
+             - init_lr: [ 3.589E-05, 1,  0.02%]
+             - mpi_environment_set: [ 8.156E-06, 1,  0.00%]
+           - createEffectiveIonicPotential: [ 9.177E-02, 1,  1.87%]
              Subroutines:
-             - createIonicPotential: [ 4.868E-02, 1,  99.94%]
+             - createIonicPotential: [ 9.173E-02, 1,  99.96%]
                Subroutines:
-               - Electrostatic_Solver: [ 3.947E-02, 1,  81.08%]
+               - Electrostatic_Solver: [ 7.870E-02, 1,  85.80%]
                  Subroutines:
-                 - apply_kernel: [ 3.864E-02, 1,  97.89%]
+                 - apply_kernel: [ 7.749E-02, 1,  98.46%]
                    Subroutines:
                    - G_PoissonSolver:
-                     -  3.399E-02
+                     -  7.121E-02
                      - 1
-                     -  87.97%
-                     - Flops: 1395464134
+                     -  91.90%
+                     - Flops: 746257663
                        ReadB: 31481408
                        WriteB: 15552000
-           - timing_dump_results: [ 4.296E-04, 1,  0.01%]
-           - IonicEnergyandForces: [ 1.259E-04, 1,  0.00%]
+           - timing_dump_results: [ 7.630E-03, 1,  0.16%]
+           - IonicEnergyandForces: [ 6.109E-04, 1,  0.01%]
              Subroutines:
-             - vdwcorrection_calculate_energy: [ 9.006E-06, 1,  7.15%]
-             - vdwcorrection_calculate_forces: [ 5.705E-06, 1,  4.53%]
-           - interaction_multipoles_ions: [ 1.618E-05, 1,  0.00%]
-           - ionic_energy_of_external_charges: [ 7.047E-06, 1,  0.00%]
-         - timing_dump_results: [ 4.658E-04, 1,  0.02%]
-         - rxyz_inside_box: [ 5.667E-06, 1,  0.00%]
-   - bigdft_init: [ 4.057E-02, 1,  1.38%]
+             - vdwcorrection_calculate_energy: [ 1.289E-05, 1,  2.11%]
+             - vdwcorrection_calculate_forces: [ 7.066E-06, 1,  1.16%]
+           - interaction_multipoles_ions: [ 2.200E-05, 1,  0.00%]
+           - ionic_energy_of_external_charges: [ 8.864E-06, 1,  0.00%]
+         - timing_dump_results: [ 5.458E-04, 1,  0.01%]
+         - rxyz_inside_box: [ 6.425E-06, 1,  0.00%]
+   - bigdft_init: [ 5.607E-02, 1,  1.13%]
      Subroutines:
-     - mpi_environment_set: [ 2.116E-05, 1,  0.05%]
-   - run_objects_init: [ 1.123E-02, 1,  0.38%]
+     - mpi_environment_set: [ 3.360E-05, 1,  0.06%]
+   - run_objects_init: [ 1.026E-02, 1,  0.21%]
      Subroutines:
-     - set_run_objects: [ 1.063E-02, 1,  94.69%]
+     - set_run_objects: [ 9.490E-03, 1,  92.49%]
        Subroutines:
-       - inputs_from_dict: [ 1.057E-02, 1,  99.48%]
+       - inputs_from_dict: [ 9.431E-03, 1,  99.38%]
          Subroutines:
-         - input_keys_fill_all: [ 5.032E-03, 1,  47.61%]
+         - input_keys_fill_all: [ 6.068E-03, 1,  64.34%]
            Subroutines:
-           - input_keys_init: [ 2.608E-03, 1,  51.83%]
-           - input_file_complete: [ 7.592E-04, 1,  15.09%]
-           - input_file_minimal: [ 6.121E-04, 1,  12.16%]
-           - PS_input_dict: [ 4.020E-04, 1,  7.99%]
+           - input_keys_init: [ 3.170E-03, 1,  52.24%]
+           - input_file_complete: [ 9.764E-04, 1,  16.09%]
+           - input_file_minimal: [ 7.335E-04, 1,  12.09%]
+           - PS_input_dict: [ 5.001E-04, 1,  8.24%]
              Subroutines:
-             - input_file_complete: [ 7.976E-05, 1,  19.84%]
-             - input_file_minimal: [ 3.276E-05, 1,  8.15%]
-           - chess_input_dict: [ 2.837E-04, 1,  5.64%]
+             - input_file_complete: [ 9.698E-05, 1,  19.39%]
+             - input_file_minimal: [ 3.957E-05, 1,  7.91%]
+           - chess_input_dict: [ 3.194E-04, 1,  5.26%]
              Subroutines:
-             - input_file_complete: [ 6.381E-05, 1,  22.49%]
-             - input_file_minimal: [ 4.937E-05, 1,  17.40%]
-         - atoms_fill: [ 3.136E-03, 1,  29.66%]
+             - input_file_complete: [ 7.595E-05, 1,  23.78%]
+             - input_file_minimal: [ 4.142E-05, 1,  12.97%]
+         - input_keys_dump: [ 1.121E-03, 1,  11.89%]
+         - astruct_set_from_dict: [ 4.933E-04, 1,  5.23%]
+         - atoms_fill: [ 3.791E-04, 1,  4.02%]
            Subroutines:
-           - atomic_data_set_from_dict: [ 2.978E-03, 1,  94.95%]
-           - psp_dict_analyse: [ 1.138E-04, 1,  3.63%]
-           - atomic_gamma_from_dict: [ 1.654E-05, 1,  0.53%]
-         - input_keys_dump: [ 8.734E-04, 1,  8.26%]
-         - astruct_set_from_dict: [ 4.320E-04, 1,  4.09%]
-         - psp_dict_fill_all: [ 2.436E-04, 2,  2.30%]
-         - allocateBasicArraysInputLin: [ 3.464E-05, 1,  0.33%]
-         - kpt_input_analyse: [ 2.419E-05, 1,  0.23%]
-         - occupation_set_from_dict: [ 1.072E-05, 1,  0.10%]
-         - rxyz_inside_box: [ 9.555E-06, 1,  0.09%]
-         - set_bigpoly_parameters: [ 8.461E-06, 1,  0.08%]
-         - input_analyze: [ 8.375E-06, 1,  0.08%]
-         - read_n_orbitals: [ 5.979E-06, 1,  0.06%]
-     - read_input_dict_from_files: [ 1.417E-04, 1,  1.26%]
+           - psp_dict_analyse: [ 1.912E-04, 1,  50.43%]
+           - atomic_data_set_from_dict: [ 1.310E-04, 1,  34.56%]
+           - atomic_gamma_from_dict: [ 2.005E-05, 1,  5.29%]
+         - psp_dict_fill_all: [ 3.142E-04, 2,  3.33%]
+         - allocateBasicArraysInputLin: [ 5.243E-05, 1,  0.56%]
+         - kpt_input_analyse: [ 2.778E-05, 1,  0.29%]
+         - occupation_set_from_dict: [ 1.303E-05, 1,  0.14%]
+         - rxyz_inside_box: [ 1.136E-05, 1,  0.12%]
+         - input_analyze: [ 1.097E-05, 1,  0.12%]
+         - set_bigpoly_parameters: [ 8.905E-06, 1,  0.09%]
+         - read_n_orbitals: [ 6.510E-06, 1,  0.07%]
+     - read_input_dict_from_files: [ 1.990E-04, 1,  1.94%]
        Subroutines:
-       - merge_input_file_to_dict: [ 1.137E-04, 1,  80.27%]
-     - set_section_objects: [ 7.260E-06, 1,  0.06%]
+       - merge_input_file_to_dict: [ 1.695E-04, 1,  85.17%]
+     - set_section_objects: [ 9.220E-06, 1,  0.09%]
  CPU parallelism:
    MPI tasks            : 1
    OMP threads          : 4
- Report timestamp       : 2026-11-19 07:53:53.020
+ Report timestamp       : 2026-11-20 08:02:54.661

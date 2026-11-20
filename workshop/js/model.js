@@ -11,7 +11,7 @@ window.OND = window.OND || {};
   'use strict';
   const HA = { eV: 27.211386245988, 'kJ/mol': 2625.4996394799, Ha: 1 };
   const RELAX_KEYS = ['action', 'geoptMethod', 'geoptSteps', 'forcemax', 'biomode'];
-  const CALC = ['calculation', 'relax'];
+  const CALC = ['calculation', 'relax'], SERIES = ['converge', 'vary'];
   const scratch = OND.Blueprint(), P = scratch.PARAMS;
   const LIB = OND.library.runs;
   const REG = Object.fromEntries(OND.steps.map((s) => [s.name, s]));
@@ -25,6 +25,7 @@ window.OND = window.OND || {};
   const byId = (id) => study.steps.find((s) => s.id === id) || null;
   const at = (step) => study.steps.indexOf(step);
   const isCalc = (s) => !!s && CALC.includes(s.kind);
+  const isSeries = (s) => !!s && SERIES.includes(s.kind);
 
   // --- naming: a step's name is the name of its run -----------------------------------
   /* 30 characters at most: BigDFT truncates the name of a longer run, and its log is then not found. */
@@ -35,16 +36,23 @@ window.OND = window.OND || {};
     return same.length > 1 ? mine + '_' + (same.indexOf(step) + 1) : mine;
   }
   const tag = (value) => String(value).replace(/[^A-Za-z0-9]+/g, 'p').replace(/^p+|p+$/g, '');
-  const memberName = (conv, base, value) => { const suffix = '-' + conv.params.action.replace(/^set_/, '').slice(0, 6) + tag(value); return nameOf(base).slice(0, LONGEST - suffix.length).replace(/[_-]+$/, '') + suffix; };
+  const memberName = (conv, base, value) => { const suffix = '-' + (conv.params.argument || conv.params.action.replace(/^set_/, '')).slice(0, 6) + tag(value); return nameOf(base).slice(0, LONGEST - suffix.length).replace(/[_-]+$/, '') + suffix; };
 
-  // --- which setting a convergence step varies -----------------------------------------
-  /* The registry names an input action (set_hgrid); the settings model has a key for what it writes (hgrid). */
-  function settingOf(action) {
+  // --- which setting a series varies -----------------------------------------------------
+  /* The registry names an input action and, when it has several, one of its arguments (set_rmult, coarse);
+     the settings model has a key for what that writes (crmult). */
+  function settingOf(action, argument) {
     const def = OND.actions.list.find((a) => a.name === action);
-    const path = def && def.params.length && def.maps[def.params[0].name] && def.maps[def.params[0].name].keys[0].path;
-    const keys = Object.keys(P).filter((k) => P[k][1] === path);
-    return keys.length === 1 ? keys[0] : null;
+    const param = def && (argument ? def.params.find((p) => p.name === argument) : def.params[0]);
+    const key = param && def.maps[param.name] && def.maps[param.name].keys[0];
+    if (!key || !['value', 'element'].includes(key.as)) return null;
+    const keys = Object.keys(P).filter((k) => P[k][1] === key.path);
+    return key.as === 'element' ? keys[key.index] || null : keys.length === 1 ? keys[0] : null;
   }
+  const settingVaried = (series) => settingOf(series.params.action, series.params.argument);
+  /* Every setting a series can vary: an argument of an input action that writes one setting of the model. */
+  const VARIABLE = OND.actions.list.filter((a) => a.writes !== null && a.method).flatMap((a) => a.params.map((p, i) => ({ action: a.name, argument: i === 0 ? null : p.name, key: settingOf(a.name, i === 0 ? null : p.name), kind: p.kind })))
+    .filter((x) => x.key && ['number', 'text'].includes(x.kind)).filter((x, i, all) => all.findIndex((y) => y.key === x.key) === i);
 
   // --- resolving a step: what it inherits, what it adds, what was decided before it ------
   function ownOf(step) {
@@ -54,7 +62,7 @@ window.OND = window.OND || {};
   function chain(step) { const out = []; for (let s = step; s; s = byId(s.links.after)) out.unshift(s); return out; }
   function decisionsBefore(step) {
     const i = at(step);
-    return study.steps.filter((s, n) => s.kind === 'choose' && n < i).map((s) => ({ step: s, key: settingOf(byId(s.links.among).params.action), value: retained(s) }));
+    return study.steps.filter((s, n) => s.kind === 'choose' && n < i).map((s) => ({ step: s, key: settingVaried(byId(s.links.among)), value: retained(s) }));
   }
   /* Load into a settings model `b` the settings of `step`. own: false stops before the step's own changes. */
   function resolveInto(b, step, opt) {
@@ -71,7 +79,19 @@ window.OND = window.OND || {};
     });
     if (opt.decisions !== false) for (const d of decisionsBefore(step)) if (d.key && d.value != null) b.set(d.key, d.value, 'decision');
     if (opt.override) b.set(opt.override[0], opt.override[1], 'decision');
+    // wavefunctions travel between two steps: the one that reads them, and only it, starts from them; the one read writes them
+    if (byId(step.links.wavefunctions)) b.applyAction('read_orbitals_from_disk', {});
+    if (study.steps.some((s) => s.links.wavefunctions === step.id)) b.applyAction('write_orbitals_on_disk', {});
     return b;
+  }
+  /* Charge and spin of a step: what the wavefunctions of another step must share to be read. */
+  const electronsOf = (step) => memo('el:' + step.id, () => { const v = resolveInto(scratch, step).st.v; return [v.charge, v.nspin, v.nspin === 1 ? 0 : v.mpol].join(); });
+  function cannotRead(step) {
+    const from = byId(step.links.wavefunctions);
+    if (!from) return null;
+    const mine = electronsOf(step).split(','), theirs = electronsOf(from).split(',');
+    const what = mine[0] !== theirs[0] ? 'charge' : mine[1] !== theirs[1] ? 'spin treatment' : mine[2] !== theirs[2] ? 'number of unpaired electrons' : null;
+    return what ? 'the wavefunctions of “' + from.title + '” are for another ' + what : null;
   }
   const undecided = (step) => decisionsBefore(step).some((d) => d.value == null);
   /* The relaxation whose final geometry a step starts from. */
@@ -101,8 +121,8 @@ window.OND = window.OND || {};
   }
   function keyOf(step, override) {
     return memo('key:' + step.id + ':' + J(override || 0), () => {
-      const from = geometryFrom(step);
-      return identity(resolveInto(scratch, step, { override }), from ? '@' + fnv(keyOf(from)) : 'start');
+      const from = geometryFrom(step), orbitals = byId(step.links.wavefunctions);
+      return identity(resolveInto(scratch, step, { override }), from ? '@' + fnv(keyOf(from)) : 'start') + (orbitals ? '|wf=@' + fnv(keyOf(orbitals)) : '');
     });
   }
 
@@ -113,7 +133,7 @@ window.OND = window.OND || {};
     return { key, run, done: !!run && study.computed.has(key), name: name || nameOf(step) };
   }
   function members(conv) {
-    const key = settingOf(conv.params.action), of = byId(conv.links.of), rel = byId(conv.links.relative_to);
+    const key = settingVaried(conv), of = byId(conv.links.of), rel = byId(conv.links.relative_to);
     return conv.params.values.map((value) => ({ value, of: runOf(of, [key, value], memberName(conv, of, value)), rel: rel ? runOf(rel, [key, value], memberName(conv, rel, value)) : null }));
   }
   function series(conv) {
@@ -124,7 +144,13 @@ window.OND = window.OND || {};
         r.quantity = !ok ? null : rel ? (r.of.run.energy - r.rel.run.energy) * HA.eV : r.of.run.energy * HA.eV / (conv.params.per_atom ? natoms : 1);
         r.seconds = (r.of.run ? r.of.run.wall : 0) + (r.rel && r.rel.run ? r.rel.run.wall : 0);
       }
-      const complete = rows.length > 0 && rows.every((r) => r.quantity != null), ref = complete ? rows[rows.length - 1].quantity : null;
+      const complete = rows.length > 0 && rows.every((r) => r.quantity != null);
+      if (conv.kind === 'vary') {                                                                    // side by side: no reference, nothing proposed
+        const t = byId(conv.links.against);
+        for (const r of rows) r.agrees = t && r.quantity != null ? Math.abs(r.quantity - t.params.value) <= t.params.within : null;
+        return { rows, complete, proposed: null, relative: rel, target: t ? t.params : null };
+      }
+      const ref = complete ? rows[rows.length - 1].quantity : null;
       for (const r of rows) r.away = complete ? Math.abs(r.quantity - ref) : null;
       const first = complete ? rows.slice(0, -1).find((r) => r.away <= conv.params.within) : null;   // the reference agreeing with itself proves nothing
       return { rows, complete, proposed: first ? first.value : null, relative: rel };
@@ -135,14 +161,16 @@ window.OND = window.OND || {};
   /* done: computed | ready: can be computed now | blocked: waits for something | absent: not among the recorded results | given */
   function status(step) {
     return memo('status:' + step.id, () => {
-      const blockedBy = (s) => { if (undecided(s)) return 'the decision'; const g = geometryFrom(s); return g && status(g).state !== 'done' ? '“' + g.title + '”' : null; };
+      const blockedBy = (s) => { if (undecided(s)) return 'the decision'; const g = geometryFrom(s), w = byId(s.links.wavefunctions), late = [g, w].find((x) => x && status(x).state !== 'done'); return late ? '“' + late.title + '”' : null; };
       if (isCalc(step)) {
         const wait = blockedBy(step);
         if (wait) return { state: 'blocked', text: 'waits for ' + wait };
+        const refused = cannotRead(step);
+        if (refused) return { state: 'refused', text: refused };
         const r = runOf(step);
         return r.done ? { state: 'done', text: 'computed' } : r.run ? { state: 'ready', text: 'ready to compute' } : { state: 'absent', text: 'not among the recorded results' };
       }
-      if (step.kind === 'converge') {
+      if (isSeries(step)) {
         const bases = [byId(step.links.of), byId(step.links.relative_to)].filter(Boolean), wait = bases.map(blockedBy).find(Boolean);
         if (wait) return { state: 'blocked', text: 'waits for ' + wait };
         const runs = members(step).flatMap((m) => [m.of, m.rel].filter(Boolean)), done = runs.filter((r) => r.done).length;
@@ -150,7 +178,9 @@ window.OND = window.OND || {};
         if (runs.some((r) => !r.run)) return { state: 'absent', text: runs.filter((r) => !r.run).length + ' of ' + runs.length + ' runs not among the recorded results' };
         return { state: 'ready', text: done ? done + ' of ' + runs.length + ' computed' : runs.length + ' runs ready' };
       }
-      if (step.kind === 'choose') return !series(byId(step.links.among)).complete ? { state: 'blocked', text: 'waits for the series' } : retained(step) != null ? { state: 'done', text: 'decided' } : { state: 'absent', text: 'needs you: no value passes the criterion' };
+      if (step.kind === 'choose') return !series(byId(step.links.among)).complete ? { state: 'blocked', text: 'waits for the series' } : retained(step) != null ? { state: 'done', text: 'decided' }
+        : { state: 'absent', text: byId(step.links.among).kind === 'vary' ? 'needs you: keep one of the values' : 'needs you: no value passes the criterion' };
+      if (step.kind === 'levels') { const of = byId(step.links.of); return status(of).state === 'done' ? { state: 'done', text: 'read' } : { state: 'blocked', text: 'waits for “' + of.title + '”' }; }
       if (step.kind === 'difference') {
         const missing = [byId(step.links.a), byId(step.links.b)].filter((s) => status(s).state !== 'done');
         return missing.length ? { state: 'blocked', text: 'waits for ' + missing.map((s) => '“' + s.title + '”').join(' and ') } : { state: 'done', text: 'computed' };
@@ -159,6 +189,13 @@ window.OND = window.OND || {};
     });
   }
   const energy = (step) => { const r = runOf(step); return r.done ? r.run.energy : null; };
+  /* The levels of a calculation, in eV: highest occupied, lowest empty and gap if empty states were computed. */
+  function levels(step) {
+    const r = runOf(byId(step.links.of));
+    if (!r.done || !r.run.levels) return null;
+    const occupied = r.run.levels, empty = r.run.empty || { up: [], down: [] }, all = occupied.up.concat(occupied.down);
+    return { occupied, empty, homo: Math.max(...all), lumo: empty.up.concat(empty.down).length ? Math.min(...empty.up.concat(empty.down)) : null, gap: r.run.gap || null, polarised: occupied.down.length > 0 };
+  }
   function difference(step) {
     const a = energy(byId(step.links.a)), b = energy(byId(step.links.b));
     if (a == null || b == null) return null;
@@ -173,7 +210,7 @@ window.OND = window.OND || {};
     for (const step of study.steps) {
       if (only && only !== step) continue;
       if (status(step).state !== 'ready') continue;
-      const runs = isCalc(step) ? [runOf(step)] : step.kind === 'converge' ? members(step).flatMap((m) => [m.of, m.rel].filter(Boolean)) : [];
+      const runs = isCalc(step) ? [runOf(step)] : isSeries(step) ? members(step).flatMap((m) => [m.of, m.rel].filter(Boolean)) : [];
       for (const r of runs) if (r.run && !r.done && !out.has(r.key)) out.set(r.key, r);
     }
     return [...out.values()];
@@ -184,7 +221,7 @@ window.OND = window.OND || {};
       const runs = readyRuns(only);
       if (!runs.length) break;
       for (const r of runs) study.computed.add(r.key);
-      waves.push(runs.map((r) => ({ name: r.name, seconds: r.run.wall, relax: !!r.run.relax })));
+      waves.push(runs.map((r) => ({ name: r.name, seconds: r.run.wall, relax: !!r.run.relax, restart: r.key.includes('|wf=') })));
       touch();
       if (only) break;
     }
@@ -194,7 +231,14 @@ window.OND = window.OND || {};
   }
 
   // --- adding and removing steps ------------------------------------------------------------------
-  const TITLES = { calculation: 'Calculation', relax: 'Relaxation', ionised: 'Cation', triplet: 'Triplet', hybrid: 'PBE0', converge: 'Convergence of the grid', choose: 'Decision on the grid', difference: 'Energy difference', target: 'Target' };
+  const TITLES = { calculation: 'Calculation', relax: 'Relaxation', ionised: 'Cation', triplet: 'Triplet', hybrid: 'PBE0', empty_states: 'Empty states', converge: 'Convergence', vary: 'Functionals', choose: 'Decision', difference: 'Energy difference', levels: 'Energy levels', target: 'Target' };
+  /* Values a series starts with, by the setting it varies. */
+  const VALUES = { hgrid: [0.5, 0.45, 0.4, 0.35], crmult: [4, 5, 6, 7], frmult: [7, 8, 9, 10], gnrm: [1e-3, 1e-4, 1e-5, 1e-6], xc: ['LDA', 'PBE', 'PBE0'] };
+  function vary(series, key) {
+    const v = VARIABLE.find((x) => x.key === key);
+    Object.assign(series.params, { action: v.action, argument: v.argument, values: (VALUES[key] || [scratch.st.v[key]]).slice() });
+    touch();
+  }
   /* Turn what a pre-filled step fills in (input actions and keys) into settings of the model. */
   function fillsToOwn(fills) {
     const own = { v: {}, expert: {}, actions: [] };
@@ -214,8 +258,8 @@ window.OND = window.OND || {};
     const need = REG[fn].params.filter((p) => p.link && p.required).map((p) => p.name);
     const calcs = study.steps.filter(isCalc);
     if (need.includes('after') && !calcs.length) return 'needs a calculation to continue';
-    if (need.includes('of') && !study.steps.some((s) => s.kind === 'calculation')) return 'needs a calculation to vary';
-    if (need.includes('among') && !study.steps.some((s) => s.kind === 'converge')) return 'needs a convergence series';
+    if (need.includes('of') && !study.steps.some((s) => (REG[fn].kind === 'levels' ? isCalc(s) : s.kind === 'calculation'))) return REG[fn].kind === 'levels' ? 'needs a calculation to read' : 'needs a calculation to vary';
+    if (need.includes('among') && !study.steps.some(isSeries)) return 'needs a series';
     if (need.includes('a') && calcs.length < 2) return 'needs two calculations to compare';
     return null;
   }
@@ -224,8 +268,14 @@ window.OND = window.OND || {};
     for (const p of def.params) if (!p.link && p.name !== 'keys') params[p.name] = Array.isArray(p.default) ? p.default.slice() : p.default;
     const calcSel = isCalc(sel) ? sel : lastOf(isCalc);
     if (CALC.includes(kind)) links.after = calcSel ? calcSel.id : null;
-    if (kind === 'converge') links.of = (sel && sel.kind === 'calculation' ? sel : lastOf((s) => s.kind === 'calculation')).id;
-    if (kind === 'choose') links.among = (sel && sel.kind === 'converge' ? sel : lastOf((s) => s.kind === 'converge')).id;
+    if (SERIES.includes(kind)) {
+      const of = sel && sel.kind === 'calculation' ? sel : lastOf((s) => s.kind === 'calculation'), before = byId(of.links.after);
+      links.of = of.id;
+      if (before && before.kind === 'calculation') links.relative_to = before.id;       // a step that continues another: what matters is usually their difference
+      if (kind === 'vary') { const t = lastOf((s) => s.kind === 'target'); if (t && links.relative_to) links.against = t.id; }
+    }
+    if (kind === 'choose') links.among = (isSeries(sel) ? sel : lastOf(isSeries)).id;
+    if (kind === 'levels') links.of = calcSel.id;
     if (kind === 'difference') {
       const a = calcSel, b = (a && byId(a.links.after)) || lastOf((s) => isCalc(s) && s !== a), t = lastOf((s) => s.kind === 'target');
       links.a = a.id; links.b = b.id; if (t) links.against = t.id;
@@ -237,7 +287,8 @@ window.OND = window.OND || {};
     if (def.fills) step.filled = J(step.own);
     if (fn === 'hybrid') step.own.v.xc = params.xc;
     if (fn === 'ionised') { step.own.v.charge = params.charge; step.own.v.mpol = params.unpaired; }
-    for (const k of ['xc', 'charge', 'unpaired']) delete params[k];                // they are settings of the calculation now
+    for (const k of ['xc', 'charge', 'unpaired', 'number']) delete params[k];       // they are settings of the calculation now
+    if (fn === 'converge') params.argument = null;
     study.steps.push(step); touch();
     return step;
   }
@@ -287,17 +338,27 @@ window.OND = window.OND || {};
       const L = s.links, args = [J(nameOf(s))], name = (id) => v(byId(id));
       if (isCalc(s)) {
         if (L.after) args.push('after=' + name(L.after));
+        if (L.wavefunctions) args.push('wavefunctions=' + name(L.wavefunctions));
         const preset = REG[s.fn].fills && s.filled === J(s.own);
         if (s.kind === 'relax') { const d = REG.relax.params; for (const p of ['method', 'nsteps', 'forcemax']) if (s.params[p] !== d.find((x) => x.name === p).default) args.push(p + '=' + py(s.params[p])); }
         if (!preset) args.push(...changesOf(s));
         lines.push([s.id, v(s) + ' = study.' + (preset ? s.fn : s.kind) + '(' + args.join(', ') + ')']);
       } else if (s.kind === 'converge') {
         args.push('of=' + name(L.of)); if (L.relative_to) args.push('relative_to=' + name(L.relative_to));
-        args.push('action=' + J(s.params.action), 'values=(' + s.params.values.join(', ') + ')', 'within=' + s.params.within);
+        args.push('action=' + J(s.params.action)); if (s.params.argument) args.push('argument=' + J(s.params.argument));
+        args.push('values=(' + s.params.values.map(py).join(', ') + ')', 'within=' + s.params.within);
         if (!L.relative_to && !s.params.per_atom) args.push('per_atom=False');
         lines.push([s.id, v(s) + ' = study.converge(' + args.join(', ') + ')']);
+      } else if (s.kind === 'vary') {
+        args.push('of=' + name(L.of)); if (L.relative_to) args.push('relative_to=' + name(L.relative_to));
+        args.push('action=' + J(s.params.action)); if (s.params.argument) args.push('argument=' + J(s.params.argument));
+        args.push('values=(' + s.params.values.map(py).join(', ') + (s.params.values.length === 1 ? ',' : '') + ')'); if (L.against) args.push('against=' + name(L.against));
+        lines.push([s.id, v(s) + ' = study.vary(' + args.join(', ') + ')']);
+      } else if (s.kind === 'levels') {
+        args.push('of=' + name(L.of));
+        lines.push([s.id, v(s) + ' = study.levels(' + args.join(', ') + ')']);
       } else if (s.kind === 'choose') {
-        args.push('among=' + name(L.among)); if (s.params.retained != null) args.push('retained=' + s.params.retained, 'because=' + J(s.params.because || ''));
+        args.push('among=' + name(L.among)); if (s.params.retained != null) args.push('retained=' + py(s.params.retained), 'because=' + J(s.params.because || ''));
         lines.push([s.id, v(s) + ' = study.choose(' + args.join(', ') + ')']);
       } else if (s.kind === 'difference') {
         args.push(name(L.a), name(L.b)); if (s.params.unit !== 'eV') args.push('unit=' + J(s.params.unit)); if (L.against) args.push('against=' + name(L.against));
@@ -322,9 +383,16 @@ window.OND = window.OND || {};
     const relaxed = t(add('relax', ground.id), 'Relaxed'), vertical = t(add('ionised', relaxed.id), 'Cation, vertical');
     t(add('difference', vertical.id), 'Ionisation energy');
     const cr = t(add('relax', vertical.id), 'Cation, relaxed'), adiabatic = t(add('difference', cr.id), 'Ionisation, adiabatic'); adiabatic.links.b = relaxed.id; delete adiabatic.links.against;
+    // does the functional matter? side by side, then the usual practice: the PBE geometry, a hybrid energy started from the PBE wavefunctions
+    const xcs = t(add('vary', cation.id), 'Functionals'); xcs.links.relative_to = ground.id; xcs.links.against = target.id;
+    const neutral0 = t(add('hybrid', relaxed.id), 'PBE0'); neutral0.links.wavefunctions = relaxed.id;
+    const cation0 = t(add('hybrid', vertical.id), 'Cation, PBE0'); cation0.links.wavefunctions = vertical.id;
+    const ip0 = t(add('difference', cation0.id), 'Ionisation, PBE0'); ip0.links.b = neutral0.id; ip0.links.against = target.id;
+    // what the levels say, and do not say
+    const empty = t(add('empty_states', relaxed.id), 'Empty states'); t(add('levels', empty.id), 'Levels');
     study.name = 'Ionisation energy of water'; touch(); return ground;
   }
 
-  OND.model = { study, HA, P, REG, CALC, RELAX_KEYS, LIB, touch, byId, at, isCalc, nameOf, memberName, settingOf, ownOf, chain, decisionsBefore, resolveInto, undecided, geometryFrom, ownerOf,
-    keyOf, runOf, members, series, retained, status, energy, difference, readyRuns, compute, cannotAdd, add, remove, dependents, setSystem, reset, script, changesOf, example, TITLES };
+  OND.model = { study, HA, P, REG, CALC, SERIES, RELAX_KEYS, LIB, VARIABLE, touch, byId, at, isCalc, isSeries, nameOf, memberName, settingOf, settingVaried, vary, ownOf, chain, decisionsBefore, resolveInto, undecided, geometryFrom, ownerOf,
+    cannotRead, keyOf, runOf, members, series, retained, status, energy, levels, difference, readyRuns, compute, cannotAdd, add, remove, dependents, setSystem, reset, script, changesOf, example, TITLES };
 })(window.OND);

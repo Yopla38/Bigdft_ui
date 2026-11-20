@@ -65,6 +65,15 @@ elif [ "$status" -ne 0 ]; then
   echo "tools/build_actions.py failed" >&2; exit 1
 fi
 
+echo "── workshop 2: the result views drawn from the registry of log attributes, the steps, and the page against its real run"
+python3 tools/build_logviews.py "$latest" || { echo "tools/build_logviews.py failed" >&2; exit 1; }
+python3 tools/build_steps.py || { echo "tools/build_steps.py failed" >&2; exit 1; }
+if command -v node >/dev/null 2>&1; then
+  node tools/check_workshop.js > /tmp/check_workshop.$$ 2>&1 || note "workshop 2 no longer writes the script that was run, or no longer finds its results: run  node tools/check_workshop.js  (the recorded results are those of the previous version until workshop/library is run again)"
+  tail -1 /tmp/check_workshop.$$
+fi
+note "the results workshop 2 shows were computed with the previous image: run workshop/library/lattice.py and lattice2.py in the new one, then tools/build_library.py, to renew them"
+
 echo
 if [ ${#todo[@]} -eq 0 ]; then
   echo "Done. Nothing to do by hand: the application follows $(basename "$latest")."

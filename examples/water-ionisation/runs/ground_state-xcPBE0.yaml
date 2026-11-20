@@ -1,0 +1,12 @@
+dft:
+  hgrids: 0.4
+  ixc: PBE0
+  rmult: [5, 8]
+posinp:
+  positions:
+  - O: [0.0, 0.0, 0.0]
+  - H: [0.757, 0.5859, 0.0]
+  - H: [-0.757, 0.5859, 0.0]
+  units: angstroem
+psppar.H: {Pseudopotential XC: 11}
+psppar.O: {Pseudopotential XC: 11}

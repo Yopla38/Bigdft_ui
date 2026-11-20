@@ -1,33 +1,47 @@
-Found 14 different runs
-Found 14 different runs
-wave 1: ready [] | waiting [] | refused {}
-Found 14 different runs
-Found 14 different runs
-Found 14 different runs
-Found 14 different runs
-Found 14 different runs
+wave 1: ready ['ground_state', 'cation', 'cation-hgrid0p5', 'ground_state-hgrid0p5', 'cation-hgrid0p45', 'ground_state-hgrid0p45', 'cation-hgrid0p35', 'ground_state-hgrid0p35', 'relaxed', 'cation-xcLDA', 'ground_state-xcLDA', 'cation-xcPBE0', 'ground_state-xcPBE0'] | waiting ['cation_vertical', 'cation_relaxed', 'pbe0', 'cation_pbe0', 'empty_states'] | refused {}
+  [OK] bigdft -n ground_state, 4s
+  [OK] bigdft -n cation, 6s
+  [OK] bigdft -n cation-hgrid0p5, 4s
+  [OK] bigdft -n ground_state-hgrid0p5, 3s
+  [OK] bigdft -n cation-hgrid0p45, 4s
+  [OK] bigdft -n ground_state-hgrid0p45, 3s
+  [OK] bigdft -n cation-hgrid0p35, 8s
+  [OK] bigdft -n ground_state-hgrid0p35, 5s
+  [OK] bigdft -n relaxed, 38s
+  [OK] bigdft -n cation-xcLDA, 4s
+  [OK] bigdft -n ground_state-xcLDA, 2s
+  [OK] bigdft -n cation-xcPBE0, 21s
+  [OK] bigdft -n ground_state-xcPBE0, 11s
+wave 2: ready ['cation_vertical', 'cation_relaxed', 'pbe0', 'empty_states'] | waiting ['cation_pbe0'] | refused {}
+  [OK] bigdft -n cation_vertical, 6s
+  [OK] bigdft -n cation_relaxed, 49s
+  [OK] bigdft -n pbe0, 8s
+  [OK] bigdft -n empty_states, 5s
+wave 3: ready ['cation_pbe0'] | waiting [] | refused {}
+  [OK] bigdft -n cation_pbe0, 12s
+wave 4: ready [] | waiting [] | refused {}
 experiment:
   value: 12.62
   within: 0.3
   unit: eV
   source: first ionisation energy of water, photoelectron spectroscopy
 ground_state:
-  energy_Ha: -17.218472864954457
+  energy_Ha: -17.21847286495445
 cation:
   energy_Ha: -16.754851308972512
 grid_convergence:
   rows:
   - value: 0.5
-    quantity: 12.534913212767401
-    from_reference: 0.08261231928189616
+    quantity: 12.534913212767497
+    from_reference: 0.08261231928199386
   - value: 0.45
     quantity: 12.615540005003831
-    from_reference: 0.0019855270454662843
+    from_reference: 0.0019855270456599072
   - value: 0.4
-    quantity: 12.615785231790646
-    from_reference: 0.0017403002586515726
+    quantity: 12.615785231790454
+    from_reference: 0.001740300259037042
   - value: 0.35
-    quantity: 12.617525532049298
+    quantity: 12.617525532049491
     from_reference: 0.0
   proposed: 0.45
 grid_kept:
@@ -37,18 +51,54 @@ grid_kept:
     \ there, the H\u2013O\u2013H angle comes out at 99.7\xB0 for 105.0\xB0 at 0.40\
     \ and 104.5\xB0 at 0.35."
 relaxed:
-  energy_Ha: -17.21871408485397
+  energy_Ha: -17.218714085987433
 cation_vertical:
-  energy_Ha: -16.756986095548932
+  energy_Ha: -16.75698609554896
 ionisation_energy:
-  value: 12.564258657562844
+  value: 12.564258688405125
   unit: eV
   target: 12.62
   within: 0.3
   agrees: true
 cation_relaxed:
-  energy_Ha: -16.760837480795743
+  energy_Ha: -16.76083748079578
 ionisation_adiabatic:
-  value: 12.45945712602976
+  value: 12.459457156871848
   unit: eV
+functionals:
+  rows:
+  - value: LDA
+    quantity: 13.07438858966308
+    agrees: false
+  - value: PBE
+    quantity: 12.615785231790454
+    agrees: true
+  - value: PBE0
+    quantity: 12.46976473594097
+    agrees: true
+  proposed: null
+pbe0:
+  energy_Ha: -17.212139531540966
+cation_pbe0:
+  energy_Ha: -16.755841358164115
+ionisation_pbe0:
+  value: 12.41650583909629
+  unit: eV
+  target: 12.62
+  within: 0.3
+  agrees: true
+empty_states:
+  energy_Ha: -17.21871408247009
+levels:
+  homo_eV: -7.207476143100404
+  gap_eV: 6.66422182917712
+  levels_eV:
+  - - -25.277116219327215
+    - -13.09231564164121
+    - -9.246074746649743
+    - -7.207476143100404
+    - -0.5432540210190604
+    - 1.3983245208033477
+    - 2.9183379834745895
+    - 3.0143396477589763
 

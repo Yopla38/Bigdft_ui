@@ -438,6 +438,53 @@ button.chip{cursor:pointer;padding:4px 10px;font-size:12px}button.chip[aria-pres
 .src-inherited{color:var(--pos)}.src-decision{color:var(--warn)}
 table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;padding:7px 8px 7px 0}table.choice tr.kept td{background:var(--accent-soft)}.pill.kept{border-color:var(--accent);color:var(--fg)}
 #map{border:0;border-radius:0}
+
+/* ---- the centre: the graph of the study, and the system ---- */
+.center{grid-template-rows:auto minmax(0,1fr) auto}
+.mainbar{display:flex;gap:8px 18px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+.mainbar .edge-legend{font-size:11.5px;gap:4px 14px;flex:1 1 200px;min-width:0}.mainbar .edge-legend svg{flex:none}
+.zoom{display:flex;gap:4px;align-items:center}.zoom .btn{min-width:30px;justify-content:center}.zoom .btn[aria-pressed="true"]{border-color:var(--accent)}
+.main{position:relative;min-height:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 38%,var(--stage-a),var(--stage-b))}
+.main .stage{position:absolute;inset:0;background:none}
+.graph{position:absolute;inset:0;overflow:auto}
+.main[data-main="scene"] .graph{display:none}
+.main[data-main="graph"] .stage{inset:auto 14px 14px auto;width:230px;height:172px;border:1px solid var(--line-2);border-radius:14px;background:var(--panel);box-shadow:0 10px 28px rgba(0,0,0,.22);overflow:hidden}
+.main[data-main="graph"] .stage .stage-title,.main[data-main="graph"] .stage .viewbar,.main[data-main="graph"] .stage .hint,.main[data-main="graph"] .stage .legend{display:none}
+.inset-open,.inset-cap{display:none;position:absolute;z-index:2}
+.main[data-main="graph"] .inset-open{display:inline-flex;gap:4px;right:8px;top:8px}
+.inset-show{position:absolute;right:14px;bottom:14px;z-index:2;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.main[data-main="graph"][data-inset="off"] .stage{width:2px;height:2px;opacity:0;pointer-events:none;border:0}
+.main[data-main="graph"] .inset-cap{display:block;left:10px;right:10px;bottom:7px;margin:0;font-size:11.5px;color:var(--fg-2);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node{width:196px;height:92px;padding:9px 11px 8px;grid-template-rows:auto auto minmax(0,1fr);gap:3px}
+.node-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center}
+.node-head b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-head .node-ico{background:var(--raise)}
+.node-res{font:500 12.5px var(--mono);color:var(--fg);align-self:end;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-res.none{font:12px var(--sans);color:var(--fg-3)}
+.node.s-blocked,.node.s-absent,.node.s-refused{border-style:dashed;background:var(--panel)}
+.node.s-ready{border-color:var(--accent)}
+.node.t-decision{padding:0 38px;grid-template-rows:auto auto auto;gap:1px}
+.node.t-decision .node-head{display:block}.node.t-decision .node-head .node-ico,.node.t-decision .node-head .pdot{display:none}
+.node.t-decision .node-head b{display:block;font-weight:500;font-size:12px;color:var(--fg-2)}
+.node.t-decision .node-sub{display:none}.node.t-decision .node-res{font:600 13px var(--mono);align-self:auto}
+.node.t-decision.s-absent::before,.node.t-decision.s-blocked::before{background:var(--warn)}
+.node.t-target{border-radius:46px;padding:9px 22px 8px}
+.node-add{position:absolute;z-index:3;width:calc(26px / var(--z,1));height:calc(26px / var(--z,1));margin:calc(-2px / var(--z,1)) 0 0 calc(-2px / var(--z,1));border-radius:50%;background:var(--accent);color:var(--accent-ink);font:600 calc(16px / var(--z,1))/1 var(--sans);display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.edge.geometry{stroke-width:2.6}.edge.settings{stroke-width:1.6}
+.pdot.refused{background:none;box-shadow:inset 0 0 0 2px var(--neg)}
+/* ---- what the log holds: views drawn from PyBigDFT's registry of log attributes ---- */
+.logviews{display:grid;gap:0;border-top:1px solid var(--line);margin-top:4px}
+.logviews > summary{cursor:pointer;padding:10px 0;font-weight:600;font-size:13px;display:flex;gap:10px;align-items:baseline;justify-content:space-between;list-style:none}
+.logviews > summary::-webkit-details-marker{display:none}.logviews > summary span{font:12px var(--sans);color:var(--fg-3);font-weight:400}
+.lv{margin:0;display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:4px 16px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;align-items:start}
+.lv dt{display:grid;gap:1px}.lv dt code{font-size:11.5px;color:var(--fg-3)}.lv dd{margin:0;min-width:0;font:12.5px var(--mono);overflow-wrap:anywhere}
+.lv dd table{font-size:12px}.lv dd table td,.lv dd table th{padding:3px 12px 3px 0}
+.lv dd .kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 14px}.lv dd .kv span{color:var(--fg-3);font-family:var(--sans)}
+.lv-absent{font-size:12px;color:var(--fg-3);padding:10px 0;border-top:1px solid var(--line)}.lv-absent code{font-size:11.5px}
+@media (max-width:640px){.lv{grid-template-columns:minmax(0,1fr)}}
+.levels-svg{display:block;max-width:100%;height:auto}
+.levels-svg text{font:11px var(--mono);fill:var(--fg-2)}.levels-svg .lab{font:11px var(--sans);fill:var(--fg-3)}
+.pick{display:flex;gap:6px;flex-wrap:wrap}.pick .tog{padding:4px 10px}
 @media (max-width:1180px){.atelier{grid-template-columns:240px minmax(0,1fr) 316px}}
 @media (max-width:1280px){.brand small{display:none}.top .study-name{width:min(26ch,24vw)}}
 @media (max-width:560px){#honest{display:none}.top-right{justify-content:flex-start;flex-basis:100%}.top-right .btn{flex:1 1 auto;justify-content:center}}
@@ -445,6 +492,8 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
   .path{flex-direction:row;overflow-x:auto;padding:8px var(--gut-r) 10px var(--gut-l);gap:6px}.path li{flex:none;width:210px}.path li + li::before{display:none}
   .add{padding:10px var(--gut-r) 12px var(--gut-l)}.rail-title{padding-left:var(--gut-l)}
   .top .study-name{width:100%;order:3}.res-cols{grid-template-columns:minmax(0,1fr)}.dock{height:auto}.dock-body{max-height:none}
+  .main{height:62vh;min-height:380px}.main .stage{height:auto;min-height:0}
+  .main[data-main="graph"] .stage{width:150px;height:116px;inset:auto 10px 10px auto}.mainbar{padding-left:var(--gut-l);padding-right:var(--gut-r)}
 }
 </style>
 <div class="app">
@@ -475,7 +524,24 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
     </aside>
 
     <div class="center">
+      <div class="mainbar">
+        <div class="seg" id="main-switch" role="group" aria-label="What the centre shows">
+          <button type="button" data-main="graph" aria-pressed="true">Study graph</button>
+          <button type="button" data-main="scene" aria-pressed="false">3D system</button>
+        </div>
+        <div class="edge-legend" id="graph-legend" aria-label="What the arrows mean"></div>
+        <div class="zoom" id="zoom" role="group" aria-label="Size of the graph">
+          <button class="btn small" id="zoom-out" type="button" aria-label="Smaller boxes">−</button>
+          <button class="btn small" id="zoom-fit" type="button" aria-pressed="true" title="Fit the width, as far as the boxes still read">Fit</button>
+          <button class="btn small" id="zoom-in" type="button" aria-label="Larger boxes">+</button>
+        </div>
+      </div>
+      <div class="main" id="main" data-main="graph">
+      <div class="graph" id="graph" aria-label="The study as a graph, one box per step"></div>
+      <button class="btn small inset-show" id="inset-show" type="button" hidden>Show the system</button>
       <div class="stage" id="stage">
+        <span class="inset-open"><button class="btn small" id="inset-hide" type="button" title="Leave the whole place to the graph">Hide</button><button class="btn small" id="inset-open" type="button" title="Show the system in full">Enlarge</button></span>
+        <p class="inset-cap" id="inset-cap"></p>
         <div class="stage-title"><h1 id="sys-name"></h1><p id="sys-blurb"></p><div class="chips" id="sys-chips"></div></div>
         <div class="viewbar" id="viewbar" role="group" aria-label="Display">
           <button class="tog" data-view="grid" type="button" aria-pressed="false">Wavelet grid</button>
@@ -485,15 +551,15 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
         <p class="hint" id="hint">Drag to rotate</p>
         <div class="legend" id="legend" hidden></div>
       </div>
-      <div class="dock tall" id="dock">
+      </div>
+      <div class="dock" id="dock">
         <div class="tabs" role="tablist">
           <button class="tab" role="tab" data-tab="results" aria-selected="true" type="button">Results</button>
           <button class="tab" role="tab" data-tab="input" aria-selected="false" type="button">Input</button>
           <button class="tab" role="tab" data-tab="script" aria-selected="false" type="button">Script</button>
-          <button class="tab" role="tab" data-tab="map" aria-selected="false" type="button">Map</button>
           <button class="tab" role="tab" data-tab="log" aria-selected="false" type="button">Log</button>
           <span class="sp"></span>
-          <button class="btn small" id="dock-toggle" type="button">Smaller</button>
+          <button class="btn small" id="dock-toggle" type="button">Larger</button>
         </div>
         <div class="dock-body">
           <div class="panel-pad" data-panel="results" id="results"></div>
@@ -502,7 +568,6 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
             <div><h3>PyBigDFT <span>the same input, written with input actions</span></h3><pre id="python"></pre></div>
           </div>
           <div class="panel-pad" data-panel="script" hidden><p class="figmeta">The whole study as a script: one line per step, written with the registry of steps. An argument that names another step is the link between them.</p><pre class="code" id="script"></pre></div>
-          <div data-panel="map" hidden><div class="board-scroll" id="map"></div></div>
           <div class="panel-pad" data-panel="log" hidden id="log"></div>
         </div>
       </div>
@@ -531,6 +596,7 @@ table.choice{width:100%}table.choice td,table.choice th{white-space:nowrap;paddi
 <script src="shared/schema.js"></script>
 <script src="shared/figure.js"></script>
 <script src="js/steps.js"></script>
+<script src="js/logviews.js"></script>
 <script src="js/library.js"></script>
 <script src="js/board.js"></script>
 <script src="js/model.js"></script>

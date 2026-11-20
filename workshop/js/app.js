@@ -32,14 +32,14 @@
   const bp = OND.Blueprint(), st = bp.st;                 // the settings of the selected calculation, edited in place
   const stage = OND.Stage($('#stage'));
   const SCHEMA = OND.schema.variables;
-  const ui = { sel: 'system', tab: 'results', depth: 0, view: { grid: false, ghosts: true, vdw: false }, drag: false, loading: false, query: '', acts: {}, palette: false, geo: '' };
+  const ui = { sel: 'system', tab: 'results', main: 'graph', inset: true, zoom: 'fit', depth: 0, view: { grid: false, ghosts: true, vdw: false }, drag: false, loading: false, query: '', acts: {}, palette: false, geo: '', moved: {}, reveal: true };
   OND.board.init({ h, typeset });
 
-  const KIND = { system: 'System', calculation: 'Calculation', relax: 'Relaxation', converge: 'Convergence series', choose: 'Decision', difference: 'Result', target: 'Criterion' };
+  const KIND = { system: 'System', calculation: 'Calculation', relax: 'Relaxation', converge: 'Convergence series', vary: 'Series', choose: 'Decision', difference: 'Result', levels: 'Result', target: 'Criterion' };
   const ROLE = {
     system: 'What everything else is computed on.', calculation: 'An energy at a fixed geometry.', relax: 'The atoms move until the forces vanish.',
-    converge: 'One setting varied, to see when the result stops changing.', choose: 'The value kept for every step after this one.',
-    difference: 'The energy of one step minus the energy of another.', target: 'A reference and the window that counts as agreement, set before computing.',
+    converge: 'One setting varied, to see when the result stops changing.', vary: 'One setting varied, the results side by side.', choose: 'The value kept for every step after this one.',
+    difference: 'The energy of one step minus the energy of another.', levels: 'The energy levels of a calculation, read from its log.', target: 'A reference and the window that counts as agreement, set before computing.',
   };
   const GLYPH = { system: '⬡', calculation: 'E', relax: '↯', converge: '≋', choose: '?', difference: 'Δ', target: '◎' };
   const SRC = { default: 'BigDFT default', adapted: 'Adapted', you: 'This step', inherited: 'Inherited', decision: 'Decision' };
@@ -76,7 +76,7 @@
   }
   bp.on(onEdit);
 
-  function select(id) { ui.sel = id; ui.palette = false; loadSelected(); refresh(true); }
+  function select(id) { ui.sel = id; ui.palette = false; ui.reveal = true; loadSelected(); refresh(true); }
 
   // ------------------------------------------------------------------ the scene
   /* The geometry a step is computed on, or ends on: the relaxed one once its relaxation is computed. */
@@ -97,6 +97,7 @@
     const c = OND.chem.composition(sys), keys = Object.keys(c).sort((a, b) => (c.C ? (a === 'C' ? -1 : b === 'C' ? 1 : a === 'H' ? -1 : b === 'H' ? 1 : a.localeCompare(b)) : c[b] - c[a]));
     $('#sys-name').textContent = sys.name;
     $('#sys-blurb').textContent = step ? step.title + ' · ' + scene.text : sys.blurb;
+    $('#inset-cap').textContent = sys.name + ' · ' + scene.text;
     $('#sys-chips').replaceChildren(...[keys.map((k) => k + (c[k] > 1 ? sub(c[k]) : '')).join(''), sys.atoms.length + ' atoms', BC[sys.bc]].map((t) => h('span', { class: 'chip' }, t)));
     $$('#viewbar .tog').forEach((b) => { b.setAttribute('aria-pressed', String(!!w[b.dataset.view])); b.disabled = b.dataset.view === 'ghosts' && sys.bc === 'free'; });
     const L = $('#legend'), css = (n) => 'background:var(' + n + ')';
@@ -115,10 +116,11 @@
       const own = M.ownOf(step), bits = Object.keys(step.own.v).filter((k) => !(k === 'nspin')).map((k) => LABELS[k] ? LABELS[k].toLowerCase() + ' ' + String(step.own.v[k]) : k);
       const extra = Object.keys(own.expert).length + own.actions.length;
       const what = step.kind === 'relax' ? 'relax' + (bits.length ? ', ' + bits.join(', ') : '') : bits.join(', ') || (L.after ? 'same settings' : 'the first calculation');
-      return (L.after ? 'after ' + t(L.after) + ' · ' : '') + what + (extra ? ' +' + extra : '');
+      return (L.after ? 'after ' + t(L.after) + ' · ' : '') + what + (extra ? ' +' + extra : '') + (L.wavefunctions ? ' · wavefunctions of ' + t(L.wavefunctions) : '');
     }
-    if (step.kind === 'converge') return t(L.of) + (L.relative_to ? ' − ' + t(L.relative_to) : '') + ' · ' + step.params.values.length + ' values';
+    if (M.isSeries(step)) return t(L.of) + (L.relative_to ? ' − ' + t(L.relative_to) : '') + ' · ' + step.params.values.length + ' × ' + (LABELS[M.settingVaried(step)] || 'setting').toLowerCase();
     if (step.kind === 'choose') return 'on ' + t(L.among);
+    if (step.kind === 'levels') return 'of ' + t(L.of);
     if (step.kind === 'difference') return t(L.a) + ' − ' + t(L.b);
     if (step.kind === 'target') return step.params.value + ' ± ' + step.params.within + ' ' + step.params.unit;
     return '';
@@ -127,6 +129,8 @@
     const s = M.status(step);
     if (M.isCalc(step) && s.state === 'done') return 'E = ' + fx(M.energy(step), 6) + ' Ha';
     if (step.kind === 'converge' && s.state === 'done') { const p = M.series(step).proposed; return p == null ? 'not converged in this range' : 'proposes ' + p; }
+    if (step.kind === 'vary' && s.state === 'done') return M.series(step).rows.map((r) => r.value + ' ' + fx(r.quantity, 2)).join(' · ');
+    if (step.kind === 'levels' && s.state === 'done') { const l = M.levels(step); return l ? 'HOMO ' + fx(l.homo, 2) + (l.gap ? ' · gap ' + fx(l.gap[0], 2) : '') + ' eV' : 'no levels in this log'; }
     if (step.kind === 'choose') { const v = M.retained(step); return v == null ? s.text : '= ' + v + (step.params.retained != null ? ' (you)' : ''); }
     if (step.kind === 'difference' && s.state === 'done') { const d = M.difference(step); return fx(d.value, d.unit === 'Ha' ? 6 : 3) + ' ' + d.unit + (d.target ? (d.agrees ? ' ✓' : ' ✗') : ''); }
     return s.state === 'given' ? '' : s.text;
@@ -270,13 +274,19 @@
     const s = M.status(step), runs = M.readyRuns(step);
     return h('div', { class: 'compute-row' },
       s.state === 'ready' ? h('button', { class: 'btn cta', type: 'button', id: 'compute-step', onclick: () => { M.compute(step); ui.tab = 'results'; refresh(true); } }, 'Compute this step' + (runs.length > 1 ? ' · ' + runs.length + ' runs' : ''))
-        : h('span', { class: 'pill' }, s.state === 'done' ? 'computed' : s.state === 'blocked' ? 'waits' : 'not available'),
+        : h('span', { class: 'pill' }, s.state === 'done' ? 'computed' : s.state === 'blocked' ? 'waits' : s.state === 'refused' ? 'to fix' : 'not available'),
       h('span', { style: 'font-size:12px;color:var(--fg-3)' }, s.state === 'ready' || s.state === 'done' ? '' : s.text));
   }
   function calcPanel(step) {
     const kids = [], own = step.own, chips = Object.keys(own.v).filter((k) => k !== 'nspin' || !('mpol' in own.v)).map((k) => (LABELS[k] || k) + ': ' + String(own.v[k]))
       .concat(Object.keys(own.expert).map((p) => p + ' = ' + own.expert[p]), own.actions.map((a) => bp.actionCall(a.name, a.args)));
     if (step.links.after || study.steps.filter(M.isCalc).length > 1) kids.push(stepSelect(step, 'after', (s) => M.isCalc(s), step.kind === 'relax' ? null : 'nothing: it starts the study', 'Continues'));
+    if (step.links.after) {
+      kids.push(stepSelect(step, 'wavefunctions', (s) => M.isCalc(s), 'nothing: from scratch', 'Starts from the wavefunctions of'));
+      const no = M.cannotRead(step);
+      if (no) kids.push(h('div', { class: 'notice err' }, h('b', {}, 'To fix'), h('span', {}, 'This step cannot start there: ' + no + '. Wavefunctions can be read across functionals and grids, not across charges or spins.')));
+      else if (step.links.wavefunctions) kids.push(h('p', { class: 'figmeta', style: 'margin:-4px 0 0' }, '“' + M.byId(step.links.wavefunctions).title + '” then writes its wavefunctions, and this step waits for it. The steps that continue this one start from scratch again.'));
+    }
     kids.push(h('div', { class: 'field2' }, h('span', {}, step.links.after ? 'What this step changes' : 'What this step sets'),
       chips.length ? h('div', { class: 'own' }, chips.map((c) => h('span', { class: 'chip' }, c))) : h('small', {}, step.links.after ? 'Nothing yet: it repeats “' + M.byId(step.links.after).title + '”' + (step.kind === 'relax' ? ' and relaxes its geometry.' : '. Change a setting below.') : 'The advised values for this system. Change any of them below.')));
     kids.push(computeRow(step));
@@ -297,6 +307,10 @@
   function decisionTable(step) {
     const conv = M.byId(step.links.among), s = M.series(conv), kept = M.retained(step), unit = s.relative ? 'eV' : 'eV/atom';
     if (!s.complete) return [h('p', { class: 'say' }, 'The decision is taken on the results of “' + conv.title + '”, which is not computed yet.')];
+    if (conv.kind === 'vary') return [h('div', { class: 'scroll-x' }, h('table', { class: 'choice' }, h('thead', {}, h('tr', {}, ['Value', s.relative ? 'Difference (eV)' : 'Energy (eV)', s.target ? 'Target ' + s.target.value + ' ± ' + s.target.within : null, 'BigDFT time (s)', ''].filter(Boolean).map((c) => h('th', {}, c)))),
+      h('tbody', {}, s.rows.map((r) => h('tr', { class: r.value === kept ? 'kept' : '' }, h('td', { class: 'num' }, String(r.value)), h('td', { class: 'num' }, fx(r.quantity, 4)), s.target ? h('td', {}, r.agrees ? 'within' : 'outside') : null, h('td', { class: 'num' }, fx(r.seconds, 0)),
+        h('td', {}, r.value === kept ? h('span', { class: 'pill kept' }, 'kept') : h('button', { class: 'btn small', type: 'button', onclick: () => { step.params.retained = r.value; M.touch(); refresh(true); } }, 'Keep'))))))),
+      h('p', { class: 'figmeta' }, 'Nothing is proposed here: these values do not converge towards one another. ' + (kept == null ? 'Keep one, and say why.' : 'You kept ' + kept + '.'))];
     return [h('div', { class: 'scroll-x' }, h('table', { class: 'choice' }, h('thead', {}, h('tr', {}, ['Value', s.relative ? 'Difference (eV)' : 'Energy (' + unit + ')', 'Off reference (meV)', 'BigDFT time (s)', 'Criterion', ''].map((c) => h('th', {}, c)))),
       h('tbody', {}, s.rows.map((r, i) => h('tr', { class: r.value === kept ? 'kept' : '' }, h('td', { class: 'num' }, String(r.value)), h('td', { class: 'num' }, fx(r.quantity, s.relative ? 4 : 5)), h('td', { class: 'num' }, i === s.rows.length - 1 ? 'reference' : fx(r.away * 1000, 1)), h('td', { class: 'num' }, fx(r.seconds, 0)),
         h('td', {}, r.value === s.proposed ? h('span', { class: 'pill' }, 'proposes') : r.away <= conv.params.within ? 'passes' : 'fails'),
@@ -317,18 +331,27 @@
         h('div', { class: 'notice' }, h('b', {}, study.sysId === 'h2o' ? 'Real results are bundled for water' : 'No recorded result for this system'), h('span', {}, 'A web page cannot start BigDFT. For water, ' + Object.keys(M.LIB).length + ' calculations were run with BigDFT 1.9.1 through the registry of steps, and a step whose input is one of them shows its real result. For any other system or setting the study is built and checked the same way, and says its result is not available here.')));
       if (!study.steps.length) kids.push(h('div', { class: 'compute-row' }, h('button', { class: 'btn cta', type: 'button', onclick: () => select(M.add('calculation', null).id) }, 'Add the first calculation')));
     } else if (M.isCalc(step)) kids.push(...calcPanel(step));
-    else if (step.kind === 'converge') {
-      const setting = M.settingOf(step.params.action);
+    else if (M.isSeries(step)) {
+      const setting = M.settingVaried(step), conv = step.kind === 'converge', text = setting === 'xc';
+      const offered = M.VARIABLE.filter((x) => (conv ? ['hgrid', 'crmult', 'frmult', 'gnrm'] : ['xc', 'hgrid', 'crmult', 'frmult', 'gnrm', 'charge', 'mpol', 'tel']).includes(x.key));
+      const XCS = ['LDA', 'PBE', 'PBE0', 'B3LYP', 'HF'];
       kids.push(stepSelect(step, 'of', (x) => x.kind === 'calculation', null, 'The calculation to vary'),
-        stepSelect(step, 'relative_to', (x) => x.kind === 'calculation' && x.id !== step.links.of, 'nothing: watch its total energy', 'Watch its difference with'),
-        field('Setting varied', h('select', { 'aria-label': 'Setting varied', disabled: true }, h('option', {}, (LABELS[setting] || setting) + '  ·  ' + step.params.action)), 'The registry names an input action; more settings will come with it.'),
-        field('Values, from the cheapest to the most accurate', h('input', { type: 'text', value: step.params.values.join(', '), 'aria-label': 'Values', onchange: (e) => { const v = parseList(e.target.value); if (v && v.length > 1) { step.params.values = v; M.touch(); } refresh(true); } }), 'The last one is the reference.'),
-        number(step, 'within', 'Converged when within (meV' + (step.links.relative_to ? '' : ' per atom') + ')', 'of the reference', 1000), computeRow(step));
+        stepSelect(step, 'relative_to', (x) => x.kind === 'calculation' && x.id !== step.links.of, 'nothing: its total energy', conv ? 'Watch its difference with' : 'Compare its difference with'),
+        field('Setting varied', h('select', { 'aria-label': 'Setting varied', onchange: (e) => { M.vary(step, e.target.value); if (step.kind === 'choose') step.params.retained = null; for (const d of M.dependents(step)) if (d.kind === 'choose') d.params.retained = null; M.touch(); refresh(true); } },
+          offered.map((x) => h('option', { value: x.key, selected: x.key === setting }, (LABELS[x.key] || x.key) + '  ·  ' + x.action + (x.argument ? ', ' + x.argument : '')))), 'Any argument of an input action of PyBigDFT’s registry that writes one setting.'),
+        text ? field('Values', h('div', { class: 'pick' }, XCS.map((x) => h('button', { class: 'tog', type: 'button', 'aria-pressed': String(step.params.values.includes(x)), onclick: () => { const v = XCS.filter((y) => (y === x) !== step.params.values.includes(y)); if (v.length) { step.params.values = v; M.touch(); } refresh(true); } }, x))))
+          : field(conv ? 'Values, from the cheapest to the most accurate' : 'Values', h('input', { type: 'text', value: step.params.values.join(', '), 'aria-label': 'Values', onchange: (e) => { const v = parseList(e.target.value); if (v && v.length > (conv ? 1 : 0)) { step.params.values = v; M.touch(); } refresh(true); } }), conv ? 'The last one is the reference.' : null),
+        conv ? number(step, 'within', 'Converged when within (meV' + (step.links.relative_to ? '' : ' per atom') + ')', 'of the reference', 1000) : stepSelect(step, 'against', (x) => x.kind === 'target', 'no target', 'Each value judged against'),
+        computeRow(step));
     } else if (step.kind === 'choose') {
-      kids.push(stepSelect(step, 'among', (x) => x.kind === 'converge', null, 'Decides on'), ...decisionTable(step));
-      if (step.params.retained != null) kids.push(field('Why this value and not the proposed one', h('input', { type: 'text', value: step.params.because || '', placeholder: 'the reason is kept with the study', 'aria-label': 'Reason', onchange: (e) => { step.params.because = e.target.value; M.touch(); refresh(); } })),
-        h('div', { class: 'compute-row' }, h('button', { class: 'btn small', type: 'button', onclick: () => { step.params.retained = null; M.touch(); refresh(true); } }, 'Back to what the criterion proposes')));
+      const among = M.byId(step.links.among);
+      kids.push(stepSelect(step, 'among', M.isSeries, null, 'Decides on'), ...decisionTable(step));
+      if (step.params.retained != null) kids.push(field(among.kind === 'vary' ? 'Why this value' : 'Why this value and not the proposed one', h('input', { type: 'text', value: step.params.because || '', placeholder: 'the reason is kept with the study', 'aria-label': 'Reason', onchange: (e) => { step.params.because = e.target.value; M.touch(); refresh(); } })),
+        among.kind === 'vary' ? null : h('div', { class: 'compute-row' }, h('button', { class: 'btn small', type: 'button', onclick: () => { step.params.retained = null; M.touch(); refresh(true); } }, 'Back to what the criterion proposes')));
       kids.push(h('p', { class: 'figmeta' }, 'Every calculation placed after this step uses the kept value. Changing it sends them back to “to compute”.'));
+    } else if (step.kind === 'levels') {
+      kids.push(stepSelect(step, 'of', M.isCalc, null, 'Levels of'),
+        h('p', { class: 'figmeta' }, 'Nothing more is computed: the levels are in the log of that calculation. For a gap it must hold empty states: add an “Empty states” step and read its levels.'));
     } else if (step.kind === 'difference') {
       kids.push(stepSelect(step, 'a', M.isCalc, null, 'Energy of'), stepSelect(step, 'b', M.isCalc, null, 'minus energy of'),
         field('Unit', seg([['eV', 'eV'], ['kJ/mol', 'kJ/mol'], ['Ha', 'Ha']], step.params.unit, (u) => { step.params.unit = u; M.touch(); refresh(); })),
@@ -352,7 +375,8 @@
   const facts = (rows) => h('dl', { class: 'facts2' }, rows.filter(Boolean).flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
   const real = (run) => h('p', { class: 'figmeta' }, 'Computed with BigDFT ' + run.version + ' for this mock-up (run ', h('code', {}, run.name), ' of the library), ' + fx(run.wall, 1) + ' s on ' + run.omp + ' threads. Every number here is read from its log.');
   function waiting(step) {
-    const s = M.status(step), runs = M.isCalc(step) ? [M.runOf(step)] : step.kind === 'converge' ? M.members(step).flatMap((m) => [m.of, m.rel].filter(Boolean)) : [];
+    const s = M.status(step), runs = M.isCalc(step) ? [M.runOf(step)] : M.isSeries(step) ? M.members(step).flatMap((m) => [m.of, m.rel].filter(Boolean)) : [];
+    if (s.state === 'refused') return [h('p', { class: 'say' }, h('b', {}, 'Cannot be computed as it is. '), 'This step asks to start from wavefunctions it cannot read: ' + s.text + '. Choose another step to start from, or none.')];
     if (s.state === 'ready') return [h('p', { class: 'say' }, h('b', {}, 'Ready. '), 'Nothing stops this step: its input is written and checked. ', runs.length > 1 ? runs.length + ' runs would be sent.' : ''),
       h('div', {}, h('button', { class: 'btn cta', type: 'button', onclick: () => { M.compute(step); refresh(true); } }, 'Compute this step'))];
     if (s.state === 'blocked') return [h('p', { class: 'say' }, h('b', {}, 'Not yet. '), 'This step ' + s.text + '. Compute what comes before it, or press “Compute what is ready”: the study is sent wave after wave.')];
@@ -372,6 +396,72 @@
     }
     return rows;
   }
+  // ---- what the log holds: one view per attribute of PyBigDFT's registry of log attributes (BigDFT.Logfiles.BUILTIN)
+  /* Words and units for the attributes this workshop knows. One it does not know is shown under its own name, by the shape of its value. */
+  const LOGWORDS = { energy: ['Total energy', 'Ha'], hartree_energy: ['Hartree energy', 'Ha'], XC_energy: ['Exchange-correlation energy', 'Ha'], trVxc: ['Integral of the XC potential', 'Ha'], ionic_energy: ['Ion-ion energy', 'Ha'], trH: ['Trace of the Hamiltonian', 'Ha'],
+    fermi_level: ['Highest occupied level', 'Ha'], evals: ['Energy levels', ''], forces: ['Forces on the atoms', 'Ha/bohr'], forcemax: ['Largest force', 'Ha/bohr'], force_fluct: ['Noise on the forces', 'Ha/bohr'], forcemax_cv: ['Force criterion asked', 'Ha/bohr'],
+    dipole: ['Dipole moment', 'a.u.'], magnetization: ['Total magnetisation', 'µB'], pressure: ['Pressure', 'GPa'], stress_tensor: ['Stress tensor', 'Ha/bohr³'], astruct: ['Atomic structure', ''], electrostatic_multipoles: ['Atomic multipoles', ''], support_functions: ['Moments of the support functions', ''],
+    memory_peak: ['Memory peak, estimated', 'MB'], memory_run: ['Memory of the run stages', 'MB'], memory_quantities: ['Memory of the main quantities', 'MB'], nat: ['Atoms', ''], number_of_orbitals: ['Occupied orbitals', ''], grid_spacing: ['Grid spacing', 'bohr'], rmult: ['Extents, coarse and fine', '× radius'],
+    XC_parameter: ['Functional, as the code names it', ''], spin_polarization: ['Spin treatment (nspin)', ''], total_magn_moment: ['Unpaired electrons (mpol)', ''], system_charge: ['Total charge', 'e'], gnrm_cv: ['Convergence criterion asked', ''], kpts: ['k-points', ''], kpt_mesh: ['k-point mesh', ''],
+    symmetry: ['Symmetry', ''], data_directory: ['Data directory', ''], posinp_file: ['Structure read from', ''], sdos: ['Files of the density of states', ''] };
+  const num = (x) => (typeof x === 'number' ? String(x).replace('-', '−').replace('e', '×10^') : String(x));
+  const perAtom = (v) => Array.isArray(v) && v.length > 0 && v.every((a) => a && typeof a === 'object' && !Array.isArray(a) && Object.keys(a).some((k) => Array.isArray(a[k]) && a[k].length === 3 && a[k].every((x) => typeof x === 'number')));
+  const atomTable = (v, unit, norm) => h('table', {}, h('thead', {}, h('tr', {}, ['Atom', 'x', 'y', 'z' + (unit && !norm ? ' (' + unit + ')' : ''), norm ? 'norm' + (unit ? ' (' + unit + ')' : '') : null].filter(Boolean).map((c) => h('th', {}, c)))),
+    h('tbody', {}, v.slice(0, 24).map((a, i) => { const el = Object.keys(a).find((k) => Array.isArray(a[k])), q = a[el]; return h('tr', {}, h('td', {}, el + (i + 1)), q.map((x) => h('td', { class: 'num' }, x.toFixed(6).replace('-', '−'))), norm ? h('td', { class: 'num' }, Math.hypot(...q).toFixed(6)) : null); })),
+    v.length > 24 ? h('caption', { style: 'caption-side:bottom;text-align:left;color:var(--fg-3)' }, 'first 24 of ' + v.length + ' atoms') : null);
+  function logValue(name, value, unit) {
+    if (typeof value === 'number') return num(value) + (unit ? ' ' + unit : '');
+    if (typeof value === 'string' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value) && value.every((x) => typeof x === 'number')) return '[' + value.map(num).join(', ') + ']' + (unit ? ' ' + unit : '');
+    if (Array.isArray(value) && value.length && value.every((x) => x && typeof x === 'object' && ('e' in x || 'e_occ' in x || 'e_vrt' in x || Object.keys(x).some((k) => /gap/i.test(k))))) {
+      // the levels: as BigDFT lists them, occupied only, or occupied then empty with the gap in between
+      const rows = value.flatMap((o) => ('e' in o ? [[o.e, String(o.f), 's' in o ? (o.s > 0 ? '↑' : '↓') : '']] : 'e_occ' in o ? [].concat(o.e_occ).map((e, i) => [e, 'occupied', Array.isArray(o.e_occ) ? '↑↓'[i] : '']) : 'e_vrt' in o ? [].concat(o.e_vrt).map((e, i) => [e, 'empty', Array.isArray(o.e_vrt) ? '↑↓'[i] : '']) : []));
+      const spin = rows.some((r) => r[2]);
+      return h('table', {}, h('thead', {}, h('tr', {}, ['Level', 'Ha', 'eV', 'Occupation', spin ? 'Spin' : null].filter(Boolean).map((c) => h('th', {}, c)))),
+        h('tbody', {}, rows.map((r, i) => h('tr', {}, h('td', {}, String(i + 1)), h('td', { class: 'num' }, r[0].toFixed(6).replace('-', '−')), h('td', { class: 'num' }, fx(r[0] * M.HA.eV, 3)), h('td', { class: 'num' }, r[1]), spin ? h('td', {}, r[2]) : null))));
+    }
+    if (perAtom(value)) return atomTable(value, unit, true);
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const simple = Object.entries(value).filter(([, v]) => !perAtom(v)), atoms = Object.entries(value).filter(([, v]) => perAtom(v));
+      return h('div', { style: 'display:grid;gap:8px' }, simple.length ? h('div', { class: 'kv' }, simple.flatMap(([k, v]) => [h('span', {}, k), h('b', { style: 'font-weight:400' }, typeof v === 'object' ? JSON.stringify(v).replace(/"/g, '').slice(0, 160) : num(v))])) : null, atoms.map(([k, v]) => atomTable(v, k === 'positions' ? value.units || '' : '', false)));
+    }
+    const text = JSON.stringify(value);
+    return text.length > 300 ? text.slice(0, 300) + ' …' : text;
+  }
+  function logViews(run) {
+    const FIRST = ['energy', 'fermi_level', 'evals', 'forces', 'forcemax', 'force_fluct', 'dipole', 'magnetization', 'pressure', 'stress_tensor'], rank = (a) => (FIRST.indexOf(a.name) + 1 || 99);
+    const R = OND.logviews, got = R.attributes.filter((a) => run.log && a.name in run.log).sort((x, y) => rank(x) - rank(y)), missing = R.attributes.filter((a) => !(run.log && a.name in run.log));
+    const row = (a) => { const w = LOGWORDS[a.name] || [a.label ? a.label.replace(/:$/, '') : a.name, '']; return h('dl', { class: 'lv', 'data-log': a.name }, h('dt', {}, w[0], h('code', {}, a.access || 'log.' + a.name)), h('dd', {}, logValue(a.name, run.log[a.name], w[1]))); };
+    return h('details', { class: 'logviews', id: 'logviews', open: ui.logOpen, ontoggle: (e) => { ui.logOpen = e.target.open; } },
+      h('summary', {}, 'Everything the log holds', h('span', {}, got.length + ' of the ' + R.attributes.length + ' attributes of a Logfile, ' + R.version.split(',')[0])),
+      h('p', { class: 'figmeta', style: 'margin:0 0 8px' }, 'PyBigDFT reads a log through one table, ', h('code', {}, 'BigDFT.Logfiles.BUILTIN'), ': each entry is an attribute of the Logfile. The views below are drawn from that table, with the values of this run. A script reads the same thing as ', h('code', {}, 'log.energy'), ', ', h('code', {}, 'log.forces'), ' …', run.relax ? ' For a relaxation these are the attributes of its last geometry.' : ''),
+      got.filter((a) => !a.global).map(row), h('p', { class: 'label', style: 'margin:14px 0 2px' }, 'What describes the run'), got.filter((a) => a.global).map(row),
+      missing.length ? h('p', { class: 'lv-absent' }, 'Not in this log, because the calculation did not produce it: ', missing.map((a, i) => [i ? ', ' : '', h('code', {}, a.name)]), '.') : null);
+  }
+  /* The identity of the same calculation started from scratch. */
+  const fromScratch = (key) => { const [sys, kept, ...rest] = key.split('|'); return [sys, kept.split(';').filter((x) => !x.startsWith('dft.inputpsiid=')).join(';'), ...rest.filter((x) => !x.startsWith('wf='))].join('|'); };
+  /* Levels drawn as a ladder: occupied full, empty dashed, one column per spin. */
+  function levelDiagram(l) {
+    const cols = l.polarised ? [['↑', l.occupied.up, l.empty.up], ['↓', l.occupied.down, l.empty.down]] : [['', l.occupied.up, l.empty.up]];
+    const all = cols.flatMap((c) => c[1].concat(c[2])), top = Math.max(...all), low = Math.max(Math.min(...all), top - 32), W = 150 * cols.length + 70, H = 230, y = (e) => 14 + (top - Math.max(e, low)) / (top - low || 1) * (H - 40);
+    let g = '';
+    for (const t of [0, -5, -10, -15, -20, -25, -30].filter((v) => v <= top + 1 && v >= low)) g += '<line x1="46" x2="' + (W - 6) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)"/><text x="40" y="' + (y(t) + 4) + '" text-anchor="end">' + String(t).replace('-', '−') + '</text>';
+    cols.forEach(([name, occ, emp], i) => {
+      const x0 = 62 + i * 150, x1 = x0 + 78;
+      for (const e of occ) g += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + y(e) + '" y2="' + y(e) + '" stroke="var(--fg)" stroke-width="2.2"' + (e < low ? ' stroke-dasharray="1 3"' : '') + '/>';
+      for (const e of emp) g += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + y(e) + '" y2="' + y(e) + '" stroke="var(--accent)" stroke-width="2.2" stroke-dasharray="5 4"/>';
+      const homo = Math.max(...occ), lumo = emp.length ? Math.min(...emp) : null;
+      g += '<text x="' + (x1 + 6) + '" y="' + (y(homo) + 4) + '">' + fx(homo, 2) + '</text>';
+      if (lumo != null) g += '<text x="' + (x1 + 6) + '" y="' + (y(lumo) + 4) + '">' + fx(lumo, 2) + '</text>';
+      if (name) g += '<text class="lab" x="' + (x0 + 39) + '" y="' + (H - 6) + '" text-anchor="middle">spin ' + name + '</text>';
+    });
+    g += '<text class="lab" x="4" y="10">eV</text>';
+    return h('div', { html: '<svg class="levels-svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Energy levels">' + g + '</svg>' });
+  }
+  const levelFacts = (l) => [['Highest occupied level', fx(l.homo, 3) + ' eV'], l.lumo != null ? ['Lowest empty level', fx(l.lumo, 3) + ' eV'] : null,
+    l.gap ? ['Gap, as BigDFT prints it', l.gap.map((g) => fx(g, 3)).join(' (↑), ') + (l.gap.length > 1 ? ' (↓)' : '') + ' eV'] : ['Gap', 'not in this log: no empty state was computed'],
+    ['Levels', l.occupied.up.length + l.occupied.down.length + ' occupied' + (l.empty.up.length + l.empty.down.length ? ', ' + (l.empty.up.length + l.empty.down.length) + ' empty' : '')]];
+
   function results() {
     const step = sel(), host = $('#results'), sys = study.sys;
     if (!step) {
@@ -395,8 +485,33 @@
           right.unshift(figure({ title: '', caption: '', panels: [{ title: 'Energy', x, y: { label: 'E − E(start) (meV)', fmt: (v) => v.toFixed(0).replace('-', '−') }, series: [{ name: 'energy', slot: 0, marker: true, pts: run.relax.steps.map((q, i) => [i, (q[0] - e0) * 27211.386]) }] },
             { title: 'Largest force', x, y: { label: 'Ha/bohr', log: true }, series: [{ name: 'force', slot: 1, marker: true, pts: run.relax.steps.map((q, i) => [i, q[1]]) }], hlines: [{ y: run.relax.forcemax, label: 'asked' }] }] })); }
         if (run.relax && run.fmax > run.relax.forcemax) left.push(h('div', { class: 'notice' }, h('b', {}, 'Look at the last force'), h('span', {}, 'BigDFT ended this relaxation with a largest force of ' + sci(run.fmax) + ' Ha/bohr, above the ' + sci(run.relax.forcemax) + ' asked. The geometry may not be the minimum: a finer grid gives cleaner forces.')));
-        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, left), h('div', { style: 'display:grid;gap:12px;min-width:0' }, right)), real(run));
+        if (step.links.wavefunctions) { const twin = study.steps.find((x) => x !== step && M.isCalc(x) && !x.links.wavefunctions && M.status(x).state === 'done' && M.keyOf(x) === fromScratch(M.keyOf(step)));
+          left.push(h('p', { class: 'say' }, h('b', {}, 'Started from the wavefunctions of “' + M.byId(step.links.wavefunctions).title + '”. '), 'It converged in ' + run.iters + ' iterations' + (twin ? ', for ' + M.runOf(twin).run.iters + ' from scratch in “' + twin.title + '”, to the same energy within ' + sci(Math.max(Math.abs(run.energy - M.runOf(twin).run.energy), 1e-12)) + ' Ha.' : '. Add the same step without the wavefunctions to compare.'))); }
+        if (run.gap) left.push(facts(levelFacts(M.levels({ links: { of: step.id } }))));
+        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, left), h('div', { style: 'display:grid;gap:12px;min-width:0' }, right)), real(run), logViews(run));
       }
+    } else if (step.kind === 'vary') {
+      const ser = M.series(step);
+      if (!ser.complete) kids.push(...waiting(step));
+      else {
+        const t = ser.target, what = ser.relative ? 'E(“' + M.byId(step.links.of).title + '”) − E(“' + M.byId(step.links.relative_to).title + '”)' : 'total energy of “' + M.byId(step.links.of).title + '”';
+        const inside = t ? ser.rows.filter((r) => r.agrees).map((r) => r.value) : [];
+        kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:10px' },
+          h('p', { class: 'say' }, h('b', {}, ser.rows.length + ' values of ' + (LABELS[M.settingVaried(step)] || 'the setting').toLowerCase() + ', side by side. '), 'What is compared: ' + what + '. ', t ? (inside.length ? 'Within the target: ' + inside.join(', ') + '.' : 'None falls within the target.') : 'Attach a target to judge them.'),
+          h('div', { class: 'scroll-x' }, h('table', {}, h('thead', {}, h('tr', {}, ['Value', ser.relative ? 'Difference (eV)' : 'Energy (eV)', t ? 'Off target (eV)' : null, 'BigDFT time (s)'].filter(Boolean).map((c) => h('th', {}, c)))),
+            h('tbody', {}, ser.rows.map((r) => h('tr', {}, h('td', { class: 'num' }, String(r.value)), h('td', { class: 'num' }, fx(r.quantity, 4)), t ? h('td', { class: 'num' }, fx(r.quantity - t.value, 3) + (r.agrees ? ' ✓' : ' ✗')) : null, h('td', { class: 'num' }, fx(r.seconds, 0)))))))),
+          figure({ kind: 'interval', title: '', caption: '', x: { label: (ser.relative ? 'Difference' : 'Energy') + ' (eV)', unit: 'eV', fmt: (v) => v.toFixed(2) }, band: t ? { x0: t.value - t.within, x1: t.value + t.within, mid: t.value, label: 'target ' + t.value + ' ± ' + t.within } : null,
+            rows: ser.rows.map((r) => ({ label: String(r.value), value: r.quantity, text: fx(r.quantity, 3) })) })),
+          h('p', { class: 'figmeta' }, ser.rows.length * (ser.relative ? 2 : 1) + ' real BigDFT runs. A decision step can keep one of these values for what follows.'));
+      }
+    } else if (step.kind === 'levels') {
+      const l = M.levels(step), of = M.byId(step.links.of);
+      if (M.status(step).state !== 'done') kids.push(h('p', { class: 'say' }, h('b', {}, 'Not yet. '), 'The levels are read from the log of “' + of.title + '”, which is not computed.'));
+      else if (!l) kids.push(h('p', { class: 'say' }, 'The log of “' + of.title + '” lists no level.'));
+      else kids.push(h('div', { class: 'res-cols' }, h('div', { style: 'display:grid;gap:12px' }, h('p', { class: 'big' }, l.gap ? fx(l.gap[0], 3) : fx(l.homo, 3), h('small', {}, l.gap ? 'eV · gap' : 'eV · highest occupied level')), facts(levelFacts(l)),
+        h('p', { class: 'say' }, l.gap ? 'The gap is the distance between the highest occupied level and the lowest empty one, in the same potential. With LDA or PBE it underestimates the true gap; a hybrid opens it.'
+          : 'The highest occupied level of a Kohn-Sham calculation is not the ionisation energy: with LDA or PBE it lies several eV above it. Compare with the difference between the cation and the neutral.')),
+        h('div', { style: 'min-width:0' }, levelDiagram(l))), h('p', { class: 'figmeta' }, 'Read from the log of “' + of.title + '”: ', h('code', {}, 'log.evals'), ', ', h('code', {}, 'log.fermi_level'), l.gap ? ', and the gap BigDFT prints after the empty states.' : '.'));
     } else if (step.kind === 'converge') {
       const ser = M.series(step);
       if (!ser.complete) kids.push(...waiting(step));
@@ -406,7 +521,7 @@
           h('p', { class: 'say' }, ser.proposed == null ? h('b', {}, 'Not converged in this range. ') : h('b', {}, 'Converged at ' + ser.proposed + '. '), ser.proposed == null ? 'No value is within ' + fx(step.params.within * 1000, 0) + ' meV of the last one.' : 'It is the cheapest value within ' + fx(step.params.within * 1000, 0) + ' meV of the reference. A decision step keeps it, or another, for what follows.'),
           h('div', { class: 'scroll-x' }, h('table', {}, h('thead', {}, h('tr', {}, ['Value', ser.relative ? 'Difference (eV)' : 'Energy (eV/atom)', 'Off reference (meV)', 'BigDFT time (s)'].map((c) => h('th', {}, c)))),
             h('tbody', {}, ser.rows.map((r) => h('tr', {}, h('td', { class: 'num' }, String(r.value)), h('td', { class: 'num' }, fx(r.quantity, ser.relative ? 4 : 5)), h('td', { class: 'num' }, fx(r.away * 1000, 1)), h('td', { class: 'num' }, fx(r.seconds, 0)))))))),
-          figure({ title: '', caption: '', panels: [{ title: ser.relative ? 'What is watched: the difference' : 'Total energy, against the reference', x: { label: (LABELS[M.settingOf(step.params.action)] || 'value'), fmt: (v) => String(+v.toFixed(3)) }, y: { label: unit, fmt: (v) => v.toFixed(ser.relative ? 2 : 0) },
+          figure({ title: '', caption: '', panels: [{ title: ser.relative ? 'What is watched: the difference' : 'Total energy, against the reference', x: { label: (LABELS[M.settingVaried(step)] || 'value'), fmt: (v) => String(+v.toFixed(3)) }, y: { label: unit, fmt: (v) => v.toFixed(ser.relative ? 2 : 0) },
             series: [{ name: step.title, slot: 0, marker: true, pts: ser.rows.map((r) => [r.value, y(r)]).sort((a, b) => a[0] - b[0]) }] }] }, 210)),
           h('p', { class: 'figmeta' }, ser.rows.length * (ser.relative ? 2 : 1) + ' real BigDFT runs. A value already computed elsewhere in the study is not computed twice.'));
       }
@@ -450,23 +565,48 @@
       line.innerHTML = esc(text).replace(/(#.*)$/, '<span class="c">$1</span>').replace(/("[^"]*")/g, '<span class="s">$1</span>') || ' ';
       return line;
     }));
-    if (ui.tab === 'map') {
-      const col = {}, rows = {}, depth = (s) => (s.id in col ? col[s.id] : (col[s.id] = 1 + Math.max(0, ...Object.values(s.links).map(M.byId).filter(Boolean).map(depth))));
-      const TYPE = { calculation: 'run', relax: 'relax', converge: 'series', choose: 'decision', difference: 'formula', target: 'target' };
-      const nodes = [{ id: 'system', col: 0, row: 0, type: 'structure', title: study.sys.name, sub: study.sys.atoms.length + ' atoms' }].concat(study.steps.map((s) => { const c = s.kind === 'target' ? 0 : depth(s), r = rows[c] = (rows[c] == null ? (c === 0 ? 1 : 0) : rows[c] + 1); return { id: s.id, col: c, row: r, type: TYPE[s.kind], title: s.title, sub: resultOf(s) || summaryOf(s) }; }));
-      const edges = study.steps.flatMap((s) => {
-        const L = s.links, out = [];
-        if (M.isCalc(s)) out.push([L.after || 'system', s.id, L.after && M.geometryFrom(s) && M.geometryFrom(s).id === L.after ? 'wavefunctions' : 'geometry']);
-        for (const r of ['of', 'relative_to', 'among', 'a', 'b']) if (L[r]) out.push([L[r], s.id, 'energies']);
-        if (L.against) out.push([L.against, s.id, 'criterion']);
-        if (s.kind === 'choose') for (const later of study.steps) if (M.isCalc(later) && M.at(later) > M.at(s) && !(later.links.after && M.at(M.byId(later.links.after)) > M.at(s))) out.push([s.id, later.id, 'choice']);
-        return out;
-      });
-      OND.board.draw($('#map'), nodes, edges, ui.sel, select, (n) => { const x = n.id === 'system' ? { state: 'done', text: 'given' } : M.status(M.byId(n.id)); return [{ done: 'done', given: 'done', ready: 'draft', blocked: 'queued', absent: 'partial' }[x.state], x.state === 'given' ? 'set' : x.state]; }, { px: 212 });
-    }
     if (ui.tab === 'log') $('#log').replaceChildren(h('p', { class: 'figmeta' }, 'What was sent, wave after wave. A wave holds every run that needs nothing still to come; the next one waits for it. Here each run comes back at once with its recorded result; the time shown is what BigDFT took.'),
-      ...(study.log.length ? study.log.map((entry, n) => h('pre', { class: 'wave', html: entry.waves.map((w, i) => '<b>wave ' + (i + 1) + '</b>  haps_bigdft(names=[' + w.map((r) => '"' + esc(r.name) + '"').join(', ') + '], directory="runs")\n' + w.map((r) => '  <span class="ok">[OK]</span> bigdft -n ' + esc(r.name) + ', ' + fx(r.seconds, 0) + ' s' + (r.relax ? '  <span class="c"># relaxation</span>' : '')).join('\n')).join('\n') + (entry.absent.length ? '\n<span class="c"># no recorded result: ' + esc(entry.absent.join(', ')) + '</span>' : '') }))
+      ...(study.log.length ? study.log.map((entry, n) => h('pre', { class: 'wave', html: entry.waves.map((w, i) => '<b>wave ' + (i + 1) + '</b>  haps_bigdft(names=[' + w.map((r) => '"' + esc(r.name) + '"').join(', ') + '], directory="runs")\n' + w.map((r) => '  <span class="ok">[OK]</span> bigdft -n ' + esc(r.name) + ', ' + fx(r.seconds, 0) + ' s' + (r.relax ? '  <span class="c"># relaxation</span>' : '') + (r.restart ? '  <span class="c"># reads data-' + esc(r.name) + '/wavefunction*, copied from the run it starts from</span>' : '')).join('\n')).join('\n') + (entry.absent.length ? '\n<span class="c"># no recorded result: ' + esc(entry.absent.join(', ')) + '</span>' : '') }))
         : [h('p', { class: 'say' }, 'Nothing computed yet.')]));
+  }
+
+  // ------------------------------------------------------------------ the graph of the study: one box per step
+  function renderGraph() {
+    const TYPE = { calculation: 'run', relax: 'relax', converge: 'series', vary: 'series', choose: 'decision', difference: 'formula', levels: 'levels', target: 'target' };
+    const col = { system: 0 }, row = { system: 0 }, taken = new Set(['0:0']);
+    const put = (c, want) => { let r = Math.max(0, want); while (taken.has(c + ':' + r)) r++; taken.add(c + ':' + r); return r; };
+    /* What a step needs before it: its links, and for a calculation the decisions taken before it. A box sits to the right of all of them. */
+    const needs = (s) => Object.values(s.links).map(M.byId).filter(Boolean).concat(M.isCalc(s) ? M.decisionsBefore(s).map((d) => d.step) : []);
+    const depth = (s) => (s.id in col ? col[s.id] : (col[s.id] = s.kind === 'target' ? 0 : 1 + Math.max(0, ...needs(s).map(depth))));
+    const nodes = [{ id: 'system', col: 0, row: 0, type: 'structure', title: study.sys.name, sub: study.sys.atoms.length + ' atoms · ' + BC[study.sys.bc], say: 'what everything is computed on', state: 'given' }];
+    for (const s of study.steps) {
+      const c = depth(s), L = s.links, parent = M.byId(L.after || L.of || L.among || L.a), st = M.status(s), res = resultOf(s);
+      row[s.id] = put(c, s.kind === 'target' ? 1 : parent ? row[parent.id] : 0);
+      nodes.push({ id: s.id, col: c, row: row[s.id], type: TYPE[s.kind], title: s.title, sub: summaryOf(s), res: st.state === 'done' || (s.kind === 'choose' && M.retained(s) != null) ? res : '', say: st.state === 'given' ? '' : st.text, state: st.state });
+    }
+    for (const n of nodes) if (ui.moved[n.id]) Object.assign(n, ui.moved[n.id]);
+    const edges = study.steps.flatMap((s) => {
+      const L = s.links, out = [], g = M.isCalc(s) && M.geometryFrom(s);
+      if (M.isCalc(s)) out.push([L.after || 'system', s.id, g && g.id === L.after ? 'geometry' : 'settings']);
+      if (L.wavefunctions) out.push([L.wavefunctions, s.id, 'wavefunctions']);
+      for (const r of ['of', 'relative_to', 'among', 'a', 'b']) if (L[r]) out.push([L[r], s.id, 'energies']);
+      if (L.against) out.push([L.against, s.id, 'criterion']);
+      if (s.kind === 'choose') for (const later of study.steps) if (M.isCalc(later) && M.at(later) > M.at(s) && !(later.links.after && M.at(M.byId(later.links.after)) > M.at(s))) out.push([s.id, later.id, 'choice']);
+      return out;
+    });
+    const z = OND.board.draw($('#graph'), nodes, edges, ui.sel, select, { reveal: ui.reveal, zoom: ui.zoom, avoid: !ui.inset ? { w: 0, h: 0 } : matchMedia('(max-width:860px)').matches ? { w: 172, h: 138 } : { w: 256, h: 198 }, onMove: (n) => { ui.moved[n.id] = { dx: n.dx, dy: n.dy }; },
+      onAdd: (id) => { if (ui.sel !== id) select(id); ui.palette = true; refresh(); const pal = $('#palette'); if (pal.scrollIntoView) pal.scrollIntoView({ block: 'nearest' }); } });
+    ui.reveal = false; ui.z = z;
+    $('#zoom-fit').setAttribute('aria-pressed', String(ui.zoom === 'fit')); $('#zoom-out').disabled = z <= 0.6; $('#zoom-in').disabled = z >= 1.2;
+    const used = [...new Set(edges.map((e) => e[2]))], L = OND.board.LINKS;
+    $('#graph-legend').replaceChildren(...Object.keys(L).filter((t) => used.includes(t)).map((t) => h('span', { html: '<svg width="28" height="8" aria-hidden="true"><path class="edge ' + t + '" d="M1 4H27"' + (L[t][1] ? ' stroke-dasharray="' + L[t][1] + '"' : '') + '/></svg>' + esc(L[t][0]) })));
+  }
+  function renderMain() {
+    $('#main').dataset.main = ui.main; $('#main').dataset.inset = ui.inset ? 'on' : 'off';
+    $('#inset-show').hidden = ui.main !== 'graph' || ui.inset;
+    $$('#main-switch button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.main === ui.main)));
+    $('#graph-legend').hidden = $('#zoom').hidden = ui.main !== 'graph';
+    if (ui.main === 'graph') renderGraph();
   }
 
   // ------------------------------------------------------------------ refresh and wiring
@@ -474,10 +614,10 @@
   function refresh(scene) {
     if (scene) renderStage();
     if (queued) return; queued = true;
-    requestAnimationFrame(() => { queued = false; renderRail(); renderStage(); if (!ui.drag) renderInspector(); renderDock(); $('#study-name').value = study.name; });
+    requestAnimationFrame(() => { queued = false; renderRail(); renderMain(); renderStage(); if (!ui.drag) renderInspector(); renderDock(); $('#study-name').value = study.name; });
   }
-  function example() { select(M.example().id); }
-  function start() { M.reset(); M.setSystem('h2o'); const first = M.add('calculation', null); first.title = 'Ground state'; M.touch(); select('system'); }
+  function example() { ui.moved = {}; select(M.example().id); }
+  function start() { ui.moved = {}; M.reset(); M.setSystem('h2o'); const first = M.add('calculation', null); first.title = 'Ground state'; M.touch(); select('system'); }
 
   $('#add-open').addEventListener('click', () => { ui.palette = !ui.palette; refresh(); });
   $('#compute-all').addEventListener('click', () => { M.compute(); ui.tab = 'log'; refresh(true); });
@@ -485,10 +625,15 @@
   $('#restart').addEventListener('click', start);
   $('#study-name').addEventListener('change', (e) => { study.name = e.target.value.trim() || 'Untitled study'; refresh(); });
   $('.tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) { ui.tab = t.dataset.tab; $('#dock').classList.remove('closed'); refresh(); } });
+  $('#main-switch').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.main = b.dataset.main; ui.reveal = true; refresh(true); } });
+  $('#inset-open').addEventListener('click', () => { ui.main = 'scene'; refresh(true); });
+  $('#inset-hide').addEventListener('click', () => { ui.inset = false; refresh(); });
+  $('#inset-show').addEventListener('click', () => { ui.inset = true; refresh(true); });
+  $('#zoom').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; ui.zoom = b.id === 'zoom-fit' ? 'fit' : Math.round(Math.min(1.2, Math.max(0.6, (ui.z || 1) + (b.id === 'zoom-in' ? 0.1 : -0.1))) * 100) / 100; ui.reveal = true; refresh(); });
   $('#dock-toggle').addEventListener('click', (e) => { const tall = $('#dock').classList.toggle('tall'); e.target.textContent = tall ? 'Smaller' : 'Larger'; setTimeout(() => window.dispatchEvent(new Event('resize')), 0); refresh(); });
   $('#viewbar').addEventListener('click', (e) => { const b = e.target.closest('.tog'); if (b && !b.disabled) { ui.view[b.dataset.view] = !ui.view[b.dataset.view]; refresh(true); } });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { themeColors(); refresh(true); });
-  window.addEventListener('resize', () => { if (ui.tab === 'results' || ui.tab === 'map') refresh(); });
+  window.addEventListener('resize', () => { if (ui.tab === 'results' || ui.main === 'graph') refresh(); });
 
   themeColors();
   start();
