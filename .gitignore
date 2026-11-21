@@ -3,3 +3,10 @@ __pycache__/
 .venv/
 node_modules/
 .DS_Store
+# the application server: its settings, its database, the runs of its users
+backend/.env
+backend/data/
+backend/work/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

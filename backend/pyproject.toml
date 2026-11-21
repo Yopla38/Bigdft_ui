@@ -1,6 +1,11 @@
-# What lets workshop 2 compute for real: the environment of backend/serve.py.
+# The server of the application: accounts, studies, and what lets workshop 2 compute for real.
 #
 #     uv sync          # in this directory
+#
+# Two things live in this one environment.
+#
+# The application server (app/, started by serve.py): FastAPI, SQLAlchemy and
+# Alembic over SQLite or PostgreSQL, Argon2 for the passwords.
 #
 # PyBigDFT WITHOUT BigDFT (pure Python): the study engine writes the inputs and
 # reads the logs here; the dry run and the calculation go to the two HAPS
@@ -10,7 +15,7 @@
 
 [project]
 name = "ondelette-backend"
-version = "0"
+version = "1.0.0"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "pybigdft==1.9.6.1",
@@ -19,7 +24,46 @@ dependencies = [
     "pyyaml",
     "ase",                # xyz_downloader.py: reads PubChem's SDF
     "requests",           # xyz_downloader.py: asks PubChem
+    # the application server
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "email-validator>=2.1",
+    "argon2-cffi>=23.1",
 ]
+
+[project.optional-dependencies]
+# uv sync --extra postgres, then ONDELETTE_DATABASE_URL=postgresql+psycopg://…
+postgres = ["psycopg[binary]>=3.1"]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.27", "mypy>=1.10", "ruff>=0.5", "types-pyyaml"]
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.mypy]
+packages = ["app"]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["haps", "preview", "xyz_downloader", "argon2.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.ruff]
+line-length = 180
+target-version = "py311"
+extend-exclude = ["haps_bridge", "bigdft_bin", "haps_dryrun_client.py", "xyz_downloader.py", "work", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]        # Depends(...) in a signature is how FastAPI is written
