@@ -16,13 +16,13 @@ uv sync                              # install: the environment of the server (a
 cp .env.example .env                 # the settings; the defaults suit a start on your own machine
 uv run alembic upgrade head          # migrate: create the database (SQLite, backend/data/), or bring it up to date
 uv run python -m app.seed            # seed: an administrator and a demonstration account with two studies; passwords printed once
-uv run python serve.py               # run: server and client on http://localhost:8766  (the first workshop is at /first/)
+uv run python serve.py               # run: server and client on http://localhost:8766  (the first workshop is at /first/, Asymille at /asymille/)
 ```
 
 Sign in with one of the two seeded accounts, or create one. Without a HAPS the page works on the recorded BigDFT results; with the bridge started (`./bridge.sh`, see "Compute for real" below) it computes.
 
 ```bash
-uv run pytest                        # the API: accounts, sessions, CSRF, roles, isolation between users, studies, waves (31 tests)
+uv run pytest                        # the API: accounts, sessions, CSRF, roles, isolation between users, studies, waves, Asymille's projects (38 tests)
 uv run mypy                          # the types of the server (strict)
 node ../tools/check_workshop.js      # the model of the page against a real BigDFT run, and a study saved and opened again
 ```
@@ -65,6 +65,7 @@ Served as files (`python tools/preview.py …`, below), the pages have no server
 | `prototype/` | The first workshop: immersive mock-up (single page, three.js, no build step) |
 | `workshop/` | **Workshop 2**: one study built step by step, from a system to its results. Each step continues the previous one; the steps come from the registry of steps; results are real BigDFT runs. See its README |
 | `backend/` | **The server of the application**: accounts, sessions and roles, the studies of each user in a database (SQLAlchemy, Alembic; SQLite or PostgreSQL), a REST API (FastAPI, Pydantic), and what lets workshop 2 **compute for real**: it prepares the runs with the registry of steps, has BigDFT dry-run them, sends them to the HAPS, reads the logs and keeps the results with the study. See its README |
+| `asymille/`, `backend/asymille/` | **Asymille**: curve fitting, data analysis and figures for publication, at `/asymille/`. Sheets of data, graphs at the size and in the type a journal asks, fits with their uncertainties, PDF with the font embedded. Developed and tested in its own repository (`Asymille`); here it is a copy, unchanged, plugged into the accounts of this server by `backend/app/asymille.py`. See "Asymille" in [`backend/README.md`](backend/README.md) |
 | `for_pybigdft_pack/study/` | The registry of steps (`StudyActions.py`) and its engine (`Studies.py`): a study as a script, prepared here, computed on the HAPS, analysed here. See its README |
 | `examples/water-ionisation/` | A study written by workshop 2 and run as written with BigDFT 1.9.1: script, inputs, logs, analysis |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |

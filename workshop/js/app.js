@@ -854,7 +854,7 @@
   /* Served by backend/serve.py, the page belongs to whoever signs in: their studies are read from the server and
      kept there, and it computes for real as soon as the HAPS is ready. Served as files (tools/preview.py) no
      account exists: it stays the mock-up, on its recorded results. */
-  OND.account.start({ slot: $('#account'), links: [{ label: 'The first workshop (mock-up)', href: '/first/' }],
+  OND.account.start({ slot: $('#account'), links: [{ label: 'The first workshop (mock-up)', href: '/first/' }, { label: 'Asymille · fit, analyse, figures', href: '/asymille/' }],
     onReturn: () => T.save(),                                     // what could not be saved while the session was over
     onUser: async () => {
       const info = await L.probe();

@@ -1,10 +1,11 @@
-"""Alembic's environment: the database of the application's settings, the tables of app/models.py."""
+"""Alembic's environment: the database of the application's settings, the tables of app/models.py and of app/asymille.py."""
 from __future__ import annotations
 
 from logging.config import fileConfig
 
 from alembic import context
 
+import app.asymille  # noqa: F401  (defines the table of Asymille's projects on Base)
 from app.config import get_settings
 from app.db import make_engine
 from app.models import Base, UTCDateTime

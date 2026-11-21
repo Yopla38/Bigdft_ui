@@ -976,7 +976,7 @@
 
   $('#role').addEventListener('click', () => { if (remote.on) return; ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
   // with accounts (backend/serve.py): the profile menu, the role of the account, the paths the server keeps
-  OND.account.start({ slot: $('#account'), links: [{ label: 'Workshop 2 · build a study', href: '/' }], onUser: loadGuides });
+  OND.account.start({ slot: $('#account'), links: [{ label: 'Workshop 2 · build a study', href: '/' }, { label: 'Asymille · fit, analyse, figures', href: '/asymille/' }], onUser: loadGuides });
   OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
   /* The study a user builds starts from the blueprint of the workshop: its settings become the script's blueprint(). */
   OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => /^inp[.[]/.test(l)), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores', haps: blueprint.TARGETS[st.v.target] }) });

@@ -2,6 +2,7 @@
 
     /                  workshop 2 (workshop/index.html, wrapped as tools/preview.py does)
     /first/            the first workshop (prototype/index.html)
+    /asymille/         Asymille: fits, analysis, figures (asymille/index.html, a copy: see app/asymille.py)
     /js, /shared       their scripts
     /api/…             routers/: accounts, studies, computing, guided paths, administration
     /api/health        for whatever watches the service
@@ -28,7 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, text
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import errors
+from . import asymille, errors
 from .compute import Compute
 from .config import BACKEND, ROOT, Settings, get_settings
 from .db import get_engine, get_sessionmaker
@@ -181,7 +182,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # ── the API ──────────────────────────────────────────────────────────────
     api = APIRouter(prefix="/api", dependencies=[Depends(csrf_guard)])
-    for module in (auth, account, studies, guides, admin):
+    for module in (auth, account, studies, guides, admin, asymille):
         api.include_router(module.router)
 
     @api.get("/health", tags=["service"])
@@ -215,6 +216,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def first_workshop_slash(request: Request) -> RedirectResponse:
         return RedirectResponse("/first/", status_code=308)
 
+    @app.get("/asymille/", include_in_schema=False)
+    def asymille_page() -> HTMLResponse:
+        return page("asymille")
+
+    @app.get("/asymille", include_in_schema=False)
+    def asymille_slash(request: Request) -> RedirectResponse:
+        return RedirectResponse("/asymille/", status_code=308)
+
+    app.mount("/asymille/js", StaticFiles(directory=ROOT / "asymille" / "js"), name="asymille-scripts")
+    app.mount("/asymille/shared", StaticFiles(directory=ROOT / "prototype" / "js"), name="asymille-shared")      # this server's own api.js and account.js
+    app.mount("/asymille/examples", StaticFiles(directory=ROOT / "asymille" / "examples"), name="asymille-examples")
     app.mount("/js", StaticFiles(directory=ROOT / "workshop" / "js"), name="workshop-scripts")
     app.mount("/shared", StaticFiles(directory=ROOT / "prototype" / "js"), name="shared-scripts")
     app.mount("/first/js", StaticFiles(directory=ROOT / "prototype" / "js"), name="first-scripts")

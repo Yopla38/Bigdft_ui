@@ -37,7 +37,7 @@ That is enough to sign in, build studies and find them again: without a HAPS the
 Check it:
 
 ```bash
-uv run pytest                            # the API: accounts, sessions, roles, isolation between users, studies, waves (31 tests, no HAPS needed)
+uv run pytest                            # the API: accounts, sessions, roles, isolation between users, studies, waves, Asymille's projects (38 tests, no HAPS needed)
 uv run mypy                              # the types of app/ (strict)
 uv run ruff check app tests serve.py migrations
 ONDELETTE_EMAIL=… ONDELETTE_PASSWORD=… node ../tools/check_live.js    # the whole chain, computing: 18 BigDFT runs, a few minutes
@@ -72,6 +72,7 @@ Everything is under `/api`, JSON in and out, and described at `/api/docs` outsid
 | `GET info` · `POST structure` | is the HAPS ready; a molecule by its name, from PubChem |
 | `GET guides` · `POST guides` · `DELETE guides/ID` | guided paths of the first workshop: read by members, published by administrators |
 | `GET admin/users` · `POST admin/users` · `PATCH admin/users/ID` · `DELETE admin/users/ID` · `GET admin/jobs` | administrators only |
+| `asymille/catalogue` · `asymille/projects…` · `asymille/model/…` · `asymille/fit` · `asymille/fit/global` · `asymille/analyse` · `asymille/figure` | Asymille: the projects of whoever is signed in, fits, operations on a curve, a figure as a file. Listed in `asymille/web/api.py` |
 | `GET health` | for whatever watches the service |
 
 What is sent is validated by Pydantic models that refuse any field they do not describe (`app/schemas.py`).
@@ -171,6 +172,9 @@ A run that failed is not sent again by itself: "Try again" on the step does it.
 | `app/schemas.py`, `app/errors.py` | What the API accepts and answers; the one shape of its errors |
 | `app/security.py`, `app/deps.py` | Passwords and tokens; who is signed in, with which role, and that a request is the page's own |
 | `app/routers/` | The addresses: `auth`, `account`, `studies` (with the waves), `guides`, `admin` |
+| `app/asymille.py` | Plugs Asymille into the accounts, the sessions and the database of this server |
+| `asymille/`, `../asymille/` | Copied unchanged from the Asymille repository: its engine and API (numpy, scipy, lmfit, matplotlib), and its page |
+| `update_from_asymille.sh` | Compares those copies with Asymille's, and takes them again |
 | `app/compute.py` | Between a study and the HAPS: start a wave in the study's directory, follow it, record its results |
 | `app/seed.py`, `app/seed_data/` | The first administrator, the demonstration account and its studies |
 | `tests/` | The API tested on a database made by the migrations, with stand-ins for the runner (`fake_runner.py`, `replay_runner.py`) |
@@ -181,8 +185,35 @@ A run that failed is not sent again by itself: "Try again" on the step does it.
 | `update_from_pack.sh` | Compares the copies below and above with the pack's, and takes them again |
 | `bigdft_bin/`, `bigdft_refused.sh`, `haps_dryrun_client.py` | Copied unchanged from the PyBigDFT pack (`tools/`): the stand-in `bigdft-tool` that sends PyBigDFT's dry run to the bridge, and `bigdft`, `abscalc`, `frequencies`, which refuse |
 | `xyz_downloader.py` | Copied unchanged from the pack too: asks PubChem for the 3D structure of a molecule and writes it in BigDFT's `.xyz`, unit included. `/api/structure` calls it and hands the text to the page; the files stay in `work/.structures/` |
-| `pyproject.toml`, `uv.lock` | The environment: FastAPI, SQLAlchemy, Alembic, Pydantic and Argon2 for the server; PyBigDFT without BigDFT, the MCP client and server, `haps-client` for the bridge, PyYAML, and `ase` and `requests` for the downloader |
+| `pyproject.toml`, `uv.lock` | The environment: FastAPI, SQLAlchemy, Alembic, Pydantic and Argon2 for the server; lmfit, numpy, scipy and matplotlib for Asymille; PyBigDFT without BigDFT, the MCP client and server, `haps-client` for the bridge, PyYAML, and `ase` and `requests` for the downloader |
 | `data/`, `work/`, `.env` | The SQLite database, the runs of the studies, the settings (none in git) |
+
+## Asymille
+
+Asymille (curve fitting, analysis, figures for publication) is a third page of the application, at `/asymille/`, reached from the account menu of the two workshops. It needs no HAPS: its calculations run in this server (lmfit and scipy for the fits and the operations, matplotlib for PDF, EPS and TIFF).
+
+It is developed in its own repository, where its engine is tested against NIST certified values and its page in Node. Here it is a copy:
+
+```bash
+./update_from_asymille.sh /path/to/Asymille           # what differs
+./update_from_asymille.sh /path/to/Asymille --apply   # take it
+uv run pytest tests/test_asymille.py                  # the copy and this server still agree
+```
+
+Asymille knows nothing of this server. `app/asymille.py` gives it what it asks for (the declarative base, who is signed in, a database session, how an error is raised), and so:
+
+| | |
+|---|---|
+| Accounts | The page loads this server's own `shared/api.js` and `shared/account.js`: the same sign-in, the same profile menu. Its API answers 401 to nobody |
+| Guards | Its router is included in the `/api` router: every address passes `csrf_guard` |
+| Isolation | Its one table, `asymille_projects`, carries `owner_id` (`ondelete="CASCADE"`) and is read with it in the query itself: a project of someone else answers 404. Deleting an account deletes its projects |
+| Database | The table is defined on `models.Base` and created by the migration `0002` |
+| What it accepts | A project is validated by a model that refuses unknown fields. An expression typed by a person (a custom fit function, a tie between parameters) is walked as a syntax tree, never evaluated: `test_asymille.py` sends `__import__('os')` through it |
+| Errors | Its refusals leave as `AppError`, in the one error shape |
+
+A project travels whole at each save, its data included: `ONDELETTE_MAX_BODY_BYTES` (4 MB) bounds it, to about 200 000 numbers. A fit is stopped after 30 s and four calculations run at a time, all accounts together (`asymille.web.Limits` in `app/asymille.py`). These calculations run in the threads of the one process: a server used by many for long fits would need them moved out, which is not done.
+
+Checked here: `tests/test_asymille.py` (7 tests: nobody signed in, isolation between two accounts, deletion with the account, the guards, a fit, an operation and a figure, the page and its scripts, and a project written by the page's own model in Node). The page was also driven in a browser through this server, on a database and a port of its own: signing up at the gate, the example, a fit, the account menu.
 
 ## Structures
 

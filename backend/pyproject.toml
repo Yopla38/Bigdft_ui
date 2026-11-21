@@ -33,6 +33,12 @@ dependencies = [
     "pydantic-settings>=2.3",
     "email-validator>=2.1",
     "argon2-cffi>=23.1",
+    # asymille/: fits, analysis and figures (numpy, scipy and matplotlib come with PyBigDFT; they are named because Asymille needs them itself)
+    "lmfit>=1.3",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "pillow>=10",
 ]
 
 [project.optional-dependencies]
@@ -55,14 +61,14 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["haps", "preview", "xyz_downloader", "argon2.*"]
+module = ["haps", "preview", "xyz_downloader", "argon2.*", "asymille", "asymille.*"]       # asymille/ is a copy: typed and checked in its own repository
 ignore_missing_imports = true
 follow_imports = "skip"
 
 [tool.ruff]
 line-length = 180
 target-version = "py311"
-extend-exclude = ["haps_bridge", "bigdft_bin", "haps_dryrun_client.py", "xyz_downloader.py", "work", "data"]
+extend-exclude = ["haps_bridge", "bigdft_bin", "haps_dryrun_client.py", "xyz_downloader.py", "asymille", "work", "data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A proposal and two browser mock-ups for a BigDFT web workshop (working name: Ondelette), plus material meant to be copied into the PyBigDFT pack (`Pack_pybigdft_HAPS`, a separate repository this one may read but not write). `docs/PROPOSAL.md` is the reference document: concept, architecture, and in §11 what is real, simulated and verified. Everything is written in English.
 
+A third page, Asymille (curve fitting, analysis, figures for publication), is served at `/asymille/`. It is developed in its own repository; here it is a copy (see "Asymille" below).
+
 On the `production` branch the two pages are an application: `backend/` serves them with accounts, a database and a REST API, and each user builds, keeps and computes their own studies. Served as files (`tools/preview.py`) the same pages are still the mock-up, without accounts.
 
 The pages have no package and no build step: plain scripts loaded in order. The tools are standalone Python scripts run with the system `python3` (3.10+, PyYAML the only dependency). The one environment is `backend/` (uv, `backend/.venv`): the application server (FastAPI, SQLAlchemy, Alembic, Pydantic, Argon2) and what lets workshop 2 compute on the HAPS.
@@ -24,10 +26,11 @@ The application (accounts, studies in a database, computing through the bridge o
 cd backend && uv sync
 uv run alembic upgrade head               # create or update the database (SQLite in backend/data/ unless ONDELETTE_DATABASE_URL says otherwise)
 uv run python -m app.seed                 # an administrator and a demonstration account; run once
-uv run python serve.py                    # http://localhost:8766 (workshop 2) and /first/ (first workshop)
+uv run python serve.py                    # http://localhost:8766 (workshop 2), /first/ (first workshop) and /asymille/
 uv run pytest                             # the API on a database made by the migrations; no HAPS needed
 uv run pytest tests/test_studies.py -k revision     # one file, one test
 uv run mypy && uv run ruff check app tests serve.py migrations
+./update_from_asymille.sh /path/to/Asymille [--apply]     # what differs from Asymille's repository; --apply takes it
 ONDELETTE_EMAIL=… ONDELETTE_PASSWORD=… node ../tools/check_live.js    # the example COMPUTED through the server: 18 BigDFT runs, about 3 minutes
 ```
 
@@ -107,6 +110,14 @@ A page cannot run BigDFT. Workshop 2 shows results only for calculations found i
 - Dry runs are sequential on purpose (PyBigDFT reads the verdict from a directory-wide `debug/`).
 - **Look at what is listening before you test** (`ss -ltnp | grep -E ':(8766|8790|8791) '`). The user may be running the real thing: their bridge on 8791 in front of a remote HAPS, their `serve.py` on 8766, with `backend/work/` as its directory and `backend/data/` as its database. A test server started on the default bridge address then computes on their HAPS, with their account. Test on a stack of your own: other ports (`serve.py --port … --bridge … --workdir …`, the local stack with `HAPS_MCP_PORT`), another work directory and another database (`ONDELETTE_DATABASE_URL`), and never a directory of `backend/work/` or a database you did not create. Stop a test server by its process id, not by a pattern that would match theirs.
 
+### Asymille
+
+`asymille/` (the page) and `backend/asymille/` (its engine and API) are verbatim copies from the Asymille repository, taken by `backend/update_from_asymille.sh`: never edit them here. A change of Asymille is made and tested there (`pytest`, `node tools/check_page.js`), then copied. Its own `CLAUDE.md` holds its rules.
+
+`backend/app/asymille.py` is the only code of this repository that knows it: it hands Asymille a `Host` (the base, `deps.current_user`, `get_db`, `AppError`), which makes its table (`asymille_projects`, in `models.Base.metadata`, created by migration `0002`) and its router (included in the `/api` router, so behind `csrf_guard`). `migrations/env.py` imports that module so that autogenerate sees the table: after copying a new `asymille/web/tables.py`, run `alembic revision --autogenerate` and read the result. `main.py` serves the page at `/asymille/` and mounts `/asymille/shared` on `prototype/js`: the page signs people in with this repository's `account.js`, not with the stand-in of Asymille's standalone server. `tests/test_asymille.py` holds what must stay true: 401 without a session, 404 for another account, the guards, deletion with the account, and a project built by the page's model in Node accepted by the API.
+
+mypy skips `asymille.*` and ruff excludes it (it is checked in its own repository). Its calculations run in the server's process, in the threads of the requests, a few at a time: the "one process" rule above still holds.
+
 ### Where calculations run
 
 `config/haps.yaml` is the only place a service address is written; no secret goes there, only the names of the environment variables that hold them. `backend/serve.py` and `bridge.sh` read the bridge's address from it (8791: the workshop's own bridge; 8790 is the agent's). Preparing and analysing happen where PyBigDFT is (no BigDFT there); the dry run and the calculation are two HAPS applications, `memguess` and `bigdft -n NAME`. The `gpu` and `hpc` entries are placeholders (`example: true`).
@@ -119,7 +130,7 @@ Changes meant for repositories this work cannot write go in `docs/patches/` as a
 
 ## Conventions
 
-- The README and the sub-READMEs (`backend/`, `workshop/`, `for_pybigdft_pack/`, `for_pybigdft_pack/study/`) state counts and measured facts (311 variables, 131 recorded calculations, 41 snippets, 31 API tests). When a change moves one of them, update the sentence.
+- The README and the sub-READMEs (`backend/`, `workshop/`, `for_pybigdft_pack/`, `for_pybigdft_pack/study/`) state counts and measured facts (311 variables, 131 recorded calculations, 41 snippets, 38 API tests). When a change moves one of them, update the sentence.
 - In the pages, a list or a form changes on screen first and is sent after; when the server refuses, it goes back to what it was and says why. Loading and failure are states that are drawn, not console messages. `Element.replaceChildren` turns `null` into the text "null": filter before spreading.
 - Documentation states plainly what was measured, what was not, and what is simulated. Follow that register rather than describing intentions.
 - Commit subjects are one plain sentence saying what changed, with a `Workshop 2:` prefix for that page.
