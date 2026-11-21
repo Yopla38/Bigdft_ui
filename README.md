@@ -4,6 +4,46 @@ A web workshop for BigDFT: build a simulation around a 3D scene, run it, analyse
 
 The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelette.
 
+This branch (`production`) is the application: the two pages of the demonstration, served by a server with accounts, a database and an API, in which each user builds, keeps and computes their own studies. The `demo` branch is the mock-up it was made from.
+
+## Run the application
+
+It needs [`uv`](https://docs.astral.sh/uv/) and Python 3.11 to 3.13. There is no client to build: the pages are plain scripts, served by the same server.
+
+```bash
+cd backend
+uv sync                              # install: the environment of the server (and of the HAPS bridge)
+cp .env.example .env                 # the settings; the defaults suit a start on your own machine
+uv run alembic upgrade head          # migrate: create the database (SQLite, backend/data/), or bring it up to date
+uv run python -m app.seed            # seed: an administrator and a demonstration account with two studies; passwords printed once
+uv run python serve.py               # run: server and client on http://localhost:8766  (the first workshop is at /first/)
+```
+
+Sign in with one of the two seeded accounts, or create one. Without a HAPS the page works on the recorded BigDFT results; with the bridge started (`./bridge.sh`, see "Compute for real" below) it computes.
+
+```bash
+uv run pytest                        # the API: accounts, sessions, CSRF, roles, isolation between users, studies, waves (31 tests)
+uv run mypy                          # the types of the server (strict)
+node ../tools/check_workshop.js      # the model of the page against a real BigDFT run, and a study saved and opened again
+```
+
+For PostgreSQL: `uv sync --extra postgres` and `ONDELETTE_DATABASE_URL=postgresql+psycopg://user:password@host/database` in `.env`, then the same `alembic upgrade head`. For production (HTTPS behind a reverse proxy, registration closed, one process): [`backend/README.md`](backend/README.md), "In production". The API is described there too, and at `/api/docs` while the server runs outside production.
+
+### What the demonstration kept in the page, and where it is now
+
+| In the demonstration | Was | Now |
+|---|---|---|
+| The study of workshop 2: its structure, steps, decisions, what was asked to be computed, the log of waves, where its boxes were dragged | in the memory of the page: lost at reload | `studies`, one row per study of a user, saved by itself as it is built, with a revision so that two tabs do not overwrite each other |
+| The results BigDFT gave when the page computed for real | in the memory of the page; the runs in `backend/work/<name of the study>/`, whoever asked | `run_results`, by study and by the identity of the calculation; the runs in `work/u<user>/s<study>/` |
+| The waves on their way | a table in the memory of the local server | `jobs`, with their owner; followed to their end even when the page is closed |
+| Guided paths an administrator added (first workshop) | `localStorage` (`ond.guides`): that browser only | `guides`, published by an administrator, read by every member |
+| "Admin view" (first workshop) | `localStorage` (`ond.admin`): a switch anyone could flip | the role of the account (`USER`, `ADMIN`), checked by the server |
+| Who is using the page | nobody: one local user | `users` and `sessions` |
+| The recorded results of workshop 2 (131 BigDFT runs on water), the capsule results, the 311 variables, the registry of steps | files generated from real runs and from the code | unchanged: they are reference data shipped with the pages, the same for everyone, never written by a user |
+| The first workshop's blueprint, its notes on atoms, its Lab, Compute and Publish spaces, people, prices | in the memory of the page, labelled as examples | unchanged, and still labelled so: they illustrate the proposal (§11), no user data is kept from them |
+
+Served as files (`python tools/preview.py …`, below), the pages have no server and no account: they remain the mock-up, on recorded results, and the two `localStorage` keys are still used there.
+
 ## Contents
 
 | Path | Role |
@@ -24,12 +64,12 @@ The proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md). Working name: Ondelet
 | `examples/water-study/` | A study built with the mock-up's builder and run with BigDFT 1.9.1: board, generated script, inputs, logs, two attempts |
 | `prototype/` | The first workshop: immersive mock-up (single page, three.js, no build step) |
 | `workshop/` | **Workshop 2**: one study built step by step, from a system to its results. Each step continues the previous one; the steps come from the registry of steps; results are real BigDFT runs. See its README |
-| `backend/` | What lets workshop 2 **compute for real**: a local server between the page and the HAPS, which prepares the runs with the registry of steps, has BigDFT dry-run them, sends them and reads the logs. See its README |
+| `backend/` | **The server of the application**: accounts, sessions and roles, the studies of each user in a database (SQLAlchemy, Alembic; SQLite or PostgreSQL), a REST API (FastAPI, Pydantic), and what lets workshop 2 **compute for real**: it prepares the runs with the registry of steps, has BigDFT dry-run them, sends them to the HAPS, reads the logs and keeps the results with the study. See its README |
 | `for_pybigdft_pack/study/` | The registry of steps (`StudyActions.py`) and its engine (`Studies.py`): a study as a script, prepared here, computed on the HAPS, analysed here. See its README |
 | `examples/water-ionisation/` | A study written by workshop 2 and run as written with BigDFT 1.9.1: script, inputs, logs, analysis |
 | `tools/` | Schema extraction and comparison, catalogue and graph generation, preview server |
 
-## See the mock-up
+## See the mock-up, without a server
 
 ```bash
 python tools/preview.py                   # the first workshop, http://localhost:8765
@@ -37,19 +77,22 @@ python tools/preview.py 8766 workshop     # workshop 2,         http://localhost
 node tools/check_workshop.js              # workshop 2 against a real BigDFT run
 ```
 
+The same pages as files: no account, nothing saved, recorded results only.
+
 The two are separate pages. Workshop 2 starts again from one idea: you are building a calculation, then a study, in one continuous line. It reuses the first workshop's scene, figures, checks and registries.
 
 ## Compute for real with workshop 2
 
-With the two HAPS served, wherever they are (`serve_remote.sh` or `serve_local.sh` of the service):
+With the two HAPS served, wherever they are (`serve_remote.sh` or `serve_local.sh` of the service), and the application installed as above:
 
 ```bash
 cd backend
-uv sync                                       # once: the environment of the bridge and of the server
 ./bridge.sh [credentials.env]                 # the workshop's MCP bridge to the HAPS, on 8791
-uv run python serve.py                        # http://localhost:8766: the same page, computing
-node ../tools/check_live.js                   # the example, computed, against the recorded run (a few minutes)
+uv run python serve.py                        # http://localhost:8766: signed in, the page computes
+ONDELETTE_EMAIL=… ONDELETTE_PASSWORD=… node ../tools/check_live.js     # the example, computed as that account, against the recorded run (a few minutes)
 ```
+
+Every account computes with the one HAPS account the bridge holds; each study has its own directory, `backend/work/u<user>/s<study>/`.
 
 `backend/README.md` has the details. A step that starts from the wavefunctions of another needs a HAPS that takes them: the pack's does since 2026-11-20 (`docs/patches/haps-wavefunctions.patch` is the change, for an older copy). On a HAPS that does not, the page refuses the step rather than let BigDFT start from scratch.
 
@@ -62,6 +105,8 @@ mkdir -p /tmp/lattice /tmp/lattice2
 tar -xzf workshop/library/runs.tgz -C /tmp/lattice && tar -xzf workshop/library/runs2.tgz -C /tmp/lattice2
 python tools/build_library.py examples/water-ionisation/runs /tmp/lattice examples/water-study/attempt-2/runs /tmp/lattice2    # the recorded results
 ```
+
+`backend/app/seed_data/studies.json`, the demonstration studies of the seed, is written by the model of the page too: `node tools/build_seed.js` (checked by `check_workshop.js`).
 
 To record more results, run a study through the registry (`workshop/library/lattice.py` and `lattice2.py` are the ones behind the library) and pass its `runs` directory to `build_library.py`. `tools/update_version.sh` regenerates the steps and the views with everything else.
 

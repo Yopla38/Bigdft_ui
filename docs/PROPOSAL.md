@@ -350,6 +350,14 @@ Real since `backend/`: served by its local server, the page computes. A step is 
 
 Verified: the same audit as the first workshop, at 1440, 1024, 768 and 400 px in both themes, on every step and tab of the example; building a study from nothing, changing an upstream step, deciding against the criterion, a system without results.
 
+### The application (branch `production`)
+
+Real: accounts, sessions and roles; the studies of each user, saved as they are built and opened again from any browser; the results BigDFT gave, kept by study and by the identity of each calculation; the waves, tied to their owner and followed by the server; the guided paths an administrator publishes in the first workshop. All of it is in a database (SQLite or PostgreSQL) behind a REST API (`backend/app`), and nothing of one user is readable by another.
+
+Still not real: what the first workshop simulates (above) is unchanged and still labelled; its blueprint, notes and example spaces keep no user data. No mail is sent: there is no e-mail verification and no password recovery by e-mail (an administrator sets a new password). Every account computes with the one HAPS account of the bridge.
+
+Verified: 31 tests of the API on a database made by the migrations (sign-up, sign-in, sign-out, session rotation, CSRF and origin refusals, slowed-down guessing, password change, roles, a study or a wave of someone else answering 404, revisions, validation, the production cookie); `tools/check_workshop.js`, with a study saved and opened again; in Chromium, on the server, 23 checks of the pages (signing up, autosave, reload, two tabs in conflict, the list of studies, a second account seeing nothing of the first, a session ending under the page, the administrator's screens, a guided path published and read, a phone width). Computing through the new server was verified with `tools/check_live.js` on recorded runs replayed in place of the HAPS (`backend/tests/replay_runner.py`): the 18 runs, their 3 waves, every energy, and the results read back from the database. It was **not** run against a HAPS from this branch: `runner.py` and the bridge are unchanged, and that check is the one to run where a HAPS is served.
+
 ## 12. Questions to move forward
 
 1. **Existing platform.** pack-kit says it was extracted from a platform monorepo (FastAPI backend, React frontend, a runner with sidecars). Is the workshop to be built inside that platform, or beside it as a second host?

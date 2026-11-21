@@ -3,10 +3,29 @@
 One place, one study. You define a system, add a calculation, compute it, look at the result, add the next step. Each step continues what is already there. There is no separate "Study" space and no capsule: the graph in the centre is the study, and it is also the script.
 
 ```bash
-python tools/preview.py 8766 workshop     # http://localhost:8766, on recorded results
+python tools/preview.py 8766 workshop     # http://localhost:8766, on recorded results, without accounts
 node tools/check_workshop.js              # the page against a real BigDFT run
-cd backend && uv run python serve.py      # the same page, computing on the HAPS (see backend/README.md)
+cd backend && uv run python serve.py      # the application: accounts, your studies kept, computing on the HAPS (see backend/README.md)
 ```
+
+## Your studies
+
+Served by `backend/serve.py`, the page belongs to whoever signs in. It is covered until someone does; an account is created there too, unless registration is closed.
+
+- **A study is saved by itself**, a moment after each change, and the header says where that stands ("Saved", "Saving…", "Not saved · retry"). Nothing asks to be saved and nothing waits for the server: what is done on screen is done, the server follows. If it does not answer, the save is tried again; if the session ended, the page asks to sign in and goes on from where it was.
+- **"Studies"** lists yours: open, rename, duplicate, delete. A change of the list shows at once and goes back, with the reason, if the server refuses it. "New study" and "The example" make studies of their own; the one in hand stays in the list.
+- **What BigDFT computed stays with the study.** Results are kept by the server under the identity of each calculation and come back when the study is opened, from any browser. A wave sent before the page was closed is followed to its end by the server, and taken up by the page when it is opened again.
+- **Two tabs do not overwrite each other.** A save carries the revision it was made from; when the study was changed elsewhere, the page says so and the person chooses which version is kept.
+- **Only you see your studies.** The profile menu (top right) holds the account settings: name, e-mail, password, where the account is signed in, deleting it. For an administrator it also holds the accounts and the waves sent to the HAPS.
+
+| File | Role |
+|---|---|
+| `shared/api.js` | The page's way to the API: the session cookie is the browser's business, the CSRF token is sent with what changes something, an error has a code and a message. No DOM |
+| `shared/account.js` | Signing in and up, the profile menu, the account settings, the administrator's screens. Shared with the first workshop |
+| `js/store.js` | The studies of the user: the list, the open one, saving it (`model.serialize`), opening one (`model.restore`). No DOM |
+| `js/studies.js` | The list of studies and the save status, drawn |
+
+A study is written by `serialize` in `js/model.js` and read back by `restore`, its exact inverse: `tools/check_workshop.js` checks that a study saved and opened again gives the same script and the same identities of calculations.
 
 The first workshop (`prototype/`) is untouched. This one reuses its 3D scene, figures, parameter schema, checks and registries through `workshop/shared`, a link to `prototype/js`.
 
@@ -55,7 +74,7 @@ A structure, the system of the study included, comes from one of four places:
 | The built-in systems | water, C₆₀, benzene on graphene, silicon, a peptide |
 | One atom | an element of the first three rows |
 | A file of your disk | an `.xyz`, read in the page (`js/structures.js`). A plain `.xyz` is in angstroem; BigDFT's own names its unit and its cell on the first two lines, and is read as it says |
-| A molecule by its name | its 3D structure from PubChem, fetched by the server with the pack's `xyz_downloader.py`. Only when the page is served by `backend/serve.py` |
+| A molecule by its name | its 3D structure from PubChem, fetched by the server with the pack's `xyz_downloader.py`. Only when the page is served by `backend/serve.py`, to someone signed in |
 
 Whatever the source, the script writes the structure as BigDFT reads it, positions in angstroem **with their unit**: a plain `.xyz` handed to BigDFT would be read in bohr, silently.
 
