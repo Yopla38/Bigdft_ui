@@ -39,6 +39,7 @@ class Column(Strict):
     formula: Text = ""
     comment: Text = ""
     values: Annotated[list[Cell], Field(max_length=500_000)] = []
+    made: dict[str, JsonValue] | None = None                                       # the operation that computed it, with its values: what a series repeats on each file
 
 
 class Sheet(Strict):
@@ -79,6 +80,36 @@ class Fit(Strict):
     stale: bool = False                                                            # the data or the model changed since
 
 
+class Variable(Strict):
+    name: Annotated[str, StringConstraints(max_length=60)] = ""
+    unit: Annotated[str, StringConstraints(max_length=40)] = ""
+
+
+class Member(Strict):
+    """One file of a series: its sheet, the value of what was varied, and what its fit gave."""
+
+    sheet: Ident
+    value: float | None = None
+    state: Literal["todo", "running", "done", "failed"] = "todo"
+    message: Text = ""
+    result: dict[str, JsonValue] | None = None
+
+
+class FileSeries(Strict):
+    """The same fit on many files."""
+
+    id: Ident
+    name: Title
+    fit: Ident
+    variable: Variable = Variable()
+    members: Annotated[list[Member], Field(max_length=500)] = []
+    chain: bool = True                                                             # each file starts from what its neighbour gave
+    results: Ident | None = None                                                   # the sheet its table of results is written in
+    graph: Ident | None = None                                                     # the graph that shows one file at a time
+    current: Ident | None = None
+    ran: Annotated[str, StringConstraints(max_length=40)] = ""                     # a mark of the model it was last run with
+
+
 class LogLine(Strict):
     at: Annotated[str, StringConstraints(max_length=40)]
     text: Text
@@ -91,10 +122,11 @@ class ProjectDocument(Strict):
     sheets: Annotated[list[Sheet], Field(max_length=100)] = []
     graphs: Annotated[list[Graph], Field(max_length=100)] = []
     fits: Annotated[list[Fit], Field(max_length=200)] = []
+    series: Annotated[list[FileSeries], Field(max_length=50)] = []
     log: Annotated[list[LogLine], Field(max_length=500)] = []
     view: dict[str, JsonValue] = {}
 
-    @field_validator("sheets", "graphs", "fits")
+    @field_validator("sheets", "graphs", "fits", "series")
     @classmethod
     def _distinct(cls, items: list[Any]) -> list[Any]:
         if len({i.id for i in items}) != len(items):

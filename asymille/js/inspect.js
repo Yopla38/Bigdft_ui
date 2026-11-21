@@ -49,6 +49,7 @@ window.ASY = window.ASY || {};
   function seriesName(r) {
     const d = M.seriesData(r);
     if (r.label) return P.plain(r.label);
+    if (r.kind === 'member') return 'Fit of the file shown';
     if (r.kind === 'fit') { const f = M.fit(r.fit); return (r.part === 'total' ? 'Fit' : r.part === 'band' ? 'Confidence band' : r.part === 'residuals' ? 'Residuals' : r.part) + (f ? ' · ' + f.name : ''); }
     return d ? d.label : 'missing data';
   }
@@ -66,7 +67,7 @@ window.ASY = window.ASY || {};
     if (sel) {
       const s = M.sheet(sel.sheet);
       const move = (d) => { const i = panel.series.indexOf(sel), j = i + d; if (j < 0 || j >= panel.series.length) return; panel.series.splice(i, 1); panel.series.splice(j, 0, sel); A().refresh(); };
-      out.push(ui.sec(seriesName(sel), sel.kind === 'fit' ? 'a curve of a fit' : 'data', true,
+      out.push(ui.sec(seriesName(sel), sel.kind === 'fit' || sel.kind === 'member' ? 'a curve of a fit' : sel.follow ? 'the file a series shows' : 'data', true,
         ui.field('Name in the legend', ui.txt(sel, 'label', { placeholder: seriesName(Object.assign({}, sel, { label: '' })), structural: true }), 'Write E_{F}, cm^{-1}, \\alpha for subscripts, superscripts and Greek letters.'),
         sel.kind === 'data' ? h('div', { class: 'cols2' },
           ui.field('X', ui.sel(sel, 'x', columnOptions(s, { none: 'row number' }), { nullable: true })), ui.field('Y', ui.sel(sel, 'y', columnOptions(s), { structural: true })),
@@ -77,6 +78,9 @@ window.ASY = window.ASY || {};
         h('div', { class: 'cols2' },
           ui.field('Colour', h('div', { class: 'row2' }, ui.col(sel, 'color', { structural: true }), ui.txt(sel, 'color', { max: 7, structural: true }))),
           ui.field('Opacity', ui.num(sel, 'opacity', { min: 0.05, max: 1 }))),
+        sel.kind === 'data' && s && s.columns.some((c) => c.made && c.made.key === 'check') ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!sel.unless,
+          onchange: (e) => { sel.unless = e.target.checked ? s.columns.find((c) => c.made && c.made.key === 'check').id : null; A().touch(); } }), 'Leave out the files marked “to check”') : null,
+        sel.kind === 'data' ? ui.field('Shifted up by', ui.num(sel, 'shift', { nullable: true, placeholder: 'not shifted' }), 'Added to y, in its unit: to stack curves one above the other.') : null,
         sel.type === 'line' || sel.type === 'both' || sel.type === 'steps' || sel.type === 'area' ? h('div', { class: 'cols2' },
           ui.field('Line width (pt)', ui.num(sel, 'width', { nullable: true, min: 0.1, max: 10, placeholder: 'of the page' })),
           ui.field('Line', ui.sel(sel, 'dash', [['solid', 'solid'], ['dash', 'dashed'], ['dot', 'dotted'], ['dashdot', 'dash-dot'], ['long', 'long dashes']]))) : null,

@@ -147,6 +147,7 @@ window.ASY = window.ASY || {};
       ui.sec('On the graph', '', !!res,
         h('div', { class: 'acts' }, ui.btn('Show the components', () => { M.showFit(f, g, { components: true }); A().refresh(); }), ui.btn('Show the confidence band', () => { M.showFit(f, g, { band: true }); A().refresh(); }),
           ui.btn('Add a panel of residuals', () => { const where = M.showFit(f, g); if (where) M.showResiduals(f, where); A().refresh(); }))),
+      ASY.seriespanel.section(f),
       h('div', { class: 'acts', style: 'padding:12px 0' }, ui.btn('Delete this fit', () => { M.removeFit(f.id); A().refresh(); }, 'danger')),
       create,
     ];

@@ -140,7 +140,7 @@ h1,h2,h3,h4,p{margin:0}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th{text-align:left;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-3);font-weight:500;padding:6px 10px 6px 0;border-bottom:1px solid var(--line-2);white-space:nowrap}
 td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
-td.num,th.num{text-align:right}td code{color:var(--accent)}
+td.num,th.num{text-align:right;white-space:nowrap}td code{color:var(--accent)}
 .facts2{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:5px 16px;margin:0;font-size:13px}.facts2 dt{color:var(--fg-3)}.facts2 dd{margin:0;font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere;text-align:right}
 .notice{padding:9px 12px;border-radius:9px;border:1px dashed var(--warn);display:grid;gap:6px;font-size:13px}
 .notice.err{border-color:var(--err);border-style:solid}.notice.ok{border-color:var(--ok);border-style:solid}.notice.advice{border-color:var(--accent)}
@@ -149,6 +149,10 @@ pre{margin:0;font:12px/1.55 var(--mono);white-space:pre;tab-size:2}
 pre.code{max-height:360px;overflow:auto;padding:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px}
 .logline{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}.logline time{color:var(--fg-3);font:12px var(--mono)}
 .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+tr.pick{cursor:pointer}tr.pick:hover td{background:var(--panel-2)}tr.pick.on td{background:var(--accent-soft)}tr.pick td:first-child{white-space:nowrap}
+.members{display:grid;gap:4px;max-height:38vh;overflow:auto;padding-right:4px}
+.member{display:grid;grid-template-columns:20px minmax(0,1fr) 130px;gap:10px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.member.off{opacity:.55}.member span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.member small{color:var(--fg-3);display:block;white-space:normal}.member input[type=checkbox]{accent-color:var(--accent);margin:0}
 
 /* ---------- the inspector ---------- */
 .insp{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -258,6 +262,7 @@ dialog.dlg::backdrop{background:color-mix(in srgb,var(--bg) 62%,transparent);bac
         <div class="tabs" role="tablist">
           <button class="tab" role="tab" data-tab="results" aria-selected="true" type="button">Results</button>
           <button class="tab" role="tab" data-tab="report" aria-selected="false" type="button">Report</button>
+          <button class="tab" role="tab" data-tab="series" aria-selected="false" type="button">Series</button>
           <button class="tab" role="tab" data-tab="log" aria-selected="false" type="button">What was done</button>
           <span class="sp"></span>
           <button class="btn small" id="dock-toggle" type="button">Larger</button>
@@ -286,6 +291,7 @@ dialog.dlg::backdrop{background:color-mix(in srgb,var(--bg) 62%,transparent);bac
 <script src="js/grid.js"></script>
 <script src="js/figview.js"></script>
 <script src="js/inspect.js"></script>
+<script src="js/seriespanel.js"></script>
 <script src="js/fitpanel.js"></script>
 <script src="js/dialogs.js"></script>
 <script src="js/app.js"></script>

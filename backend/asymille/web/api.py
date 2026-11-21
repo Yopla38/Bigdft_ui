@@ -80,7 +80,7 @@ def build(host: Host) -> APIRouter:
         return {"version": __version__, "functions": functions.described(), "families": functions.FAMILIES,
                 "operations": analysis.described(), "operation_families": analysis.FAMILIES, "journals": journals.described(),
                 "methods": fitting.METHODS, "weights": fitting.WEIGHTS, "losses": list(fitting.LOSSES), "expression_functions": sorted(FUNCTIONS),
-                "fonts": figures.fonts(), "formats": figures.FORMATS, "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects}}
+                "fonts": figures.fonts(), "formats": figures.FORMATS, "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects, "document_bytes": host.document_bytes()}}
 
     # ── projects ─────────────────────────────────────────────────────────────
     def owned(db: Session, owner: int, project_id: int) -> Any:

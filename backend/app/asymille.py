@@ -26,6 +26,7 @@ from typing import Any
 from asymille.web import Host, Limits, build
 from asymille.web.tables import define
 
+from .config import get_settings
 from .db import get_db
 from .deps import CurrentUser
 from .errors import AppError
@@ -40,6 +41,11 @@ def _refused(status: int, code: str, message: str) -> AppError:
     return AppError(status, code, message)
 
 
-host: Any = Host(base=Base, users="users.id", moment=UTCDateTime, db=get_db, user_id=_owner, error=_refused, limits=Limits())
+def _largest() -> int:
+    """What this server reads of one request: a project is saved whole, so that is how large one can be. The page warns before it is reached."""
+    return get_settings().max_body_bytes
+
+
+host: Any = Host(base=Base, users="users.id", moment=UTCDateTime, db=get_db, user_id=_owner, error=_refused, limits=Limits(), document_bytes=_largest)
 Project: Any = define(host)             # the table, on the application's own base: migrations/env.py imports this module for it
 router: Any = build(host)

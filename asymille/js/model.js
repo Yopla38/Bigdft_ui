@@ -10,6 +10,10 @@
  *              or a fit and one of its curves: it holds no data of its own.
  *     fits     the data fitted (a sheet, its x and y columns, a range), the model, the options,
  *              and what the server answered.
+ *     series   the same fit on many files. A series names a fit (made on one sheet, its model), the
+ *              other sheets it is repeated on, each with the value of what was varied between them
+ *              (a temperature, a field), and keeps what each gave. A graph's own `series` are its
+ *              curves: an older use of the word, kept in the document.
  *     log      one line per thing done: what goes in a lab notebook, and in the methods of a paper.
  *
  * `commit()` is called after every change a person made: it is what makes it undoable and what
@@ -28,7 +32,7 @@ window.ASY = window.ASY || {};
   const iso = () => new Date().toISOString();
 
   function blank(name) {
-    doc = { version: 1, name: name || 'Untitled project', seq: 0, sheets: [], graphs: [], fits: [], log: [], view: { main: 'sheet', sheet: null, graph: null, fit: null } };
+    doc = { version: 1, name: name || 'Untitled project', seq: 0, sheets: [], graphs: [], fits: [], series: [], log: [], view: { main: 'sheet', sheet: null, graph: null, fit: null } };
     const sheet = addSheet('Sheet 1');
     addColumn(sheet, { role: 'x' }); addColumn(sheet, { role: 'y' });
     doc.view.sheet = sheet.id;
@@ -40,7 +44,9 @@ window.ASY = window.ASY || {};
     if (!saved || saved.version !== 1 || !Array.isArray(saved.sheets)) throw new Error('this is not an Asymille project');
     doc = JSON.parse(JSON.stringify(saved));
     doc.view = Object.assign({ main: 'sheet', sheet: null, graph: null, fit: null }, doc.view || {});
-    doc.graphs = doc.graphs || []; doc.fits = doc.fits || []; doc.log = doc.log || [];
+    doc.graphs = doc.graphs || []; doc.fits = doc.fits || []; doc.log = doc.log || []; doc.series = doc.series || [];
+    doc.sheets.forEach((s) => s.columns.forEach((c) => { if (c.made === undefined) c.made = null; }));          // a project saved before columns kept how they were made
+    doc.series.forEach((sr) => sr.members.forEach((m) => { if (m.state === 'running') m.state = 'todo'; }));      // a page closed in the middle of a series
     if (!sheet(doc.view.sheet)) doc.view.sheet = doc.sheets.length ? doc.sheets[0].id : null;
     if (!graph(doc.view.graph)) doc.view.graph = doc.graphs.length ? doc.graphs[0].id : null;
     if (!fit(doc.view.fit)) doc.view.fit = doc.fits.length ? doc.fits[0].id : null;
@@ -80,7 +86,7 @@ window.ASY = window.ASY || {};
   function addColumn(s, props, at) {
     props = props || {};
     const c = { id: id('c'), name: freeName(s), title: String(props.title || '').slice(0, 120), unit: String(props.unit || '').slice(0, 40), role: props.role || 'y',
-      formula: props.formula || '', comment: String(props.comment || '').slice(0, 2000), values: props.values ? props.values.slice() : [] };
+      formula: props.formula || '', comment: String(props.comment || '').slice(0, 2000), values: props.values ? props.values.slice() : [], made: props.made || null };
     if (at == null || at >= s.columns.length) s.columns.push(c); else s.columns.splice(at, 0, c);
     return c;
   }
@@ -93,6 +99,7 @@ window.ASY = window.ASY || {};
     doc.sheets = doc.sheets.filter((s) => s.id !== sid);
     doc.graphs.forEach((g) => g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'data' && r.sheet === sid)); }));
     doc.fits.filter((f) => f.sheet === sid).forEach((f) => removeFit(f.id));
+    doc.series.forEach((sr) => { sr.members = sr.members.filter((m) => m.sheet !== sid); if (sr.results === sid) sr.results = null; if (sr.current === sid) sr.current = sr.members.length ? sr.members[0].sheet : null; });
     if (doc.view.sheet === sid) doc.view.sheet = doc.sheets.length ? doc.sheets[0].id : null;
   }
   /* A cell as it is kept: a number when it reads as one, text otherwise, null when empty. */
@@ -162,7 +169,7 @@ window.ASY = window.ASY || {};
   // ------------------------------------------------------------------ graphs
   const graph = (gid) => doc.graphs.find((g) => g.id === gid) || null;
   function addGraph(name) { const g = { id: id('g'), name: unique(doc.graphs, name || 'Graph ' + (doc.graphs.length + 1)).slice(0, 80), figure: P.defaults() }; doc.graphs.push(g); return g; }
-  function removeGraph(gid) { doc.graphs = doc.graphs.filter((g) => g.id !== gid); if (doc.view.graph === gid) { doc.view.graph = doc.graphs.length ? doc.graphs[0].id : null; if (!doc.view.graph) doc.view.main = 'sheet'; } }
+  function removeGraph(gid) { doc.graphs = doc.graphs.filter((g) => g.id !== gid); doc.series.forEach((sr) => { if (sr.graph === gid) sr.graph = null; }); if (doc.view.graph === gid) { doc.view.graph = doc.graphs.length ? doc.graphs[0].id : null; if (!doc.view.graph) doc.view.main = 'sheet'; } }
   const colorFor = (g, panel) => { const pal = P.PALETTES[g.figure.palette] || P.PALETTES.okabe; return pal[panel.series.filter((r) => r.kind === 'data').length % pal.length]; };
   function addData(g, panel, s, y, more) {
     const x = xOf(s, y), e = errOf(s, y);
@@ -236,10 +243,23 @@ window.ASY = window.ASY || {};
       const comp = (f.model.components || []).find((c) => c.id === r.part);
       return part ? { x: res.curve.x, y: part, label: r.part + (comp ? ' · ' + ASY.fnLabel(comp) : '') } : null;
     }
-    const s = sheet(r.sheet), y = column(s, r.y); if (!y) return null;
-    const x = column(s, r.x), n = Math.max(y.values.length, x ? x.values.length : 0);
-    const ye = column(s, r.yerr), xe = column(s, r.xerr);
-    return { x: x ? numbers(x, n) : Array.from({ length: n }, (_, i) => i + 1), y: numbers(y, n), yerr: ye ? numbers(ye, n) : null, xerr: xe ? numbers(xe, n) : null, label: y.title || y.name };
+    if (r.kind === 'member') {            // the curve fitted to the file a series is showing: computed when asked for, kept for the visit only
+      const sr = fileSeries(r.series), curve = sr ? memberCurves[sr.id + ':' + sr.current] : null;
+      if (!curve) return null;
+      return r.part === 'total' ? { x: curve.x, y: curve.y, label: 'Fit' } : curve.components[r.part] ? { x: curve.x, y: curve.components[r.part], label: r.part } : null;
+    }
+    // a curve that follows a series draws, with the same columns, the file the series is showing
+    const sr = r.follow ? fileSeries(r.follow) : null, model = sheet(r.sheet), s = sr && sheet(sr.current) ? sheet(sr.current) : model;
+    const at = (cid) => (s === model ? column(s, cid) : counterpart(model, cid, s));
+    const y = at(r.y); if (!y) return null;
+    const x = at(r.x), n = Math.max(y.values.length, x ? x.values.length : 0);
+    const ye = at(r.yerr), xe = at(r.xerr);
+    let ys = numbers(y, n);
+    if (r.shift) ys = ys.map((v) => v + r.shift);
+    const out = { x: x ? numbers(x, n) : Array.from({ length: n }, (_, i) => i + 1), y: ys, yerr: ye ? numbers(ye, n) : null, xerr: xe ? numbers(xe, n) : null, label: sr ? P.literal(s.name) : y.title || y.name };
+    const flag = r.unless ? column(s, r.unless) : null;          // the rows another column marks (a fit to check) are left out of this curve
+    if (flag) { const keep = []; for (let i = 0; i < n; i++) if (flag.values[i] == null) keep.push(i); ['x', 'y', 'yerr', 'xerr'].forEach((k) => { if (out[k]) out[k] = keep.map((i) => out[k][i]); }); out.left = n - keep.length; }
+    return out;
   }
   const previewOf = { fit: null, curve: null };                // the model drawn at its starting values, before any fit: on screen only
 
@@ -254,10 +274,241 @@ window.ASY = window.ASY || {};
   }
   function removeFit(fid) {
     doc.fits = doc.fits.filter((f) => f.id !== fid);
+    doc.series = doc.series.filter((sr) => sr.fit !== fid);
     doc.graphs.forEach((g) => { g.figure.panels = g.figure.panels.filter((p) => !(p.series.length && p.series.every((r) => r.kind === 'fit' && r.fit === fid && r.part === 'residuals')) || g.figure.panels.length === 1); g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'fit' && r.fit === fid)); }); if (g.figure.panels.length === 1) { g.figure.layout.ratios = []; g.figure.layout.shareX = false; } });
     if (doc.view.fit === fid) doc.view.fit = doc.fits.length ? doc.fits[doc.fits.length - 1].id : null;
   }
   const nullable = (a) => a.map((v) => (isFinite(v) ? v : null));
+
+  // ------------------------------------------------------------------ series: the same fit on many files
+  const fileSeries = (id) => doc.series.find((sr) => sr.id === id) || null;
+  const memberCurves = {};                                    // series id + ':' + sheet id → the fitted curve, on screen only
+  const originals = (s) => s.columns.filter((c) => !c.formula && !c.made);
+  const madeKey = (m) => JSON.stringify([m.op, Object.keys(m.args || {}).sort().map((k) => [k, m.args[k]]), m.x, m.y, m.y2 || null, m.part || 0]);
+  /* The column of sheet `to` that is what column `cid` is in sheet `from`: the same place among the columns that were
+     imported or typed, the same formula, or the same operation on the counterparts of its own columns. */
+  function counterpart(from, cid, to) {
+    const c = column(from, cid);
+    if (!c || !to) return null;
+    if (from === to) return c;
+    if (c.formula) return to.columns.find((k) => k.formula === c.formula && k.name === c.name) || null;
+    if (c.made) { const want = mapped(from, c.made, to); return want ? to.columns.find((k) => k.made && madeKey(k.made) === madeKey(want)) || null : null; }
+    return originals(to)[originals(from).indexOf(c)] || null;
+  }
+  function mapped(from, made, to) {
+    const ids = {};
+    for (const key of ['x', 'y', 'y2']) { if (made[key] == null) { ids[key] = null; continue; } const k = counterpart(from, made[key], to); if (!k) return null; ids[key] = k.id; }
+    return Object.assign({}, made, ids);
+  }
+  /* The numbers written in a name, each with the letters that follow it: "N3978_3kV_236nm_160K" → 3978, 3 kV, 236 nm, 160 K. */
+  function numbersIn(name) {
+    const out = [], re = /(\d+(?:[.,]\d+)?)\s?([A-Za-zµ°%]{0,4})(?![A-Za-zµ°%=])|(\d+(?:[.,]\d+)?)/g;          // "3 T=5": T is the name of what follows, not the unit of 3
+    let m;
+    while ((m = re.exec(String(name)))) {
+      const text = m[1] || m[3], before = name[m.index - 1], sign = before === '-' && !/[A-Za-z0-9.]/.test(name[m.index - 2] || ' ') ? -1 : 1;
+      out.push({ value: sign * Number(text.replace(',', '.')), unit: m[1] ? m[2] : '' });
+    }
+    return out;
+  }
+  /* What may have been varied between files, read from their names: for each number that sits at the same place in every
+     name, its value in each. The ones that differ from file to file come first. */
+  function variablesIn(names) {
+    const all = names.map(numbersIn), n = all.length ? Math.min(...all.map((a) => a.length)) : 0, out = [];
+    if (all.every((a) => a.length === n)) for (let i = 0; i < n; i++) out.push({ values: all.map((a) => a[i].value), unit: all[0][i].unit });
+    else {                                                    // names of different shapes: a number is known by its unit
+      const units = [...new Set(all.flat().map((x) => x.unit))].filter((u) => u && all.every((a) => a.filter((x) => x.unit === u).length === 1));
+      units.forEach((u) => out.push({ values: all.map((a) => a.find((x) => x.unit === u).value), unit: u }));
+    }
+    out.forEach((c) => { c.distinct = new Set(c.values).size; });
+    return out.map((c, i) => [c, i]).sort((a, b) => b[0].distinct - a[0].distinct || b[1] - a[1]).map((x) => x[0]);
+  }
+  /* A name for a series from the names of its files: what they have in common. */
+  function commonName(names) {
+    if (names.length < 2) return '';
+    let n = 0; while (n < names[0].length && names.every((x) => x[n] === names[0][n])) n++;
+    const stem = names[0].slice(0, n).replace(/[\s_\-.\d]+$/, '');
+    return stem.length >= 3 ? stem : '';
+  }
+  function addSeries(f) {
+    const sr = { id: id('q'), name: unique(doc.series, 'Series of ' + (sheet(f.sheet) || { name: 'files' }).name).slice(0, 80), fit: f.id, variable: { name: '', unit: '' },
+      members: [{ sheet: f.sheet, value: null, state: 'todo', message: '', result: null }], chain: true, results: null, graph: null, current: f.sheet, ran: '' };
+    doc.series.push(sr);
+    return sr;
+  }
+  /* Whether a sheet can be a file of the series: it must hold what the fit reads, at the same places. */
+  function fitsIn(sr, s) {
+    const f = fit(sr.fit), model = f && sheet(f.sheet);
+    if (!model || !s) return 'the fit of this series is gone';
+    if (s.id === sr.results) return 'it is the table of results';
+    const need = [];
+    const walk = (cid) => {             // back to the columns that were imported or typed: through an operation by what it read, through a formula by the names it uses
+      const c = column(model, cid); if (!c) return;
+      if (c.made) ['x', 'y', 'y2'].forEach((k) => { if (c.made[k]) walk(c.made[k]); });
+      else if (c.formula) { try { ASY.expr.compile(c.formula).names.forEach((n) => { const k = model.columns.find((q) => q.name === n && q !== c); if (k) walk(k.id); }); } catch (e) { /* a formula that does not read: nothing to follow */ } }
+      else if (!need.includes(c)) need.push(c);
+    };
+    [f.x, f.y, f.yerr].forEach((cid) => { if (cid) walk(cid); });
+    const short = need.find((c) => !originals(s)[originals(model).indexOf(c)]);
+    return short ? 'it has ' + originals(s).length + ' column' + (originals(s).length === 1 ? '' : 's') + ' of data where “' + model.name + '” has ' + originals(model).length : '';
+  }
+  /* The order the files are fitted in: the one the fit was made on first, then its neighbours in the value that was varied,
+     outwards on each side. With `chain`, each starts from what its neighbour gave: that is how a peak is followed as it moves. */
+  function seriesOrder(sr) {
+    const f = fit(sr.fit), sorted = sr.members.slice().sort((a, b) => (a.value == null) - (b.value == null) || a.value - b.value);
+    const t = Math.max(0, sorted.findIndex((m) => f && m.sheet === f.sheet)), out = [{ member: sorted[t], from: null }];
+    for (let i = t + 1; i < sorted.length; i++) out.push({ member: sorted[i], from: sorted[i - 1] });
+    for (let i = t - 1; i >= 0; i--) out.push({ member: sorted[i], from: sorted[i + 1] });
+    return out;
+  }
+  /* A mark of what a series was run with: the model, the columns, the range, the weights. Starting values are not in it. */
+  function mark(f) {
+    const text = JSON.stringify([f.x, f.y, f.yerr, f.limits, f.options.weights, f.options.method, f.options.loss, f.options.absolute_sigma,
+      f.model.components.map((c) => [c.id, c.fn, c.expr || '', Object.entries(c.params).map(([n, p]) => [n, p.vary !== false, p.min, p.max, p.expr || '', p.vary === false ? p.value : null])])]);
+    let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+    return h.toString(16) + ':' + text.length;
+  }
+  const brief = (res) => ({ success: !!res.success, message: res.message || '', redchi: res.redchi, rsquared: res.rsquared, npoints: res.npoints, nvarys: res.nvarys, warnings: res.warnings || [],
+    params: res.params.map((q) => ({ name: q.name, value: q.value, stderr: q.stderr, vary: q.vary, tied: q.tied || '' })), derived: res.derived.map((d) => ({ name: d.name, label: d.label, value: d.value, stderr: d.stderr })) });
+  /* The model of a fit, starting from values found elsewhere: the parameters that are fitted take them, the held and the tied ones stay. */
+  function modelFrom(model, params) {
+    const got = {}; (params || []).forEach((q) => { if (q.value != null) got[q.name] = q.value; });
+    const out = JSON.parse(JSON.stringify(model));
+    out.components.forEach((c) => Object.entries(c.params).forEach(([n, spec]) => { const v = got[c.id + '_' + n]; if (v != null && spec.vary !== false && !spec.expr) { let w = Number(v.toPrecision(10)); if (spec.min != null) w = Math.max(w, spec.min); if (spec.max != null) w = Math.min(w, spec.max); spec.value = w; } }));
+    return out;
+  }
+  /* What is sent to be fitted for one file of a series: the counterparts of the columns the fit reads. */
+  function memberData(sr, s) {
+    const f = fit(sr.fit), model = sheet(f.sheet), x = counterpart(model, f.x, s), y = counterpart(model, f.y, s), e = counterpart(model, f.yerr, s);
+    if (!y) throw new Error('“' + s.name + '” has no column that is what “' + label(column(model, f.y)) + '” is in “' + model.name + '”');
+    const n = Math.max(y.values.length, x ? x.values.length : 0);
+    return { x: x ? nullable(numbers(x, n)) : Array.from({ length: n }, (_, i) => i + 1), y: nullable(numbers(y, n)), sigma: e ? nullable(numbers(e, n)) : null };
+  }
+  /* Give a file of the series the columns the model sheet computes: its formulas, and its operations done again on this file. `call(path, body)` asks the server. */
+  async function replay(sr, s, call) {
+    const f = fit(sr.fit), model = sheet(f.sheet);
+    if (s === model) return 0;
+    let made = 0;
+    const done = new Set(), whole = (m) => madeKey(Object.assign({}, m, { part: 0 }));          // an operation is done once, whichever of its columns the model sheet kept
+    for (const c of model.columns) {
+      if (c.formula && !counterpart(model, c.id, s)) { if (s.columns.some((k) => k.name === c.name)) throw new Error('“' + s.name + '” already has a column ' + c.name + ', which the formula of “' + model.name + '” would need'); const k = addColumn(s, { title: c.title, unit: c.unit, role: c.role, formula: c.formula, comment: c.comment }); k.name = c.name; recompute(s); made++; }
+      if (!c.made || !c.made.op || done.has(whole(c.made))) continue;
+      done.add(whole(c.made));
+      const want = mapped(model, c.made, s);
+      if (!want) throw new Error('“' + s.name + '” lacks a column that ' + c.made.op + ' needs');
+      const xc = column(s, want.x), yc = column(s, want.y), y2c = column(s, want.y2), n = Math.max(yc.values.length, xc ? xc.values.length : 0);
+      const body = { operation: c.made.op, args: c.made.args || {}, x: xc ? nullable(numbers(xc, n)) : Array.from({ length: n }, (_, i) => i + 1), y: nullable(numbers(yc, n)) };
+      if (y2c) { const x2 = xOf(s, y2c) || xc; body.x2 = x2 ? nullable(numbers(x2, n)) : body.x; body.y2 = nullable(numbers(y2c, n)); }
+      const out = await call('asymille/analyse', body);
+      if (out.sheet !== 'same') throw new Error(c.made.op + ' makes a table of its own: it cannot be repeated inside a series');
+      out.columns.forEach((col, part) => {
+        const twin = model.columns.find((k) => k.made && madeKey(k.made) === madeKey(Object.assign({}, c.made, { part })));
+        if (!twin) return;                                      // the model sheet no longer keeps that output: neither does this one
+        const key = Object.assign({}, want, { part }), had = s.columns.find((k) => k.made && madeKey(k.made) === madeKey(key));
+        if (had) had.values = col.values.slice();
+        else { const k = addColumn(s, { title: twin.title, unit: twin.unit, role: twin.role, values: col.values, comment: out.note, made: key }); if (!s.columns.some((q) => q !== k && q.name === twin.name)) k.name = twin.name; }       // the same short name, so that the formulas of the model sheet read it
+        made++;
+      });
+    }
+    return made;
+  }
+  /* Fit every file of a series. `call` asks the server; `tell(member)` is called as each one starts and ends; `stop()` says whether to go on.
+     A file that cannot be fitted says why and the others go on: a series is not lost for one bad file. */
+  async function runSeries(sr, call, tell, stop) {
+    const f = fit(sr.fit);
+    if (!f || !f.model.components.length) throw new Error('The fit of this series has no model yet');
+    const options = Object.assign({}, f.options); delete options.started; options.intervals = false;
+    const limits = f.limits ? [f.limits[0], f.limits[1]] : null;
+    /* A result to start a neighbour from: it converged and carries no warning. A file where the peak is lost must not lead the next ones astray. */
+    const sound = (r) => !!(r && r.success && !r.warnings.length);
+    let model = f.model, lastSound = null;
+    if (!f.options.started && !(f.result && !f.stale)) { const d = fitData(f); model = (await call('asymille/model/guess', { x: d.x, y: d.y, model: f.model, limits })).model; f.model = model; f.options.started = true; }
+    sr.members.forEach((m) => { m.state = 'todo'; m.message = ''; });
+    for (const step of seriesOrder(sr)) {
+      const m = step.member, s = sheet(m.sheet);
+      if (stop && stop()) break;
+      m.state = 'running'; if (tell) tell(m);
+      try {
+        if (!s) throw new Error('its sheet is gone');
+        let res;
+        if (s.id === f.sheet && f.result && !f.stale && f.mode === 'single') res = f.result;            // the fit already made on the model sheet is its result
+        else {
+          await replay(sr, s, call);
+          if (step.from && step.from.sheet === f.sheet) lastSound = null;                              // the other side of the model sheet: start again from it
+          const d = memberData(sr, s), near = sr.chain && step.from ? (sound(step.from.result) ? step.from.result : lastSound) : null;
+          const start = near ? near.params : f.result && !f.stale ? f.result.params : null;
+          res = await call('asymille/fit', { x: d.x, y: d.y, sigma: d.sigma, model: start ? modelFrom(model, start) : model, limits, options });
+          if (!sound(res)) {                                                                          // a second try, from starting values read from this file itself; the better of the two is kept
+            const own = await call('asymille/model/guess', { x: d.x, y: d.y, model, limits });
+            const again = await call('asymille/fit', { x: d.x, y: d.y, sigma: d.sigma, model: own.model, limits, options });
+            if (sound(again) || (again.success && (!res.success || again.redchi < res.redchi))) res = again;
+          }
+        }
+        if (sound(res)) lastSound = brief(res);
+        m.result = brief(res); m.state = res.success ? 'done' : 'failed'; m.message = res.success ? '' : res.message || 'did not converge';
+        memberCurves[sr.id + ':' + m.sheet] = { x: res.curve.x, y: res.curve.y, components: res.curve.components };
+      } catch (e) { m.result = null; m.state = 'failed'; m.message = e.message || String(e); }
+      if (tell) tell(m);
+    }
+    sr.members.forEach((m) => { if (m.state === 'running') m.state = 'todo'; });
+    sr.ran = mark(f);
+    return seriesTable(sr);
+  }
+  const OF_X = ['center', 'sigma', 'gamma', 'fwhm', 'sigma_r', 'x0', 'width', 'tau', 'tau1', 'tau2', 'tau3', 'mode', 'median', 'half_life', 'period', 'km', 'k'], OF_Y = ['height', 'y0', 'c', 'intercept', 'low', 'high', 'top', 'vmax', 'qmax'];
+  /* What a series found, as a sheet: one row per file, in the order of what was varied; each parameter beside its uncertainty,
+     so that it is plotted with its error bars; and a column that says which rows should not be trusted. Made again at each run, in place. */
+  function seriesTable(sr) {
+    const f = fit(sr.fit), model = f && sheet(f.sheet), xc = model && column(model, f.x), yc = model && column(model, f.y);
+    let s = sheet(sr.results);
+    if (!s) { s = addSheet('Results of ' + sr.name, 'What the series “' + sr.name + '” found: one row per file.'); sr.results = s.id; }
+    const rows = sr.members.slice().sort((a, b) => (a.value == null) - (b.value == null) || a.value - b.value);
+    const kept = [], put = (key, props, values) => {
+      let c = s.columns.find((k) => k.made && k.made.series === sr.id && k.made.key === key);
+      if (!c) c = addColumn(s, Object.assign({ made: { series: sr.id, key } }, props));
+      Object.assign(c, { title: props.title, unit: props.unit || '', role: props.role }); c.values = values.slice(); kept.push(c);
+    };
+    const unitOf = (name) => { const p = name.split('_').slice(1).join('_'); return OF_X.includes(p) ? (xc ? xc.unit : '') : OF_Y.includes(p) ? (yc ? yc.unit : '') : ''; };
+    put('variable', { title: sr.variable.name || 'File', unit: sr.variable.unit, role: 'x' }, rows.map((m, i) => (m.value == null ? i + 1 : m.value)));
+    const names = [], derived = [];
+    rows.forEach((m) => { if (!m.result) return; m.result.params.forEach((q) => { if (q.vary && !names.includes(q.name)) names.push(q.name); }); m.result.derived.forEach((d) => { if (!derived.includes(d.name)) derived.push(d.name); }); });
+    const cell = (m, list, name, field) => { const q = m.result && m.result[list].find((k) => k.name === name); return q && q[field] != null ? q[field] : null; };
+    const said = (name) => name.replace(/_/g, ' ');            // p1_center is a name of the model; as the title of an axis an underscore would lower what follows
+    names.forEach((name) => { put(name, { title: said(name), unit: unitOf(name), role: 'y' }, rows.map((m) => cell(m, 'params', name, 'value'))); put(name + ':err', { title: '± ' + said(name), unit: unitOf(name), role: 'yerr' }, rows.map((m) => cell(m, 'params', name, 'stderr'))); });
+    derived.forEach((name) => { put(name, { title: said(name), unit: unitOf(name), role: 'y' }, rows.map((m) => cell(m, 'derived', name, 'value'))); put(name + ':err', { title: '± ' + said(name), unit: unitOf(name), role: 'yerr' }, rows.map((m) => cell(m, 'derived', name, 'stderr'))); });
+    put('redchi', { title: 'Reduced χ²', role: 'y' }, rows.map((m) => (m.result ? m.result.redchi : null)));
+    put('rsquared', { title: 'R²', role: 'y' }, rows.map((m) => (m.result ? m.result.rsquared : null)));
+    put('check', { title: 'To check', role: 'label' }, rows.map((m) => (m.state === 'failed' ? (m.message || 'not fitted').slice(0, 190) : m.result && m.result.warnings.length ? m.result.warnings.length + ' warning' + (m.result.warnings.length > 1 ? 's' : '') : null)));
+    put('file', { title: 'File', role: 'label' }, rows.map((m) => (sheet(m.sheet) || { name: '' }).name.slice(0, 190)));
+    s.columns = kept.concat(s.columns.filter((c) => !kept.includes(c) && !(c.made && c.made.series === sr.id)));
+    return s;
+  }
+  /* A graph that shows one file of the series at a time, with the curve fitted to it: to look at each fit. */
+  function reviewGraph(sr) {
+    let g = graph(sr.graph);
+    if (g) return g;
+    const f = fit(sr.fit), model = sheet(f.sheet), y = column(model, f.y), x = column(model, f.x), e = column(model, f.yerr);
+    g = addGraph('Each fit of ' + sr.name); sr.graph = g.id;
+    const p = g.figure.panels[0];
+    p.series.push(P.series({ id: id('r'), kind: 'data', follow: sr.id, sheet: model.id, x: x ? x.id : null, y: y.id, yerr: e ? e.id : null, xerr: null, type: rows(model) > 400 ? 'line' : 'scatter', color: P.PALETTES.okabe[0] }));
+    p.series.push(P.series({ id: id('r'), kind: 'member', series: sr.id, part: 'total', type: 'line', color: '#c81d25', marker: 'none' }));
+    p.x.label = label(x); p.y.label = label(y);
+    return g;
+  }
+  const RAMP = ['#440154', '#472d7b', '#3b528b', '#2c728e', '#21918c', '#28ae80', '#5ec962', '#addc30', '#e8d51c'];          // viridis, stopped before its palest yellow: it must show on white
+  const ramp = (t) => { const u = ASY.clamp(t, 0, 1) * (RAMP.length - 1), i = Math.min(RAMP.length - 2, Math.floor(u)), k = u - i, h = (c, o) => parseInt(c.slice(o, o + 2), 16);
+    return '#' + [1, 3, 5].map((o) => Math.round(h(RAMP[i], o) * (1 - k) + h(RAMP[i + 1], o) * k).toString(16).padStart(2, '0')).join(''); };
+  /* Every file of the series on one graph, coloured along what was varied, each shifted up by `shift` from the one before. */
+  function overlayGraph(sr, shift) {
+    const f = fit(sr.fit), model = sheet(f.sheet), g = addGraph('All of ' + sr.name), p = g.figure.panels[0];
+    const members = sr.members.slice().sort((a, b) => (a.value == null) - (b.value == null) || a.value - b.value).filter((m) => sheet(m.sheet) && counterpart(model, f.y, sheet(m.sheet)));
+    members.forEach((m, i) => {
+      const s = sheet(m.sheet), y = counterpart(model, f.y, s), x = counterpart(model, f.x, s);
+      p.series.push(P.series({ id: id('r'), kind: 'data', sheet: s.id, x: x ? x.id : null, y: y.id, yerr: null, xerr: null, type: 'line', marker: 'none', color: ramp(members.length > 1 ? i / (members.length - 1) : 0), shift: (shift || 0) * i,
+        label: m.value == null ? s.name : ASY.fmt(m.value, 6) + (sr.variable.unit ? ' ' + sr.variable.unit : '') }));
+    });
+    p.x.label = label(column(model, f.x)); p.y.label = label(column(model, f.y)) + (shift ? ', shifted' : '');
+    if (members.length > 5) { p.legend.pos = 'out'; g.figure.width += 22; }          // many files: the legend beside the curves, on a wider page
+    return g;
+  }
   /* What is sent to be fitted: the x, y and error columns of a fit, row for row. */
   function fitData(f, ycol) {
     const s = sheet(f.sheet), x = column(s, f.x), y = column(s, ycol || f.y), e = column(s, f.yerr);
@@ -273,5 +524,7 @@ window.ASY = window.ASY || {};
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, recompute, changed, sortBy, sheetFrom, toText, unique,
     graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, seriesData, resultOf,
     fit, addFit, removeFit, fitData, componentId,
+    fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
+    get size() { return last.length; },
   };
 })(window.ASY);

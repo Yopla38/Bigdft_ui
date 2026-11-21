@@ -73,6 +73,8 @@ window.ASY = window.ASY || {};
     return out;
   }
   const plain = (text) => runs(text).map((r) => r.s).join('');
+  /* A name that is not markup (a file name, with its underscores) written so that it is drawn as it is. */
+  const literal = (text) => String(text == null ? '' : text).replace(/[\\_^]/g, '\\$&');
   function textWidth(text, size) {
     let w = 0;
     for (const r of (Array.isArray(text) ? text : runs(text))) {
@@ -153,7 +155,10 @@ window.ASY = window.ASY || {};
     const prepared = fig.panels.map((p, index) => {
       const drawn = p.series.filter((s) => s.show !== false).map((s) => ({ s, d: data(s) || { x: [], y: [] } }));
       const of = (key) => drawn.filter((e) => (e.s.axis || 'y') === key);
-      const ys = (list) => list.flatMap((e) => { const d = e.d; const arr = [d.y]; if (d.lower) arr.push(d.lower, d.upper); if (d.yerr) arr.push(d.y.map((v, i) => v - (d.yerr[i] || 0)), d.y.map((v, i) => v + (d.yerr[i] || 0))); return arr; });
+      // the range makes room for the error bars, but not for one that dwarfs the data: a point that is not determined would flatten every other
+      const ys = (list) => list.flatMap((e) => { const d = e.d; const arr = [d.y]; if (d.lower) arr.push(d.lower, d.upper);
+        if (d.yerr) { const span = extent([d.y]), most = span ? 3 * (span[1] - span[0]) : 0, bar = (i) => (isFinite(d.yerr[i]) && (!most || d.yerr[i] <= most) ? d.yerr[i] : 0); arr.push(d.y.map((v, i) => v - bar(i)), d.y.map((v, i) => v + bar(i))); }
+        return arr; });
       const xr = range(p.x, drawn.map((e) => e.d.x)), yr = range(p.y, ys(of('y')));
       if (!p.y.min && p.y.min !== 0 && p.y.scale !== 'log' && of('y').some((e) => e.s.type === 'bars' || e.s.type === 'area') && yr[0] > 0) yr[0] = 0;       // bars stand on zero
       const y2r = p.y2 ? range(p.y2, ys(of('y2'))) : null;
@@ -175,9 +180,13 @@ window.ASY = window.ASY || {};
       const wide = (t, size) => Math.max(0, ...t.major.map((m) => textWidth(m.runs, size)));
       const tx = ticks(e.xr[0], e.xr[1], e.p.x, guessW, ax.size, true);
       const lastHalf = tx.major.length ? textWidth(tx.major[tx.major.length - 1].runs, ax.size) / 2 : 0;
+      // a legend set outside takes its room on the right of the panel
+      const listed = e.p.legend && e.p.legend.show !== false && e.p.legend.pos === 'out' ? e.drawn.filter((q) => q.s.legend !== false && q.s.type !== 'band').map((q) => q.s.label || q.d.label || '') : [];
+      const beside = listed.length ? 6 + S.legend * 3.75 + Math.max(...listed.map((t) => textWidth(t, S.legend))) : 0;
       return {
         l: 2 + (e.p.y.label ? S.label * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out,
-        r: ty2 ? 2 + (e.p.y2.label ? S.label * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5),
+        r: (ty2 ? 2 + (e.p.y2.label ? S.label * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5)) + beside,
+        beside,
         t: 3 + (e.p.title ? (e.p.titleSize || S.title) * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? ay.size * 1.25 : 0) + S.tick * 0.4,
         b: e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? S.label * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out,
         wy: wide(ty, ay.size), wy2: ty2 ? wide(ty2, ay2.size) : 0,
@@ -321,7 +330,7 @@ window.ASY = window.ASY || {};
         const pos = p.legend.pos || 'ne';
         let lx = pos === 'custom' ? box.x + p.legend.x * box.w : pos.includes('w') ? box.x + inset : pos.includes('e') ? x1 - inset - w : box.x + (box.w - w) / 2;
         let ly = pos === 'custom' ? box.y + p.legend.y * box.h : pos.includes('s') ? y1 - inset - hgt : pos === 'e' || pos === 'w' ? box.y + (box.h - hgt) / 2 : box.y + inset + (tag && pos === 'nw' ? S.tag * 1.5 : 0);
-        if (pos === 'out') { lx = x1 + 6; ly = box.y; }
+        if (pos === 'out') { lx = x1 + (colR[e.col] - n.beside) + 6; ly = box.y; }
         legendBox = { x: lx, y: ly, w, h: hgt };
         if (p.legend.frame) items.push({ t: 'poly', pts: [lx, ly, lx + w, ly, lx + w, ly + hgt, lx, ly + hgt].map(R), fill: '#ffffff', stroke: '#000000', width: aw * 0.8, k: key('legend') });
         legend.forEach((l, i) => {
@@ -396,5 +405,5 @@ window.ASY = window.ASY || {};
   const sendable = (list) => ({ width: list.width, height: list.height, background: list.background, font: list.font,
     items: list.items.map((it) => { const o = {}; for (const key in it) if (key !== 'k' && it[key] !== undefined) o[key] = it[key]; return o; }) });
 
-  ASY.plot = { MM, PALETTES, MARKERS, DASHES, TYPES, GREEK, defaults, panel, axis, series, runs, plain, textWidth, range, ticks, scale, layout, svg, sendable, FONTS };
+  ASY.plot = { MM, PALETTES, MARKERS, DASHES, TYPES, GREEK, defaults, panel, axis, series, runs, plain, literal, textWidth, range, ticks, scale, layout, svg, sendable, FONTS };
 })(window.ASY);

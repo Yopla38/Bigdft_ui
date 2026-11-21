@@ -23,3 +23,4 @@ class Host:
     user_id: Callable[..., int]                 # a FastAPI dependency: the id of whoever is signed in, or the host's own refusal
     error: Callable[..., Exception]             # error(status, code, message) → what the host raises to answer an error in its own shape
     limits: Limits = field(default_factory=Limits)
+    document_bytes: Callable[[], int | None] = lambda: None     # the largest request the host reads, when it has a limit: the page warns before a project reaches it

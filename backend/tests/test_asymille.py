@@ -15,10 +15,10 @@ MODEL = {"components": [{"id": "p1", "fn": "gaussian", "params": {}}, {"id": "b1
 
 
 def document(name: str = "Spectra") -> dict[str, Any]:
-    return {"version": 1, "name": name, "seq": 3, "graphs": [], "fits": [], "log": [], "view": {"main": "sheet", "sheet": "s1"},
+    return {"version": 1, "name": name, "seq": 3, "graphs": [], "fits": [], "series": [], "log": [], "view": {"main": "sheet", "sheet": "s1"},
             "sheets": [{"id": "s1", "name": "Sheet 1", "source": "", "columns": [
-                {"id": "c2", "name": "A", "title": "Energy", "unit": "eV", "role": "x", "formula": "", "comment": "", "values": [1, 2, None, 4]},
-                {"id": "c3", "name": "B", "title": "", "unit": "", "role": "y", "formula": "A*2", "comment": "", "values": [2, 4, None, "n/a"]}]}]}
+                {"id": "c2", "name": "A", "title": "Energy", "unit": "eV", "role": "x", "formula": "", "comment": "", "made": None, "values": [1, 2, None, 4]},
+                {"id": "c3", "name": "B", "title": "", "unit": "", "role": "y", "formula": "A*2", "comment": "", "made": None, "values": [2, 4, None, "n/a"]}]}]}
 
 
 def test_nobody_signed_in_gets_nothing(browser: Browser) -> None:
@@ -74,6 +74,7 @@ def test_the_same_guards_as_every_address_of_the_api(alice: Browser) -> None:
 def test_a_fit_an_operation_and_a_figure_for_who_is_signed_in(alice: Browser) -> None:
     catalogue = alice.get("/asymille/catalogue").json()
     assert len(catalogue["functions"]) == 35 and len(catalogue["operations"]) == 18
+    assert catalogue["limits"]["document_bytes"] == 4 * 1024 * 1024                # ONDELETTE_MAX_BODY_BYTES: the page says how much room a project has left
     started = alice.post("/asymille/model/guess", {"x": X, "y": Y, "model": MODEL}).json()["model"]
     result = alice.post("/asymille/fit", {"x": X, "y": Y, "model": started}).json()
     params = {p["name"]: p for p in result["params"]}
@@ -96,7 +97,7 @@ def test_the_page_is_served_as_the_workshops_are(browser: Browser) -> None:
     assert f'<script nonce="{nonce}">' in page.text and "<script>" not in page.text
     assert browser.http.get("/asymille", follow_redirects=False).status_code == 308
     scripts = [line.split('"')[1] for line in page.text.splitlines() if line.startswith('<script src="') and "://" not in line]
-    assert len(scripts) == 14 and scripts[:2] == ["shared/api.js", "shared/account.js"]
+    assert len(scripts) == 15 and scripts[:2] == ["shared/api.js", "shared/account.js"]
     for script in scripts:
         assert browser.http.get("/asymille/" + script).status_code == 200, script
     # signing in is this server's: the page loads the account script of the workshops, not Asymille's stand-in
@@ -121,10 +122,14 @@ def test_the_project_the_page_writes_is_accepted(alice: Browser) -> None:
     const s = M.sheetFrom('Peaks', columns);
     M.addColumn(s, { formula: 'B*2 + i' }); M.changed(s);
     const g = M.plot(s, [s.columns[1]], 'scatter'), f = M.addFit(s, s.columns[0], s.columns[1]);
-    f.model.components = [{ id: 'p1', fn: 'gaussian', params: {} }]; M.showFit(f, g); M.log('Built in Node.'); M.commit();
+    f.model.components = [{ id: 'p1', fn: 'gaussian', params: {} }]; M.showFit(f, g);
+    const other = M.sheetFrom('Peaks 180K', columns), sr = M.addSeries(f);               // a series of two files, with its table of results and its graph
+    sr.variable = { name: 'Temperature', unit: 'K' }; sr.members[0].value = 160; sr.members.push({ sheet: other.id, value: 180, state: 'todo', message: '', result: null });
+    M.seriesTable(sr); M.reviewGraph(sr); M.log('Built in Node.'); M.commit();
     process.stdout.write(JSON.stringify(M.serialize()));
     """
     written = json.loads(subprocess.run(["node", "-e", script], cwd=ROOT, capture_output=True, text=True, timeout=60, check=True).stdout)
     made = alice.post("/asymille/projects", {"document": written})
     assert made.status_code == 201, made.text
-    assert made.json()["document"] == written and (made.json()["sheet_count"], made.json()["graph_count"], made.json()["fit_count"]) == (2, 1, 1)
+    assert made.json()["document"] == written and (made.json()["sheet_count"], made.json()["graph_count"], made.json()["fit_count"]) == (4, 2, 1)
+    assert [m["value"] for m in made.json()["document"]["series"][0]["members"]] == [160, 180]

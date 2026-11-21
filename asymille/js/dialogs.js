@@ -139,6 +139,7 @@ window.ASY = window.ASY || {};
           ui.btn('Save this project to a file', () => ASY.download(JSON.stringify(M.doc), (M.doc.name.replace(/[^\w.-]+/g, '_') || 'project') + '.asymille.json', 'application/json'), '', { title: 'The whole project (data, graphs, fits) as one file: a backup, or to send to someone' }),
           ui.btn('Open a project file', () => fileInput.click())),
         note ? h('div', { class: 'notice err' }, note) : null,
+        ASY.seriespanel.room() ? h('p', { class: ASY.seriespanel.room().near ? 'notice' : 'muted' }, ASY.seriespanel.room().text + (ASY.seriespanel.room().near ? ' Larger, it is refused when it is saved.' : '')) : null,
         !s.on ? h('p', { class: 'say' }, 'No server keeps projects here: save the project to a file to find it again.')
           : s.loading && !s.list ? h('p', { class: 'say' }, 'Reading your projects…') : s.error && !s.list ? h('div', { class: 'notice err' }, s.error)
             : h('ul', { class: 'std-list' }, (s.list || []).map(row)));

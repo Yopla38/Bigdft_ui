@@ -9,7 +9,7 @@ window.ASY = window.ASY || {};
 (function (ASY) {
   'use strict';
   const h = ASY.h, $ = ASY.$, M = ASY.model, P = ASY.plot, I = ASY.inspect, ui = ASY.ui, api = window.OND.api, T = ASY.store;
-  const state = { tab: { graph: 'fit', sheet: 'column' }, tool: 'pointer', panel: null, series: null, note: null, dock: 'results', busy: null, facts: null, resultOf: null, live: false };
+  const state = { tab: { graph: 'fit', sheet: 'column' }, tool: 'pointer', panel: null, series: null, note: null, dock: 'results', busy: null, facts: null, resultOf: null, live: false, stop: false, shownSeries: null };
   let grid = null, view = null, shown = null, toastTimer = null;
   const app = ASY.app = { state, catalogue: null, style: null };
 
@@ -28,6 +28,8 @@ window.ASY = window.ASY || {};
   app.refresh = () => { M.commit(); drawTop(); drawTree(); drawMain(); drawInspector(); drawDock(); T.changed(); };
   app.redrawMain = () => { if (view && M.doc.view.main === 'graph') view.draw(); };
   app.redrawDock = () => drawDock();
+  app.redrawTree = () => drawTree();
+  app.redrawAll = () => { drawTop(); drawTree(); drawMain(); drawInspector(); drawDock(); };          // what is on screen, without saying the project changed
   app.changedSheet = (s) => { M.changed(s); app.refresh(); };
 
   // ------------------------------------------------------------------ what the buttons do
@@ -59,7 +61,8 @@ window.ASY = window.ASY || {};
       if (out.sheet === 'new' && out.columns.length) {
         target = M.sheetFrom((out.title || op.label) + ' of ' + of, out.columns.map((c) => ({ title: c.role === 'x' && c.name === 'x' ? (x ? x.title || x.name : 'x') : c.name, unit: c.role === 'x' && c.name === 'x' && x ? x.unit : SAME_UNIT.includes(c.name) ? y.unit : '', values: c.values, role: c.role, comment: out.note })), op.label + ' of “' + M.label(y) + '” (sheet “' + s.name + '”). ' + out.note);
         made = target.columns;
-      } else out.columns.forEach((c, i) => { made.push(M.addColumn(s, { title: c.name + ' of ' + of, unit: SAME_UNIT.includes(c.name) ? y.unit : '', values: c.values, role: 'y', comment: out.note }, s.columns.indexOf(y) + 1 + i)); });
+      } else out.columns.forEach((c, i) => { made.push(M.addColumn(s, { title: c.name + ' of ' + of, unit: SAME_UNIT.includes(c.name) ? y.unit : '', values: c.values, role: 'y', comment: out.note,
+        made: { op: op.name, args: chosen.args, x: x ? x.id : null, y: y.id, y2: y2 ? y2.id : null, part: i } }, s.columns.indexOf(y) + 1 + i)); });          // kept so that a series can do it again on each of its files
       M.log(op.label + ' of “' + M.label(y) + '” (sheet “' + s.name + '”). ' + out.note + (made.length ? ' Written to ' + (target === s ? 'the column' + (made.length > 1 ? 's ' : ' ') + made.map((c) => c.name).join(', ') : 'the sheet “' + target.name + '”') + '.' : ''));
       if (chosen.plot && g && made.length) {
         const panel = g.figure.panels.find((p) => p.series.some((r) => r.kind === 'data' && r.sheet === s.id && r.y === y.id)) || g.figure.panels[0];
@@ -127,13 +130,17 @@ window.ASY = window.ASY || {};
         doc.sheets.map((s) => item('S', s.name, M.rows(s) + ' × ' + s.columns.length, v.main === 'sheet' && v.sheet === s.id, () => { v.sheet = s.id; v.main = 'sheet'; app.resetGrid(); app.refresh(); },
           () => { if (doc.sheets.length === 1) return app.say('A project keeps at least one sheet', true); M.removeSheet(s.id); app.resetGrid(); app.refresh(); })), 'No sheet.'),
       section('Graphs', () => { const g = M.addGraph(); v.graph = g.id; v.main = 'graph'; state.tab.graph = 'series'; app.resetGrid(); app.refresh(); }, 'A new, empty graph',
-        doc.graphs.map((g) => { const n = g.figure.panels.reduce((a, p) => a + p.series.length, 0); return item('G', g.name, n + ' series · ' + g.figure.width + ' × ' + g.figure.height + ' mm', v.main === 'graph' && v.graph === g.id, () => { v.graph = g.id; v.main = 'graph'; state.series = state.panel = null; app.refresh(); }, () => { M.removeGraph(g.id); app.refresh(); }); }),
+        doc.graphs.map((g) => { const n = g.figure.panels.reduce((a, p) => a + p.series.length, 0); return item('G', g.name, n + ' curve' + (n === 1 ? '' : 's') + ' · ' + g.figure.width + ' × ' + g.figure.height + ' mm', v.main === 'graph' && v.graph === g.id, () => { v.graph = g.id; v.main = 'graph'; state.series = state.panel = null; app.refresh(); }, () => { M.removeGraph(g.id); app.refresh(); }); }),
         'Select columns of a sheet and plot them.'),
       section('Fits', null, '', doc.fits.map((f) => { const r = f.result || f.results[f.y], busy = state.busy === 'fit:' + f.id;
         return item('F', f.name, r ? 'χ²ᵣ ' + ASY.fmt(r.redchi, 4) + ' · R² ' + ASY.fmt(r.rsquared, 5) : f.model.components.length + ' component' + (f.model.components.length === 1 ? '' : 's') + ', not fitted', v.fit === f.id && state.tab[v.main] === 'fit',
           () => { v.fit = f.id; state.facts = null; const g = M.doc.graphs.find((k) => k.figure.panels.some((p) => p.series.some((x) => (x.kind === 'fit' && x.fit === f.id) || (x.kind === 'data' && x.sheet === f.sheet && x.y === f.y)))); if (g) { v.graph = g.id; v.main = 'graph'; state.tab.graph = 'fit'; } app.refresh(); },
           () => { M.removeFit(f.id); app.refresh(); }, h('span', { class: 'pdot ' + (busy ? 'running' : !r ? '' : f.stale ? 'stale' : r.success ? 'done' : 'failed'), title: busy ? 'being fitted' : !r ? 'not fitted' : f.stale ? 'out of date' : r.success ? 'converged' : 'did not converge' })); }),
-        'Select a column and choose “Fit this column”.'));
+        'Select a column and choose “Fit this column”.'),
+      doc.series.length ? section('Series', null, '', doc.series.map((sr) => { const done = sr.members.filter((m) => m.state === 'done').length, bad = sr.members.filter((m) => m.state === 'failed').length, busy = state.busy === 'series:' + sr.id;
+        return item('≡', sr.name, sr.members.length + ' files' + (sr.variable.name ? ' · ' + sr.variable.name : '') + (done + bad ? ' · ' + done + ' fitted' : ''), state.dock === 'series' && state.shownSeries === sr.id,
+          () => ASY.seriespanel.open(sr), () => { doc.series = doc.series.filter((k) => k !== sr); app.refresh(); },
+          h('span', { class: 'pdot ' + (busy ? 'running' : bad ? 'failed' : done ? 'done' : ''), title: busy ? 'being fitted' : bad ? bad + ' to check' : done ? 'fitted' : 'not fitted yet' })); }), '') : null);
   }
 
   // ------------------------------------------------------------------ the middle: a sheet or a graph
@@ -173,7 +180,7 @@ window.ASY = window.ASY || {};
   }
 
   // ------------------------------------------------------------------ the right: what is selected
-  const TABS = { graph: [['fit', 'Fit'], ['analyse', 'Analyse'], ['series', 'Series'], ['axes', 'Axes'], ['page', 'Page'], ['notes', 'Notes']], sheet: [['column', 'Column'], ['analyse', 'Analyse'], ['fit', 'Fit']] };
+  const TABS = { graph: [['fit', 'Fit'], ['analyse', 'Analyse'], ['series', 'Curves'], ['axes', 'Axes'], ['page', 'Page'], ['notes', 'Notes']], sheet: [['column', 'Column'], ['analyse', 'Analyse'], ['fit', 'Fit']] };
   function drawInspector() {
     const v = M.doc.view, kind = v.main === 'graph' && M.graph(v.graph) ? 'graph' : 'sheet', g = M.graph(v.graph), s = M.sheet(v.sheet);
     const tab = TABS[kind].some((t) => t[0] === state.tab[kind]) ? state.tab[kind] : TABS[kind][0][0];
@@ -196,6 +203,7 @@ window.ASY = window.ASY || {};
     let parts;
     if (state.dock === 'results') parts = ASY.fitpanel.results();
     else if (state.dock === 'report') parts = ASY.fitpanel.report();
+    else if (state.dock === 'series') parts = ASY.seriespanel.dock();
     else parts = M.doc.log.length ? [h('p', { class: 'say' }, 'One line per thing done to this project, with the values used: for a notebook, and for the methods of a paper.'),
       h('div', {}, M.doc.log.slice().reverse().map((l) => h('div', { class: 'logline' }, h('time', {}, new Date(l.at).toLocaleString()), h('span', {}, l.text)))),
       h('div', { class: 'acts' }, ui.btn('Copy', async () => { try { await navigator.clipboard.writeText(M.doc.log.map((l) => l.at + '\t' + l.text).join('\n')); app.say('Copied'); } catch (e) { app.say('The browser did not allow copying', true); } }))] : [h('p', { class: 'say' }, 'Nothing was done yet. Imports, operations, fits and exports are written here as they happen.')];
