@@ -746,8 +746,11 @@
   }
 
   // --- guided paths: Jupyter notebooks turned into steps ---------------------------
-  /* Browser storage keeps what an administrator added on this device only. In
-   * production the notebook goes to the platform, and to the pack's sources. */
+  /* Served by backend/serve.py, the paths an administrator publishes are kept by the server
+   * (`api/guides`) and read by every member; who is an administrator is the role of the
+   * account signed in. Served as files (the mock-up), there is no account: browser storage
+   * keeps what was added on this device only, and "Admin view" is a switch. */
+  const remote = { on: false, loading: false, error: '' };
   const store = {
     get(k, d) { try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : d; } catch (e) { return d; } },
     set(k, val) { try { localStorage.setItem(k, JSON.stringify(val)); return true; } catch (e) { return false; } },
@@ -783,22 +786,54 @@
   function publishDraft() {
     const d = guides.draft, entry = { id: d.id, title: d.title.trim() || d.parsed.title, level: d.level, minutes: d.minutes, summary: d.summary.trim() || 'Imported from ' + d.file + '.', origin: d.origin, notebook: d.notebook };
     guides.imported.push(entry);
-    const saved = store.set('ond.guides', guides.imported);
-    guides.draft = null; guides.error = saved ? '' : 'Published for this session. This browser refused to store it, so it will not be there after a reload.';
+    guides.draft = null;
+    if (remote.on) {
+      // shown at once, sent after: taken back, with the reason, if the server refuses it
+      entry.pending = true; guides.error = '';
+      OND.api.post('guides', { title: entry.title.slice(0, 120), level: entry.level, minutes: entry.minutes, summary: entry.summary.slice(0, 600), origin: entry.origin, notebook: entry.notebook })
+        .then((kept) => { Object.assign(entry, fromServer(kept)); delete entry.pending; }, (e) => { guides.imported = guides.imported.filter((x) => x !== entry); guides.draft = d; guides.error = 'The server did not keep this path: ' + e.message + '.'; })
+        .then(() => { buildGuides(); renderGuides(); });
+    } else {
+      const saved = store.set('ond.guides', guides.imported);
+      guides.error = saved ? '' : 'Published for this session. This browser refused to store it, so it will not be there after a reload.';
+    }
+    buildGuides(); renderGuides();
+  }
+  const fromServer = (g) => ({ id: 'db-' + g.id, db: g.id, title: g.title, level: g.level, minutes: g.minutes, summary: g.summary, origin: g.origin, notebook: g.notebook });
+  function removeGuide(g) {
+    const before = guides.imported;
+    guides.imported = guides.imported.filter((x) => x.id !== g.id);
+    if (guides.cur && guides.cur.id === g.id) guides.cur = null;
+    if (remote.on) OND.api.del('guides/' + g.db).catch((e) => { guides.imported = before; guides.error = 'The server did not remove “' + g.title + '”: ' + e.message + '.'; buildGuides(); renderGuides(); });
+    else store.set('ond.guides', guides.imported);
+    buildGuides(); renderGuides(); renderGuide();
+  }
+  /* Someone signed in: the paths the server holds replace this device's, and the account's role decides who publishes. */
+  async function loadGuides(user) {
+    remote.on = true; remote.loading = true; remote.error = '';
+    ui.admin = user.role === 'ADMIN'; guides.imported = []; guides.draft = null; guides.error = '';
+    buildGuides(); renderGuides();
+    try { guides.imported = (await OND.api.get('guides')).map(fromServer); } catch (e) { remote.error = e.message; }
+    remote.loading = false;
     buildGuides(); renderGuides();
   }
 
   function renderGuides() {
-    $('#role').textContent = ui.admin ? 'Admin view' : 'Member view';
+    $('#role').textContent = remote.on ? (ui.admin ? 'Administrator' : 'Member') : ui.admin ? 'Admin view' : 'Member view';
     $('#role').setAttribute('aria-pressed', String(ui.admin));
+    $('#role').disabled = remote.on;
+    $('#role').title = remote.on ? 'The role of your account. An administrator publishes guided paths for every member.' : 'Switch between what a member and an administrator see';
     $('#guides-admin').replaceChildren(...(ui.admin
       ? [h('input', { type: 'file', id: 'nb-file', accept: '.ipynb,application/json', hidden: true, onchange: (e) => { readNotebook(e.target.files[0]); e.target.value = ''; } }),
         h('button', { class: 'btn small cta', type: 'button', onclick: () => $('#nb-file').click() }, 'Add a notebook (.ipynb)')]
       : [h('span', { style: 'color:var(--fg-3);font-size:13px' }, 'each path is a Jupyter notebook')]));
     const review = $('#guides-review'), d = guides.draft;
-    review.hidden = !(ui.admin && (d || guides.error));
+    review.hidden = !((ui.admin && (d || guides.error)) || remote.loading || remote.error);
     if (!review.hidden) {
       const kids = [];
+      if (remote.loading) kids.push(h('p', { style: 'color:var(--fg-3);font-size:13px' }, 'Loading the paths published by the administrators…'));
+      if (remote.error) kids.push(h('div', { class: 'notice err' }, h('b', {}, 'The published paths could not be read'), h('span', {}, remote.error + '. The paths the workshop ships with are below.'),
+        h('div', { class: 'notice-actions' }, h('button', { class: 'btn small', type: 'button', onclick: () => loadGuides(OND.account.state.user) }, 'Try again'))));
       if (guides.error) kids.push(h('div', { class: 'notice err' }, h('b', {}, 'Not imported'), h('span', {}, guides.error)));
       if (d) {
         const c = count(d.parsed), moves = d.parsed.steps.flatMap((x) => x.moves), kept = [...new Set(d.parsed.steps.flatMap((x) => x.kept))];
@@ -824,9 +859,9 @@
       const c = count(g);
       return h('article', { class: 'tile' }, h('h3', {}, g.title), h('p', {}, g.summary),
         h('div', { class: 'meta' }, h('span', {}, g.level), h('span', {}, g.minutes + ' min'), h('span', {}, c.steps + ' steps'), c.moves ? h('span', {}, c.moves + (c.moves === 1 ? ' move' : ' moves')) : null),
-        h('div', { class: 'foot' }, h('span', { class: 'chip' }, g.builtin ? 'BigDFT-school' : 'Added by admin'),
+        h('div', { class: 'foot' }, h('span', { class: 'chip' }, g.builtin ? 'BigDFT-school' : g.pending ? 'Publishing…' : 'Added by admin'),
           h('span', { style: 'display:flex;gap:6px' },
-            ui.admin && !g.builtin ? h('button', { class: 'btn small', type: 'button', onclick: () => { guides.imported = guides.imported.filter((x) => x.id !== g.id); store.set('ond.guides', guides.imported); if (guides.cur && guides.cur.id === g.id) guides.cur = null; buildGuides(); renderGuides(); renderGuide(); } }, 'Remove') : null,
+            ui.admin && !g.builtin && !g.pending ? h('button', { class: 'btn small', type: 'button', onclick: () => removeGuide(g) }, 'Remove') : null,
             h('button', { class: 'btn small', type: 'button', onclick: () => startGuide(g) }, 'Start'))));
     }));
   }
@@ -939,7 +974,9 @@
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeColors);
   new MutationObserver(themeColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-  $('#role').addEventListener('click', () => { ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
+  $('#role').addEventListener('click', () => { if (remote.on) return; ui.admin = !ui.admin; store.set('ond.admin', ui.admin); guides.draft = null; guides.error = ''; renderGuides(); });
+  // with accounts (backend/serve.py): the profile menu, the role of the account, the paths the server keeps
+  OND.account.start({ slot: $('#account'), links: [{ label: 'Workshop 2 · build a study', href: '/' }], onUser: loadGuides });
   OND.studyView.mount({ h, $, typeset, openInWorkshop: openRecorded });
   /* The study a user builds starts from the blueprint of the workshop: its settings become the script's blueprint(). */
   OND.builder.mount({ h, $, base: () => ({ system: st.sys.name, file: blueprint.input().file, lines: blueprint.python().filter((l) => /^inp[.[]/.test(l)), mpi: st.v.mpi, omp: st.v.omp, cost: '≈ ' + duration(blueprint.derived().seconds) + ' on ' + st.v.mpi * st.v.omp + ' cores', haps: blueprint.TARGETS[st.v.target] }) });
