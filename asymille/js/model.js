@@ -124,22 +124,16 @@ window.ASY = window.ASY || {};
       delete errors[c.id];
       if (!c.formula) return;
       try {
-        const compiled = ASY.expr.compile(c.formula), env = { i: 0, n }, sources = [];
+        const compiled = ASY.expr.column(c.formula), cols = {};
         for (const name of compiled.names) {
           if (name === 'i' || name === 'n') continue;
           const src = s.columns.find((k) => k.name === name);
           if (!src) throw new Error('no column is called ' + name);
           if (src === c) throw new Error('a column cannot be computed from itself');
-          sources.push([name, src.values]);
+          cols[name] = src.values;
         }
-        const count = sources.length ? Math.max(...sources.map((x) => x[1].length)) : n;
-        const out = new Array(count);
-        for (let r = 0; r < count; r++) {
-          env.i = r + 1;
-          for (const [name, values] of sources) { const v = values[r]; env[name] = typeof v === 'number' ? v : NaN; }
-          const v = compiled.run(env);
-          out[r] = typeof v === 'number' && isFinite(v) ? v : null;
-        }
+        const lengths = Object.values(cols).map((v) => v.length), count = lengths.length ? Math.max(...lengths) : n;
+        const out = compiled.run({ n: count, cols }).map((v) => (typeof v === 'number' && isFinite(v) ? v : null));
         c.values = out; trim(c);
       } catch (e) { errors[c.id] = e.message; }
     });
@@ -344,7 +338,7 @@ window.ASY = window.ASY || {};
     const walk = (cid) => {             // back to the columns that were imported or typed: through an operation by what it read, through a formula by the names it uses
       const c = column(model, cid); if (!c) return;
       if (c.made) ['x', 'y', 'y2'].forEach((k) => { if (c.made[k]) walk(c.made[k]); });
-      else if (c.formula) { try { ASY.expr.compile(c.formula).names.forEach((n) => { const k = model.columns.find((q) => q.name === n && q !== c); if (k) walk(k.id); }); } catch (e) { /* a formula that does not read: nothing to follow */ } }
+      else if (c.formula) { try { ASY.expr.column(c.formula).names.forEach((n) => { const k = model.columns.find((q) => q.name === n && q !== c); if (k) walk(k.id); }); } catch (e) { /* a formula that does not read: nothing to follow */ } }
       else if (!need.includes(c)) need.push(c);
     };
     [f.x, f.y, f.yerr].forEach((cid) => { if (cid) walk(cid); });
