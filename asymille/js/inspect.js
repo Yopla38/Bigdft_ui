@@ -1,0 +1,252 @@
+/* The right-hand column: what is selected, and its settings. A sheet shows its columns and the
+ * operations; a graph shows its series, its axes, its page and its notes (fitpanel.js draws the fit).
+ *
+ * A control changes the project at once and the figure follows; the inspector itself is drawn
+ * again only when what it lists changed (a series added, another tab), so that typing in one
+ * field and moving to the next never loses the place. `ASY.ui` is the small set of controls. */
+window.ASY = window.ASY || {};
+(function (ASY) {
+  'use strict';
+  const h = ASY.h, M = ASY.model, P = ASY.plot;
+  const A = () => ASY.app;
+
+  // ------------------------------------------------------------------ controls bound to a field of the project
+  const done = (opt) => { if (opt && opt.then) opt.then(); if (opt && opt.structural) A().refresh(); else A().touch(); };
+  const ui = ASY.ui = {
+    field: (label, control, hint) => h('label', { class: 'field2' }, h('span', {}, label), control, hint ? h('small', {}, hint) : null),
+    txt(obj, key, opt) {
+      opt = opt || {};
+      return h(opt.area ? 'textarea' : 'input', { type: opt.area ? null : 'text', class: 'inp', value: obj[key] == null ? '' : obj[key], placeholder: opt.placeholder, maxlength: opt.max || 400, spellcheck: 'false', rows: opt.area ? 2 : null,
+        onchange: (e) => { obj[key] = e.target.value; done(opt); } });
+    },
+    num(obj, key, opt) {
+      opt = opt || {};
+      return h('input', { type: 'text', inputmode: 'decimal', class: 'inp num', value: obj[key] == null ? '' : String(obj[key]), placeholder: opt.placeholder || (opt.nullable ? 'auto' : ''),
+        onchange: (e) => {
+          const raw = e.target.value.trim(); let v = raw === '' ? null : ASY.parseNum(raw);
+          if (v === null && !opt.nullable) { e.target.value = obj[key]; return; }
+          if (v !== null && isNaN(v)) { e.target.value = obj[key] == null ? '' : obj[key]; A().say('“' + raw + '” is not a number', true); return; }
+          if (v !== null) { if (opt.min != null) v = Math.max(opt.min, v); if (opt.max != null) v = Math.min(opt.max, v); if (opt.int) v = Math.round(v); }
+          obj[key] = v; e.target.value = v == null ? '' : String(v); done(opt);
+        } });
+    },
+    sel(obj, key, options, opt) {
+      opt = opt || {};
+      const current = obj[key] == null ? '' : String(obj[key]);
+      const option = (o) => h('option', { value: o[0] == null ? '' : o[0], selected: String(o[0] == null ? '' : o[0]) === current }, o[1]);
+      return h('select', { class: 'inp', onchange: (e) => { const v = e.target.value; obj[key] = v === '' && opt.nullable ? null : opt.number ? Number(v) : v; done(opt); } },
+        options.map((o) => (o.group ? h('optgroup', { label: o.group }, o.options.map(option)) : option(o))));
+    },
+    chk: (obj, key, label, opt) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: opt && opt.invert ? !obj[key] : obj[key] !== false && !!obj[key], onchange: (e) => { obj[key] = opt && opt.invert ? !e.target.checked : e.target.checked; done(opt); } }), label),
+    col: (obj, key, opt) => h('input', { type: 'color', value: obj[key] || '#000000', 'aria-label': 'Colour', oninput: (e) => { obj[key] = e.target.value; A().redrawMain(); }, onchange: (e) => { obj[key] = e.target.value; done(opt); } }),
+    sec: (title, hint, open, ...kids) => h('details', { class: 'sec', open }, h('summary', {}, title, h('span', {}, hint || '')), h('div', {}, kids)),
+    btn: (label, act, cls, attrs) => h('button', Object.assign({ class: 'btn small' + (cls ? ' ' + cls : ''), type: 'button', onclick: act }, attrs || {}), label),
+  };
+  const columnOptions = (s, opt) => (opt && opt.none ? [[null, opt.none]] : []).concat(s ? s.columns.map((c) => [c.id, c.name + (c.title ? ' · ' + c.title : '')]) : []);
+  const sheetOptions = () => M.doc.sheets.map((s) => [s.id, s.name]);
+
+  // ------------------------------------------------------------------ a graph: its series
+  function seriesName(r) {
+    const d = M.seriesData(r);
+    if (r.label) return P.plain(r.label);
+    if (r.kind === 'fit') { const f = M.fit(r.fit); return (r.part === 'total' ? 'Fit' : r.part === 'band' ? 'Confidence band' : r.part === 'residuals' ? 'Residuals' : r.part) + (f ? ' · ' + f.name : ''); }
+    return d ? d.label : 'missing data';
+  }
+  function seriesTab(g) {
+    const st = A().state, fig = g.figure, panel = fig.panels.find((p) => p.id === st.panel) || fig.panels[0];
+    const sel = panel.series.find((r) => r.id === st.series) || panel.series[0] || null;
+    const pick = { sheet: (M.sheet(M.doc.view.sheet) || M.doc.sheets[0] || {}).id, y: null };
+    const yChoice = h('span', {});
+    const drawPick = () => { const s = M.sheet(pick.sheet); const ys = s ? s.columns.filter((c) => c.role === 'y') : []; pick.y = ys.length ? ys[0].id : s && s.columns.length ? s.columns[0].id : null; ASY.fill(yChoice, ui.sel(pick, 'y', columnOptions(s), { then: () => {}, structural: false })); };
+    drawPick();
+    const out = [];
+    if (fig.panels.length > 1) out.push(ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i) + (p.title ? ' · ' + p.title : '')]), { structural: true })));
+    out.push(h('div', { class: 'slist' }, panel.series.length ? panel.series.map((r) => h('button', { class: 'srow', type: 'button', 'aria-pressed': String(sel === r), onclick: () => { st.series = r.id; A().refresh(); } },
+      h('i', { style: 'background:' + r.color + (r.show === false ? ';opacity:.25' : '') }), h('span', {}, seriesName(r)), h('small', {}, r.show === false ? 'hidden' : P.TYPES[r.type] || (r.type === 'band' ? 'Band' : r.type)))) : h('p', { class: 'empty' }, 'Nothing is drawn in this panel yet.')));
+    if (sel) {
+      const s = M.sheet(sel.sheet);
+      const move = (d) => { const i = panel.series.indexOf(sel), j = i + d; if (j < 0 || j >= panel.series.length) return; panel.series.splice(i, 1); panel.series.splice(j, 0, sel); A().refresh(); };
+      out.push(ui.sec(seriesName(sel), sel.kind === 'fit' ? 'a curve of a fit' : 'data', true,
+        ui.field('Name in the legend', ui.txt(sel, 'label', { placeholder: seriesName(Object.assign({}, sel, { label: '' })), structural: true }), 'Write E_{F}, cm^{-1}, \\alpha for subscripts, superscripts and Greek letters.'),
+        sel.kind === 'data' ? h('div', { class: 'cols2' },
+          ui.field('X', ui.sel(sel, 'x', columnOptions(s, { none: 'row number' }), { nullable: true })), ui.field('Y', ui.sel(sel, 'y', columnOptions(s), { structural: true })),
+          ui.field('Y error', ui.sel(sel, 'yerr', columnOptions(s, { none: 'none' }), { nullable: true })), ui.field('X error', ui.sel(sel, 'xerr', columnOptions(s, { none: 'none' }), { nullable: true }))) : null,
+        sel.type === 'band' ? null : h('div', { class: 'cols2' },
+          ui.field('Drawn as', ui.sel(sel, 'type', Object.entries(P.TYPES), { structural: true })),
+          ui.field('Axis', ui.sel(sel, 'axis', [['y', 'left'], ['y2', 'right']], { then: () => { if (sel.axis === 'y2' && !panel.y2) panel.y2 = P.axis(); }, structural: true }))),
+        h('div', { class: 'cols2' },
+          ui.field('Colour', h('div', { class: 'row2' }, ui.col(sel, 'color', { structural: true }), ui.txt(sel, 'color', { max: 7, structural: true }))),
+          ui.field('Opacity', ui.num(sel, 'opacity', { min: 0.05, max: 1 }))),
+        sel.type === 'line' || sel.type === 'both' || sel.type === 'steps' || sel.type === 'area' ? h('div', { class: 'cols2' },
+          ui.field('Line width (pt)', ui.num(sel, 'width', { nullable: true, min: 0.1, max: 10, placeholder: 'of the page' })),
+          ui.field('Line', ui.sel(sel, 'dash', [['solid', 'solid'], ['dash', 'dashed'], ['dot', 'dotted'], ['dashdot', 'dash-dot'], ['long', 'long dashes']]))) : null,
+        sel.type === 'scatter' || sel.type === 'both' ? h('div', { class: 'cols3' },
+          ui.field('Symbol', ui.sel(sel, 'marker', [['circle', 'circle'], ['square', 'square'], ['triangle', 'triangle'], ['down', 'triangle down'], ['diamond', 'diamond'], ['cross', 'cross'], ['plus', 'plus']])),
+          ui.field('Size (pt)', ui.num(sel, 'size', { min: 0.5, max: 30 })), ui.field('Filled', ui.sel(sel, 'open', [['false', 'filled'], ['true', 'open']], { then: () => { sel.open = sel.open === 'true' || sel.open === true; } }))) : null,
+        h('div', { class: 'cols2' }, ui.chk(sel, 'show', 'Drawn', { structural: true }), sel.type === 'band' ? null : ui.chk(sel, 'legend', 'In the legend')),
+        h('div', { class: 'acts' }, ui.btn('Draw earlier', () => move(-1)), ui.btn('Draw later', () => move(1)), ui.btn('Remove', () => { panel.series = panel.series.filter((r) => r !== sel); st.series = null; A().refresh(); }, 'danger'))));
+    }
+    out.push(ui.sec('Add data to this panel', '', !panel.series.length,
+      ui.field('Sheet', ui.sel(pick, 'sheet', sheetOptions(), { then: drawPick, structural: false })), ui.field('Y column', yChoice),
+      h('div', { class: 'acts' }, ui.btn('Add', () => { const s = M.sheet(pick.sheet), y = M.column(s, pick.y); if (!y) return A().say('Choose a column first', true); st.series = M.addData(g, panel, s, y, { type: M.rows(s) > 60 ? 'line' : 'scatter' }).id; A().refresh(); }, 'cta'))));
+    return out;
+  }
+
+  // ------------------------------------------------------------------ a graph: its axes and legend
+  function axisFields(ax, name) {
+    return [ui.field('Title', ui.txt(ax, 'label', { placeholder: 'e.g. Energy (eV)' })),
+      h('div', { class: 'cols3' }, ui.field('From', ui.num(ax, 'min', { nullable: true })), ui.field('To', ui.num(ax, 'max', { nullable: true })), ui.field('Step', ui.num(ax, 'step', { nullable: true, min: 0 }))),
+      h('div', { class: 'cols2' }, ui.field('Scale', ui.sel(ax, 'scale', [['linear', 'linear'], ['log', 'logarithmic']])), ui.field('Decimals', ui.num(ax, 'decimals', { nullable: true, min: 0, max: 10, int: true }))),
+      h('div', { class: 'cols2' }, ui.chk(ax, 'grid', 'Grid lines'), ui.chk(ax, 'reverse', 'Reversed')),
+      h('div', { class: 'acts' }, ui.btn('Show all the data', () => { ax.min = ax.max = ax.step = null; A().refresh(); }, '', { title: 'Back to an automatic range for the ' + name + ' axis' }))];
+  }
+  function axesTab(g) {
+    const st = A().state, fig = g.figure, panel = fig.panels.find((p) => p.id === st.panel) || fig.panels[0];
+    return [fig.panels.length > 1 ? ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i)]), { structural: true })) : null,
+      ui.field('Title above the panel', ui.txt(panel, 'title')),
+      ui.sec('X axis', P.plain(panel.x.label), true, axisFields(panel.x, 'x')),
+      ui.sec('Y axis', P.plain(panel.y.label), true, axisFields(panel.y, 'y')),
+      ui.sec('Second Y axis, on the right', panel.y2 ? P.plain(panel.y2.label) : 'none', !!panel.y2,
+        panel.y2 ? [axisFields(panel.y2, 'right'), h('div', { class: 'acts' }, ui.btn('Remove this axis', () => { panel.y2 = null; panel.series.forEach((r) => { r.axis = 'y'; }); A().refresh(); }, 'danger'))]
+          : h('div', { class: 'acts' }, ui.btn('Add a second Y axis', () => { panel.y2 = P.axis(); A().refresh(); }), h('span', { class: 'muted' }, 'Then choose “right” as the axis of a series.'))),
+      ui.sec('Legend', panel.legend.show === false ? 'hidden' : '', false,
+        ui.chk(panel.legend, 'show', 'Shown'), ui.chk(panel.legend, 'frame', 'In a frame'),
+        ui.field('Place', ui.sel(panel.legend, 'pos', [['ne', 'top right'], ['nw', 'top left'], ['se', 'bottom right'], ['sw', 'bottom left'], ['n', 'top'], ['s', 'bottom'], ['e', 'right'], ['w', 'left'], ['out', 'outside, on the right'], ['custom', 'where it was dragged']]), 'Or drag it on the figure.'))];
+  }
+
+  // ------------------------------------------------------------------ a graph: its page
+  function applyJournal(fig, preset) {
+    Object.assign(fig, { width: preset.width, height: preset.height, font: preset.font, journal: preset.id });
+    Object.assign(fig.size, { label: preset.label_size, tick: preset.tick_size, legend: preset.tick_size, title: preset.label_size, tag: preset.label_size + 1 });
+    Object.assign(fig.stroke, { axis: preset.stroke, line: preset.line, grid: Math.max(0.25, preset.stroke * 0.7), error: preset.stroke });
+    fig.tick.len = Math.max(2, preset.tick_size * 0.4);
+    fig.panels.forEach((p) => p.series.forEach((r) => { if (r.type !== 'band') r.size = Math.max(1.5, preset.tick_size * 0.4); }));
+  }
+  function pageTab(g) {
+    const fig = g.figure, cat = A().catalogue, presets = cat ? cat.journals.presets : [], chosen = { id: fig.journal || '' };
+    const groups = []; presets.forEach((p) => { let grp = groups.find((x) => x.group === p.publisher); if (!grp) groups.push(grp = { group: p.publisher, options: [] }); grp.options.push([p.id, p.label + ' · ' + p.width + ' mm']); });
+    const preset = presets.find((p) => p.id === fig.journal);
+    const fontNote = cat && cat.fonts.find((f) => f.name === fig.font);
+    return [
+      ui.sec('For a journal', preset ? preset.publisher : '', true,
+        ui.field('Size and type of', ui.sel(chosen, 'id', [['', 'my own size']].concat(groups), { then: () => { const p = presets.find((x) => x.id === chosen.id); if (p) applyJournal(fig, p); else fig.journal = null; }, structural: true }),
+          preset ? (preset.note ? preset.note + ' ' : '') + 'Page of the journal: ' + preset.max_height + ' mm high at most. Widths are ' + cat.journals.checked + ': check the journal’s guide before submitting.' : 'Sets the width, the type and the line widths. Your data and your choices of colours stay.'),
+        h('div', { class: 'cols2' }, ui.field('Width (mm)', ui.num(fig, 'width', { min: 20, max: 500, then: () => { fig.journal = fig.journal && preset && preset.width === fig.width ? fig.journal : null; }, structural: true })), ui.field('Height (mm)', ui.num(fig, 'height', { min: 15, max: 500, structural: true })))),
+      ui.sec('Type', fig.font, false,
+        ui.field('Font', ui.sel(fig, 'font', (cat ? cat.fonts.map((f) => [f.name, f.name]) : [['Arial', 'Arial']]), { structural: true }), fontNote && fontNote.note ? 'In a file made by the server: ' + fontNote.note : null),
+        h('div', { class: 'cols3' }, ui.field('Axis titles (pt)', ui.num(fig.size, 'label', { min: 3, max: 40 })), ui.field('Numbers (pt)', ui.num(fig.size, 'tick', { min: 3, max: 40 })), ui.field('Legend (pt)', ui.num(fig.size, 'legend', { min: 3, max: 40 })))),
+      ui.sec('Lines and ticks', '', false,
+        h('div', { class: 'cols3' }, ui.field('Axes (pt)', ui.num(fig.stroke, 'axis', { min: 0.1, max: 6 })), ui.field('Curves (pt)', ui.num(fig.stroke, 'line', { min: 0.1, max: 10 })), ui.field('Error bars (pt)', ui.num(fig.stroke, 'error', { min: 0.1, max: 6 }))),
+        h('div', { class: 'cols2' }, ui.field('Ticks point', ui.sel(fig.tick, 'dir', [['in', 'inwards'], ['out', 'outwards'], ['both', 'both ways'], ['none', 'no ticks']])), ui.field('Tick length (pt)', ui.num(fig.tick, 'len', { min: 0.5, max: 20 }))),
+        h('div', { class: 'cols2' }, ui.field('Frame', ui.sel(fig, 'frame', [['box', 'a box'], ['open', 'left and bottom only']])), ui.chk(fig.tick, 'mirror', 'Ticks on the top and right too'))),
+      ui.sec('Colours', fig.palette, false,
+        ui.field('Palette of the data', ui.sel(fig, 'palette', [['okabe', 'Okabe–Ito: safe for colour-blind readers'], ['tol', 'Paul Tol, bright'], ['classic', 'Classic: black, red, blue…'], ['grey', 'Greys, for print']], { then: () => { const pal = P.PALETTES[fig.palette]; fig.panels.forEach((p) => { let i = 0; p.series.forEach((r) => { if (r.kind === 'data') r.color = pal[i++ % pal.length]; }); }); }, structural: true }), 'Choosing a palette recolours the data series.'),
+        ui.field('Paper', h('div', { class: 'row2' }, ui.col(fig, 'background'), h('span', { class: 'muted' }, 'white for a journal')))),
+      ui.sec('Panels', fig.panels.length + (fig.panels.length > 1 ? ' panels' : ' panel'), false,
+        h('div', { class: 'cols2' }, ui.field('Columns', ui.num(fig.layout, 'cols', { min: 1, max: 6, int: true })), ui.field('Letters', ui.sel(fig, 'tags', [['none', 'none'], ['(a)', '(a) (b)'], ['a', 'a b'], ['A', 'A B']]))),
+        ui.chk(fig.layout, 'shareX', 'Stacked panels share their x axis'),
+        ui.field('Heights of the rows', h('input', { class: 'inp', type: 'text', value: (fig.layout.ratios || []).join(' : '), placeholder: 'equal, or 3 : 1', onchange: (e) => { fig.layout.ratios = e.target.value.split(/[:\s,;]+/).map(Number).filter((v) => v > 0).slice(0, 12); A().touch(); } })),
+        h('div', { class: 'acts' }, ui.btn('Add a panel', () => { const p = P.panel(M.id('p')); fig.panels.push(p); A().state.panel = p.id; A().refresh(); }),
+          fig.panels.length > 1 ? ui.btn('Remove the last panel', () => { fig.panels.pop(); if (fig.panels.length === 1) { fig.layout.ratios = []; fig.layout.shareX = false; } A().refresh(); }, 'danger') : null)),
+      ui.sec('Style', 'from one graph to another', false,
+        h('p', { class: 'say' }, 'The size, the type, the lines and the ticks of this graph can be given to another, so that the figures of a paper look alike.'),
+        h('div', { class: 'acts' }, ui.btn('Copy the style', () => { A().style = JSON.parse(JSON.stringify({ width: fig.width, height: fig.height, font: fig.font, background: fig.background, journal: fig.journal, palette: fig.palette, size: fig.size, stroke: fig.stroke, tick: fig.tick, frame: fig.frame })); try { localStorage.setItem('asymille.style', JSON.stringify(A().style)); } catch (e) { /* kept for this visit only */ } A().say('Style copied: open another graph and paste it'); }),
+          ui.btn('Paste the style', () => { let style = A().style; try { style = style || JSON.parse(localStorage.getItem('asymille.style')); } catch (e) { /* none */ } if (!style) return A().say('Copy the style of a graph first', true); Object.assign(fig, JSON.parse(JSON.stringify(style))); A().refresh(); }))),
+    ];
+  }
+
+  // ------------------------------------------------------------------ a graph: its notes
+  const NOTES = { text: 'Text', arrow: 'Arrow', line: 'Line', vline: 'Vertical line', hline: 'Horizontal line', span: 'Highlighted range of x' };
+  function notesTab(g) {
+    const st = A().state, fig = g.figure, panel = fig.panels.find((p) => p.id === st.panel) || fig.panels[0], hp = (A().hit() || []).find((q) => q.id === panel.id);
+    const mid = (r, f) => (r ? Number((r[0] + (r[1] - r[0]) * f).toPrecision(4)) : f);
+    const add = (type) => {
+      const xr = hp ? hp.xr : null, yr = hp ? hp.yr : null, n = { id: M.id('n'), type, color: '#000000' };
+      if (type === 'text') Object.assign(n, { x: mid(xr, 0.1), y: mid(yr, 0.9), text: 'Text', size: fig.size.label, coords: 'data' });
+      else if (type === 'vline') Object.assign(n, { x: mid(xr, 0.5), width: 0.8, dash: 'dash' });
+      else if (type === 'hline') Object.assign(n, { y: mid(yr, 0.5), width: 0.8, dash: 'dash' });
+      else if (type === 'span') Object.assign(n, { x: mid(xr, 0.4), x2: mid(xr, 0.6), color: '#e69f00', opacity: 0.18 });
+      else Object.assign(n, { x: mid(xr, 0.3), y: mid(yr, 0.8), x2: mid(xr, 0.5), y2: mid(yr, 0.6), width: 0.8, coords: 'data' });
+      panel.notes.push(n); st.note = n.id; A().refresh();
+    };
+    return [fig.panels.length > 1 ? ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i)]), { structural: true })) : null,
+      h('div', { class: 'acts', style: 'padding:10px 0' }, Object.entries(NOTES).map(([type, label]) => ui.btn('+ ' + label, () => add(type)))),
+      panel.notes.length ? null : h('p', { class: 'empty' }, 'A text, an arrow, a line marking a value, a highlighted range. A text or a line can then be dragged on the figure.'),
+      panel.notes.map((n) => h('div', { class: 'act' + (st.note === n.id ? ' on' : '') },
+        h('div', { class: 'act-head' }, h('b', {}, NOTES[n.type]), ui.btn('Remove', () => { panel.notes = panel.notes.filter((k) => k !== n); A().refresh(); }, 'danger')),
+        n.type === 'text' ? [ui.field('Text', ui.txt(n, 'text'), 'E_{F}, cm^{-1}, \\alpha …'), h('div', { class: 'cols3' }, ui.field('x', ui.num(n, 'x')), ui.field('y', ui.num(n, 'y')), ui.field('Size (pt)', ui.num(n, 'size', { min: 3, max: 60 }))),
+          h('div', { class: 'cols2' }, ui.field('Placed in', ui.sel(n, 'coords', [['data', 'the units of the axes'], ['axes', 'fractions of the panel']], { then: () => { if (hp) { if (n.coords === 'axes') { n.x = 0.05; n.y = 0.92; } else { n.x = mid(hp.xr, 0.1); n.y = mid(hp.yr, 0.9); } } }, structural: true })), ui.chk(n, 'bold', 'Bold'))] : null,
+        n.type === 'arrow' || n.type === 'line' ? h('div', { class: 'cols2' }, ui.field('From x', ui.num(n, 'x')), ui.field('From y', ui.num(n, 'y')), ui.field(n.type === 'arrow' ? 'To x (the head)' : 'To x', ui.num(n, 'x2')), ui.field('To y', ui.num(n, 'y2'))) : null,
+        n.type === 'vline' ? ui.field('At x', ui.num(n, 'x')) : null, n.type === 'hline' ? ui.field('At y', ui.num(n, 'y')) : null,
+        n.type === 'span' ? h('div', { class: 'cols3' }, ui.field('From x', ui.num(n, 'x')), ui.field('To x', ui.num(n, 'x2')), ui.field('Opacity', ui.num(n, 'opacity', { min: 0.02, max: 1 }))) : null,
+        h('div', { class: 'row2' }, ui.col(n, 'color'), n.type === 'text' || n.type === 'span' ? null : ui.num(n, 'width', { min: 0.1, max: 10, placeholder: 'width (pt)' }),
+          n.type === 'text' || n.type === 'span' ? null : ui.sel(n, 'dash', [['solid', 'solid'], ['dash', 'dashed'], ['dot', 'dotted']])))),
+    ];
+  }
+
+  // ------------------------------------------------------------------ a sheet: its columns
+  function columnTab(s) {
+    const picked = A().picked(), cols = picked.columns.map((id) => M.column(s, id)).filter(Boolean), c = cols[0];
+    if (!c) return [h('p', { class: 'empty' }, 'Select a column: click its header.')];
+    const ys = cols.filter((k) => k.role === 'y'), toPlot = ys.length ? ys : cols;
+    const nums = M.numbers(c).filter(isFinite), mean = nums.reduce((a, b) => a + b, 0) / (nums.length || 1);
+    const sd = nums.length > 1 ? Math.sqrt(nums.reduce((a, b) => a + (b - mean) ** 2, 0) / (nums.length - 1)) : NaN;
+    const index = s.columns.indexOf(c), g = M.graph(M.doc.view.graph);
+    const insert = (at) => { M.addColumn(s, {}, at); A().changedSheet(s, true); };
+    return [
+      ui.sec('Plot', toPlot.map((k) => k.name).join(', '), true,
+        h('p', { class: 'say' }, toPlot.length > 1 ? toPlot.length + ' columns, each against the X column on its left.' : h('span', {}, h('b', {}, M.label(c)), ' against ', h('b', {}, M.label(M.xOf(s, c)) || 'the row number'), '.')),
+        h('div', { class: 'acts' }, ui.btn('Symbols', () => A().plot(s, toPlot, 'scatter'), 'cta'), ui.btn('Line', () => A().plot(s, toPlot, 'line')), ui.btn('Line and symbols', () => A().plot(s, toPlot, 'both')), ui.btn('Bars', () => A().plot(s, toPlot, 'bars'))),
+        g ? h('div', { class: 'acts', style: 'margin-top:8px' }, ui.btn('Add to “' + g.name + '”', () => { toPlot.forEach((y) => M.addData(g, g.figure.panels[0], s, y, { type: M.rows(s) > 60 ? 'line' : 'scatter' })); M.doc.view.main = 'graph'; A().refresh(); })) : null,
+        h('div', { class: 'acts', style: 'margin-top:8px' }, ui.btn('Fit this column', () => A().fitColumn(s, toPlot[0]), '', { title: 'A fit of ' + M.label(toPlot[0]) + ', on a graph' }))),
+      ui.sec('Column ' + c.name, M.label(c), true,
+        h('div', { class: 'cols2' }, ui.field('Short name', ui.txt(c, 'name', { max: 24, then: () => { const clean = c.name.replace(/[^A-Za-z0-9_]/g, '').replace(/^[^A-Za-z]+/, '').slice(0, 24); c.name = clean && !s.columns.some((k) => k !== c && k.name === clean) && clean !== 'i' && clean !== 'n' && clean !== 'x' ? clean : M.freeName({ columns: s.columns.filter((k) => k !== c) }); M.recompute(s); }, structural: true }), 'What formulas call it.'),
+          ui.field('Used as', ui.sel(c, 'role', [['x', 'X'], ['y', 'Y'], ['yerr', 'error on Y'], ['xerr', 'error on X'], ['label', 'labels'], ['none', 'not plotted']], { structural: true }))),
+        h('div', { class: 'cols2' }, ui.field('Title', ui.txt(c, 'title', { max: 120, placeholder: 'Energy', structural: true })), ui.field('Unit', ui.txt(c, 'unit', { max: 40, placeholder: 'eV', structural: true }))),
+        ui.field('Computed from other columns', ui.txt(c, 'formula', { area: true, max: 2000, placeholder: 'e.g. ' + (s.columns[0] && s.columns[0] !== c ? s.columns[0].name : 'A') + '*1000   or   sqrt(B)   or   i - 1', then: () => A().changedSheet(s), structural: true }),
+          M.errors[c.id] ? null : 'Columns by their short name, i for the row number, n for the number of rows. Functions: ' + Object.keys(ASY.expr.FUNCTIONS).slice(0, 14).join(', ') + '…'),
+        M.errors[c.id] ? h('small', { class: 'act-note err' }, 'Not computed: ' + M.errors[c.id]) : null,
+        ui.field('Comment', ui.txt(c, 'comment', { area: true, max: 2000 })),
+        h('div', { class: 'acts' }, ui.btn('Insert before', () => insert(index)), ui.btn('Insert after', () => insert(index + 1)),
+          ui.btn('Delete', () => { cols.forEach((k) => M.removeColumn(s, k.id)); A().changedSheet(s, true); }, 'danger', { disabled: s.columns.length <= cols.length }))),
+      ui.sec('Its values', nums.length + ' numbers', false,
+        h('dl', { class: 'facts2' }, [['Numbers', nums.length], ['Mean', mean], ['Standard deviation', sd], ['Minimum', nums.length ? Math.min(...nums.slice(0, 1e5)) : NaN], ['Maximum', nums.length ? Math.max(...nums.slice(0, 1e5)) : NaN], ['Sum', nums.reduce((a, b) => a + b, 0)]]
+          .flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, nums.length ? ASY.fmt(v, 7) : '–')])),
+        h('div', { class: 'acts', style: 'margin-top:10px' }, ui.btn('Sort the sheet ↑', () => { M.sortBy(s, c, false); M.log('Sheet “' + s.name + '” sorted by ' + M.label(c) + ', ascending.'); A().changedSheet(s); }), ui.btn('Sort the sheet ↓', () => { M.sortBy(s, c, true); M.log('Sheet “' + s.name + '” sorted by ' + M.label(c) + ', descending.'); A().changedSheet(s); }))),
+    ];
+  }
+
+  // ------------------------------------------------------------------ operations on a curve
+  const chosen = { op: 'smooth_savgol', args: {}, sheet: null, x: null, y: null, y2: null, plot: true };
+  function analyseTab() {
+    const cat = A().catalogue;
+    if (!cat) return [h('div', { class: 'notice' }, 'The operations are computed by the server, which does not answer here.')];
+    const doc = M.doc, g = doc.view.main === 'graph' ? M.graph(doc.view.graph) : null;
+    // what it is applied to: the selected series of the graph, or the selected column of the sheet
+    if (!M.sheet(chosen.sheet) || chosen.from !== doc.view.main + ':' + (g ? g.id + ':' + A().state.series : doc.view.sheet + ':' + A().picked().columns.join())) {
+      let s = M.sheet(doc.view.sheet), y = null, x = null;
+      if (g) { const all = g.figure.panels.flatMap((p) => p.series).filter((r) => r.kind === 'data'), r = all.find((k) => k.id === A().state.series) || all[0]; if (r) { s = M.sheet(r.sheet); y = M.column(s, r.y); x = M.column(s, r.x); } }
+      else if (s) { const cols = A().picked().columns.map((id) => M.column(s, id)).filter(Boolean); y = cols.find((k) => k.role === 'y') || cols[0] || s.columns.find((k) => k.role === 'y'); x = y ? M.xOf(s, y) : null; }
+      Object.assign(chosen, { sheet: s ? s.id : null, x: x ? x.id : null, y: y ? y.id : null, y2: null, from: doc.view.main + ':' + (g ? g.id + ':' + A().state.series : doc.view.sheet + ':' + A().picked().columns.join()) });
+    }
+    const s = M.sheet(chosen.sheet), op = cat.operations.find((o) => o.name === chosen.op) || cat.operations[0];
+    const groups = cat.operation_families.map((f) => ({ group: f, options: cat.operations.filter((o) => o.family === f).map((o) => [o.name, o.label]) })).filter((x) => x.options.length);
+    op.args.forEach((a) => { if (!(a.name in chosen.args) || chosen.argsOf !== op.name) chosen.args[a.name] = a.default; });
+    chosen.argsOf = op.name;
+    const quiet = { then: () => {}, structural: false, quiet: true };
+    const control = (a) => (a.kind === 'bool' ? ui.chk(chosen.args, a.name, a.label, quiet) : ui.field(a.label, a.kind === 'choice' ? ui.sel(chosen.args, a.name, a.choices, quiet) : ui.num(chosen.args, a.name, { min: a.min, max: a.max, int: a.kind === 'int' }), a.help));
+    return [
+      ui.field('Operation', ui.sel(chosen, 'op', groups, { then: () => { chosen.args = {}; }, structural: true }), op.summary),
+      ui.sec('On', s ? s.name : 'no data', true,
+        ui.field('Sheet', ui.sel(chosen, 'sheet', sheetOptions(), { then: () => { const t = M.sheet(chosen.sheet), y = t.columns.find((k) => k.role === 'y') || t.columns[0]; chosen.y = y ? y.id : null; chosen.x = y && M.xOf(t, y) ? M.xOf(t, y).id : null; chosen.from += ' '; }, structural: true })),
+        h('div', { class: 'cols2' }, ui.field('X', ui.sel(chosen, 'x', columnOptions(s, { none: 'row number' }), { nullable: true, structural: true })), ui.field('Y', ui.sel(chosen, 'y', columnOptions(s), { structural: true }))),
+        op.second ? ui.field('The other curve (Y, same sheet)', ui.sel(chosen, 'y2', columnOptions(s, { none: 'choose' }), { nullable: true, structural: true })) : null),
+      op.args.length ? ui.sec('With', '', true, op.args.map(control)) : null,
+      g ? ui.chk(chosen, 'plot', 'Draw the result on this graph', quiet) : null,
+      h('div', { class: 'acts', style: 'padding:12px 0' }, ui.btn(A().state.busy === 'analyse' ? 'Computing…' : 'Apply', () => A().analyse(Object.assign({}, chosen, { args: Object.assign({}, chosen.args) }), op), 'cta', { disabled: A().state.busy === 'analyse' || !chosen.y })),
+      h('p', { class: 'say' }, 'The result is written in new columns; what was done, with the values used, is kept under “What was done”.'),
+    ];
+  }
+
+  ASY.inspect = { seriesTab, axesTab, pageTab, notesTab, columnTab, analyseTab, seriesName, applyJournal, columnOptions, sheetOptions };
+})(window.ASY);
