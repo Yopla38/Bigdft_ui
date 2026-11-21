@@ -130,5 +130,36 @@ ground.own.v = Object.assign({}, ground.own.v, { crmult: 5, xc: 'LDA' }); M.touc
 const kept = M.study.steps.filter((s) => M.isCalc(s) && M.status(s).state === 'done').map((s) => M.nameOf(s)).join();
 check('a calculation a series already made is not asked again', kept === 'ground_state,cation' && M.status(step('relaxed')).state === 'ready', 'done: ' + kept + ' | relaxed: ' + M.status(step('relaxed')).state);
 
+/* 7. a study is saved and opened again: what the server keeps for its owner is the study, whole.
+      Written, turned into JSON as it travels, and read back, it gives the same script, the same identities of
+      calculations (so the same results), the same statuses, and writes itself the same again. */
+{
+  const scriptOf = () => M.script().map((line) => line[1]).join('\n');
+  const stateOf = () => M.study.steps.map((s) => M.nameOf(s) + ':' + M.status(s).state + ':' + M.runsOf(s).map((r) => r.key).join(',')).join('\n');
+  const reopened = (label) => {
+    const saved = JSON.stringify(M.serialize()), script = scriptOf(), state = stateOf();
+    M.restore(JSON.parse(saved));
+    check(label + ': saved and opened again, it is the same study', scriptOf() === script && stateOf() === state && JSON.stringify(M.serialize()) === saved,
+      scriptOf() !== script ? 'the script differs' : stateOf() !== state ? 'a status or an identity differs' : 'it does not write itself the same again');
+  };
+  M.example(); M.compute(); reopened('the example, computed');
+  const built = M.study.steps.filter((s) => ['done', 'given'].includes(M.status(s).state)).length;
+  check('its ' + M.study.computed.size + ' computed runs are still computed once reopened', built === M.study.steps.length, built + ' of ' + M.study.steps.length + ' steps done');
+
+  /* a structure read from a file, a second structure, a calculation placed on it, an atomisation energy */
+  M.reset(); M.setStructure(null, OND.structures.parseXyz('3\nwater, from a file\nO 0 0 0.1173\nH 0 0.7572 -0.4692\nH 0 -0.7572 -0.4692\n', 'my-water.xyz', 'file my-water.xyz'));
+  const molecule = M.add('calculation', null), sum = M.add('combination', molecule.id);
+  M.addAtoms(molecule, sum); M.setTerms(sum, M.atomisationTerms(molecule)); M.study.name = 'From a file'; M.touch();
+  reopened('a study on a file of the disk, with ' + M.study.steps.filter((s) => s.kind === 'structure').length + ' other structures');
+  const next = M.add('relax', molecule.id);
+  check('a step added after reopening takes an id no other step has', M.study.steps.filter((s) => s.id === next.id).length === 1, next.id);
+  let refused = ''; try { M.restore({ version: 2 }); } catch (e) { refused = e.message; }
+  check('a document of another version is refused, and the study in hand is kept', refused !== '' && M.study.name === 'From a file', refused || 'it was accepted');
+
+  const seed = require('./build_seed.js');
+  check('backend/app/seed_data/studies.json is what the model writes now (node tools/build_seed.js)',
+    fs.existsSync(seed.OUT) && fs.readFileSync(seed.OUT, 'utf8') === seed.text(seed.documents(M)));
+}
+
 console.log(failed ? failed + ' check(s) failed' : 'all checks passed');
 process.exit(failed ? 1 : 0);

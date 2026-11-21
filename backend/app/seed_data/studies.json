@@ -1,0 +1,673 @@
+[
+ {
+  "version": 1,
+  "name": "Ionisation energy of water",
+  "system": "h2o",
+  "sys": null,
+  "steps": [
+   {
+    "id": "s1",
+    "fn": "target",
+    "kind": "target",
+    "title": "Experiment",
+    "links": {},
+    "params": {
+     "value": 12.62,
+     "within": 0.3,
+     "unit": "eV",
+     "source": "first ionisation energy of water, photoelectron spectroscopy"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s2",
+    "fn": "calculation",
+    "kind": "calculation",
+    "title": "Ground state",
+    "links": {
+     "after": null
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s3",
+    "fn": "ionised",
+    "kind": "calculation",
+    "title": "Cation",
+    "links": {
+     "after": "s2"
+    },
+    "params": {},
+    "own": {
+     "v": {
+      "charge": 1,
+      "mpol": 1,
+      "nspin": 2
+     },
+     "expert": {},
+     "actions": []
+    },
+    "filled": "{\"v\":{\"charge\":1,\"mpol\":1,\"nspin\":2},\"expert\":{},\"actions\":[]}",
+    "sys": null
+   },
+   {
+    "id": "s4",
+    "fn": "converge",
+    "kind": "converge",
+    "title": "Grid convergence",
+    "links": {
+     "of": "s3",
+     "relative_to": "s2"
+    },
+    "params": {
+     "action": "set_hgrid",
+     "values": [
+      0.5,
+      0.45,
+      0.4,
+      0.35
+     ],
+     "within": 0.01,
+     "per_atom": true,
+     "argument": null
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s5",
+    "fn": "choose",
+    "kind": "choose",
+    "title": "Grid kept",
+    "links": {
+     "among": "s4"
+    },
+    "params": {
+     "retained": 0.4,
+     "because": "The energy difference is converged at 0.45, but the geometry is not: relaxed there, the H–O–H angle comes out at 99.7° for 105.0° at 0.40 and 104.5° at 0.35."
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s6",
+    "fn": "relax",
+    "kind": "relax",
+    "title": "Relaxed",
+    "links": {
+     "after": "s2"
+    },
+    "params": {
+     "method": "SQNM",
+     "nsteps": 300,
+     "forcemax": 0.0002
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s7",
+    "fn": "ionised",
+    "kind": "calculation",
+    "title": "Cation, vertical",
+    "links": {
+     "after": "s6"
+    },
+    "params": {},
+    "own": {
+     "v": {
+      "charge": 1,
+      "mpol": 1,
+      "nspin": 2
+     },
+     "expert": {},
+     "actions": []
+    },
+    "filled": "{\"v\":{\"charge\":1,\"mpol\":1,\"nspin\":2},\"expert\":{},\"actions\":[]}",
+    "sys": null
+   },
+   {
+    "id": "s8",
+    "fn": "difference",
+    "kind": "difference",
+    "title": "Ionisation energy",
+    "links": {
+     "a": "s7",
+     "b": "s6",
+     "against": "s1"
+    },
+    "params": {
+     "unit": "eV"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s9",
+    "fn": "relax",
+    "kind": "relax",
+    "title": "Cation, relaxed",
+    "links": {
+     "after": "s7"
+    },
+    "params": {
+     "method": "SQNM",
+     "nsteps": 300,
+     "forcemax": 0.0002
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s10",
+    "fn": "difference",
+    "kind": "difference",
+    "title": "Ionisation, adiabatic",
+    "links": {
+     "a": "s9",
+     "b": "s6"
+    },
+    "params": {
+     "unit": "eV"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s11",
+    "fn": "vary",
+    "kind": "vary",
+    "title": "Functionals",
+    "links": {
+     "of": "s3",
+     "relative_to": "s2",
+     "against": "s1"
+    },
+    "params": {
+     "action": "set_xc",
+     "values": [
+      "LDA",
+      "PBE",
+      "PBE0"
+     ],
+     "argument": null
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s12",
+    "fn": "hybrid",
+    "kind": "calculation",
+    "title": "PBE0",
+    "links": {
+     "after": "s6",
+     "wavefunctions": "s6"
+    },
+    "params": {},
+    "own": {
+     "v": {
+      "xc": "PBE0"
+     },
+     "expert": {},
+     "actions": []
+    },
+    "filled": "{\"v\":{\"xc\":\"PBE0\"},\"expert\":{},\"actions\":[]}",
+    "sys": null
+   },
+   {
+    "id": "s13",
+    "fn": "hybrid",
+    "kind": "calculation",
+    "title": "Cation, PBE0",
+    "links": {
+     "after": "s7",
+     "wavefunctions": "s7"
+    },
+    "params": {},
+    "own": {
+     "v": {
+      "xc": "PBE0"
+     },
+     "expert": {},
+     "actions": []
+    },
+    "filled": "{\"v\":{\"xc\":\"PBE0\"},\"expert\":{},\"actions\":[]}",
+    "sys": null
+   },
+   {
+    "id": "s14",
+    "fn": "difference",
+    "kind": "difference",
+    "title": "Ionisation, PBE0",
+    "links": {
+     "a": "s13",
+     "b": "s12",
+     "against": "s1"
+    },
+    "params": {
+     "unit": "eV"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s15",
+    "fn": "empty_states",
+    "kind": "calculation",
+    "title": "Empty states",
+    "links": {
+     "after": "s6"
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": [
+      {
+       "name": "extract_virtual_states",
+       "args": {
+        "nvirt": 4
+       }
+      }
+     ]
+    },
+    "filled": "{\"v\":{},\"expert\":{},\"actions\":[{\"name\":\"extract_virtual_states\",\"args\":{\"nvirt\":4}}]}",
+    "sys": null
+   },
+   {
+    "id": "s16",
+    "fn": "levels",
+    "kind": "levels",
+    "title": "Levels",
+    "links": {
+     "of": "s15"
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   }
+  ],
+  "seq": 16,
+  "computed": [
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.hgrids=5.000000000e-1;dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.hgrids=5.000000000e-1;dft.ixc=PBE|geo=start",
+   "h2o|dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.ixc=PBE|geo=start",
+   "h2o|dft.hgrids=3.500000000e-1;dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.hgrids=3.500000000e-1;dft.ixc=PBE|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE;geopt.forcemax=2.000000000e-4;geopt.method=SQNM;geopt.ncount_cluster_x=3.000000000e2|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=LDA;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=LDA|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE0;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE0|geo=start",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=@18b7659b",
+   "h2o|dft.hgrids=4.000000000e-1;dft.ixc=PBE;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0;geopt.forcemax=2.000000000e-4;geopt.method=SQNM;geopt.ncount_cluster_x=3.000000000e2|geo=@18b7659b",
+   "h2o|dft.hgrids=4.000000000e-1;dft.inputpsiid=2.000000000e0;dft.ixc=PBE0|geo=@18b7659b|wf=@18b7659b",
+   "h2o|dft.hgrids=4.000000000e-1;dft.itermax_virt=1.500000000e2;dft.ixc=PBE;dft.norbv=-4.000000000e0;dft.nvirt=4.000000000e0|geo=@18b7659b",
+   "h2o|dft.hgrids=4.000000000e-1;dft.inputpsiid=2.000000000e0;dft.ixc=PBE0;dft.mpol=1.000000000e0;dft.nspin=2.000000000e0;dft.qcharge=1.000000000e0|geo=@18b7659b|wf=@0872bcb4"
+  ],
+  "log": [
+   {
+    "waves": [
+     [
+      {
+       "name": "ground_state",
+       "seconds": 3.7,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation",
+       "seconds": 6.2,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation-hgrid0p5",
+       "seconds": 3.95,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "ground_state-hgrid0p5",
+       "seconds": 2.55,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation-hgrid0p45",
+       "seconds": 4.43,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "ground_state-hgrid0p45",
+       "seconds": 2.73,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation-hgrid0p35",
+       "seconds": 8.39,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "ground_state-hgrid0p35",
+       "seconds": 5.02,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "relaxed",
+       "seconds": 38.22,
+       "relax": true,
+       "restart": false
+      },
+      {
+       "name": "cation-xcLDA",
+       "seconds": 3.55,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "ground_state-xcLDA",
+       "seconds": 2.43,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation-xcPBE0",
+       "seconds": 20.47,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "ground_state-xcPBE0",
+       "seconds": 11.34,
+       "relax": false,
+       "restart": false
+      }
+     ],
+     [
+      {
+       "name": "cation_vertical",
+       "seconds": 5.87,
+       "relax": false,
+       "restart": false
+      },
+      {
+       "name": "cation_relaxed",
+       "seconds": 48.61,
+       "relax": true,
+       "restart": false
+      },
+      {
+       "name": "pbe0",
+       "seconds": 7.92,
+       "relax": false,
+       "restart": true
+      },
+      {
+       "name": "empty_states",
+       "seconds": 5.19,
+       "relax": false,
+       "restart": false
+      }
+     ],
+     [
+      {
+       "name": "cation_pbe0",
+       "seconds": 12.04,
+       "relax": false,
+       "restart": true
+      }
+     ]
+    ],
+    "absent": [],
+    "only": null
+   }
+  ]
+ },
+ {
+  "version": 1,
+  "name": "Atomisation energy of water",
+  "system": "h2o",
+  "sys": null,
+  "steps": [
+   {
+    "id": "s1",
+    "fn": "calculation",
+    "kind": "calculation",
+    "title": "Water",
+    "links": {
+     "after": null
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s3",
+    "fn": "structure",
+    "kind": "structure",
+    "title": "Oxygen atom",
+    "links": {},
+    "params": {
+     "source": "one isolated atom"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": {
+     "id": "atom-O",
+     "name": "Oxygen atom",
+     "formula": "O",
+     "bc": "free",
+     "cell": null,
+     "blurb": "One isolated atom, with 2 unpaired electrons in its ground state.",
+     "source": "one isolated atom",
+     "traits": [
+      "atom"
+     ],
+     "atoms": [
+      {
+       "el": "O",
+       "p": [
+        0,
+        0,
+        0
+       ],
+       "i": 0,
+       "src": "O"
+      }
+     ],
+     "origin": [
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "s4",
+    "fn": "calculation",
+    "kind": "calculation",
+    "title": "Energy of O atom",
+    "links": {
+     "after": "s1",
+     "on": "s3"
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s5",
+    "fn": "structure",
+    "kind": "structure",
+    "title": "Hydrogen atom",
+    "links": {},
+    "params": {
+     "source": "one isolated atom"
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": {
+     "id": "atom-H",
+     "name": "Hydrogen atom",
+     "formula": "H",
+     "bc": "free",
+     "cell": null,
+     "blurb": "One isolated atom, with 1 unpaired electron in its ground state.",
+     "source": "one isolated atom",
+     "traits": [
+      "atom"
+     ],
+     "atoms": [
+      {
+       "el": "H",
+       "p": [
+        0,
+        0,
+        0
+       ],
+       "i": 0,
+       "src": "H"
+      }
+     ],
+     "origin": [
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "id": "s6",
+    "fn": "calculation",
+    "kind": "calculation",
+    "title": "Energy of H atom",
+    "links": {
+     "after": "s1",
+     "on": "s5"
+    },
+    "params": {},
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   },
+   {
+    "id": "s2",
+    "fn": "combination",
+    "kind": "combination",
+    "title": "Atomisation energy",
+    "links": {
+     "term1": "s4",
+     "term2": "s6",
+     "term3": "s1"
+    },
+    "params": {
+     "unit": "eV",
+     "coefficients": [
+      1,
+      2,
+      -1
+     ]
+    },
+    "own": {
+     "v": {},
+     "expert": {},
+     "actions": []
+    },
+    "filled": null,
+    "sys": null
+   }
+  ],
+  "seq": 6,
+  "computed": [],
+  "log": []
+ }
+]

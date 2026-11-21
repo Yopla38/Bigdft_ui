@@ -500,7 +500,36 @@ window.OND = window.OND || {};
     study.name = 'Ionisation energy of water'; touch(); return ground;
   }
 
+  // --- the study as a document: what the server keeps for its owner, and what the page opens again ------
+  /* Everything that makes the study, and nothing that can be found again: a built-in system is named, not copied;
+     results are not in it (they belong to calculations, by their identity). `restore` is its exact inverse, so a
+     study written and read back gives the same script, character for character (tools/check_workshop.js). */
+  const BUILT_IN = new Set(OND.chem.list.map(([id]) => id)), KEPT_LOG = 30;
+  const copy = (x) => JSON.parse(J(x));
+  function serialize() {
+    return { version: 1, name: study.name, system: study.sysId, sys: BUILT_IN.has(study.sysId) ? null : copy(study.sys),
+      steps: study.steps.map((s) => ({ id: s.id, fn: s.fn, kind: s.kind, title: s.title, links: copy(s.links), params: copy(s.params), own: copy(s.own), filled: s.filled || null, sys: s.sys ? copy(s.sys) : null })),
+      seq: study.seq, computed: [...study.computed], log: copy(study.log.slice(-KEPT_LOG)) };
+  }
+  function restore(doc) {
+    if (!doc || doc.version !== 1) throw new Error('this study was written by another version of the workshop');
+    if (!doc.sys && !BUILT_IN.has(doc.system)) throw new Error('this study names a system the workshop does not have: ' + doc.system);
+    const steps = copy(doc.steps || []).map((s) => {
+      if (!REG[s.fn]) throw new Error('this study uses a step the registry does not have: ' + s.fn);
+      const step = { id: s.id, fn: s.fn, kind: s.kind, title: s.title, links: s.links || {}, params: s.params || {}, own: Object.assign({ v: {}, expert: {}, actions: [] }, s.own) };
+      if (s.filled) step.filled = s.filled;
+      if (s.sys) step.sys = s.sys;
+      return step;
+    });
+    reset();
+    setStructure(null, doc.sys ? copy(doc.sys) : OND.chem.build(doc.system));
+    Object.assign(study, { name: doc.name, steps, seq: Math.max(doc.seq || 0, ...steps.map((s) => +s.id.slice(1) || 0)), computed: new Set(doc.computed || []), log: copy(doc.log || []) });
+    touch();
+  }
+  /* What BigDFT gave for the calculations of this study, as the server kept it: by the identity of each. */
+  function setResults(runs) { live.runs = Object.assign({}, runs); live.state = {}; touch(); }
+
   OND.model = { study, HA, P, REG, CALC, SERIES, RELAX_KEYS, LIB, VARIABLE, touch, byId, at, isCalc, isSeries, nameOf, memberName, settingOf, settingVaried, vary, ownOf, chain, decisionsBefore, resolveInto, electronsOf, valuesOf, undecided, geometryFrom, ownerOf,
     cannotRead, keyOf, runOf, runsOf, members, series, retained, status, energy, levels, difference, combination, termsOf, setTerms, atomisationTerms, addAtoms, atomCalc, sysOf, readyRuns, compute, cannotAdd, add, remove, dependents, setSystem, setStructure, reset, script, changesOf, calls, plan, example, TITLES,
-    live, setLive, mark, receive };
+    live, setLive, mark, receive, serialize, restore, setResults };
 })(window.OND);
