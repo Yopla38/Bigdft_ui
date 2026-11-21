@@ -35,7 +35,7 @@
     else if (tries < 75) setTimeout(() => waitForMath(tries + 1), 400);
   })(0);
 
-  const M = OND.model, L = OND.live, S = OND.structures, Q = OND.equations, study = M.study, P = M.P;
+  const M = OND.model, L = OND.live, S = OND.structures, Q = OND.equations, T = OND.store, study = M.study, P = M.P;
   const bp = OND.Blueprint(), st = bp.st;                 // the settings of the selected calculation, edited in place
   const stage = OND.Stage($('#stage'));
   const SCHEMA = OND.schema.variables;
@@ -204,9 +204,10 @@
     const honest = $('#honest');
     honest.className = 'pill' + (on ? (haps.ok ? ' live' : ' down') : ' example');
     // beside the switch the words are short, so that the header keeps to one line; the title says the rest
-    honest.textContent = !info ? 'Mock-up · real results for water' : !on ? 'Mock-up' : !haps.ok ? 'HAPS not ready' : L.state.busy ? 'Computing…' : 'HAPS ready';
+    honest.textContent = !info ? 'Mock-up · real results for water' : !on ? 'Recorded results' : !haps.ok ? 'HAPS not ready' : L.state.busy ? 'Computing…' : 'HAPS ready';
     honest.title = !on ? 'A web page cannot start BigDFT. The results shown were computed with BigDFT 1.9.1 for this mock-up, for water; a step whose calculation is not among them says so.'
-      : (haps.ok ? 'Every step is computed now: checked by BigDFT’s dry run, then run on the HAPS through ' + info.bridge + '. ' + (haps.wavefunctions ? '' : 'This HAPS does not take wavefunctions: a step that starts from those of another is refused. ') + 'The runs are kept in ' + info.workdir + '.' : haps.text);
+      : (haps.ok ? 'Every step is computed now: checked by BigDFT’s dry run, then run on the HAPS' + (info.bridge ? ' through ' + info.bridge : '') + '. ' + (haps.wavefunctions ? '' : 'This HAPS does not take wavefunctions: a step that starts from those of another is refused. ')
+        + (info.workdir ? 'The runs are kept in ' + info.workdir + ', one directory per user and per study.' : 'The results are kept with your study.') : haps.text);
   }
   function setMode(live) {
     if (L.state.busy || !L.state.info) return;
@@ -330,7 +331,7 @@
   function compute(step, tab) {
     if (tab) ui.tab = tab;
     if (!M.live.on) { M.compute(step); refresh(true); return; }
-    if (!L.state.busy) L.compute(step, () => refresh(true));
+    if (!L.state.busy) T.flush().then(() => L.compute(step, () => refresh(true)));       // the server computes a study it holds: saved first
     refresh(true);
   }
   const again = (step) => h('button', { class: 'btn small', type: 'button', disabled: L.state.busy, onclick: () => { L.retry(step); compute(step, 'results'); } }, 'Try again');
@@ -776,7 +777,7 @@
       if (s.kind === 'choose') for (const later of study.steps) if (M.isCalc(later) && M.at(later) > M.at(s) && !(later.links.after && M.at(M.byId(later.links.after)) > M.at(s))) out.push([s.id, later.id, 'choice']);
       return out;
     });
-    const z = OND.board.draw($('#graph'), nodes, edges, ui.sel, select, { reveal: ui.reveal, zoom: ui.zoom, per: ui.per, avoid: !ui.inset ? { w: 0, h: 0 } : matchMedia('(max-width:860px)').matches ? { w: 172, h: 138 } : { w: 256, h: 198 }, onMove: (n) => { ui.moved[n.id] = { dx: n.dx, dy: n.dy }; },
+    const z = OND.board.draw($('#graph'), nodes, edges, ui.sel, select, { reveal: ui.reveal, zoom: ui.zoom, per: ui.per, avoid: !ui.inset ? { w: 0, h: 0 } : matchMedia('(max-width:860px)').matches ? { w: 172, h: 138 } : { w: 256, h: 198 }, onMove: (n) => { ui.moved[n.id] = { dx: n.dx, dy: n.dy }; T.changed(); },
       onAdd: (id) => { if (ui.sel !== id) select(id); ui.palette = true; refresh(); const pal = $('#palette'); if (pal.scrollIntoView) pal.scrollIntoView({ block: 'nearest' }); } });
     ui.reveal = false; ui.z = z.z; ui.cols = z.per;
     $('#zoom-fit').setAttribute('aria-pressed', String(ui.zoom === 'all')); $('#zoom-out').disabled = z.z <= OND.board.SMALLEST; $('#zoom-in').disabled = z.z >= BIGGEST;
@@ -796,7 +797,7 @@
   function refresh(scene) {
     if (scene) renderStage();
     if (queued) return; queued = true;
-    requestAnimationFrame(() => { queued = false; renderRail(); renderMain(); renderStage(); if (!ui.drag) renderInspector(); renderDock(); $('#study-name').value = study.name; });
+    requestAnimationFrame(() => { queued = false; renderRail(); renderMain(); renderStage(); if (!ui.drag) renderInspector(); renderDock(); if (document.activeElement !== $('#study-name')) $('#study-name').value = study.name; if (!ui.drag) T.changed(); });       // a redraw that comes from elsewhere (a wave, the server) never takes back a name being typed
   }
   const fresh = () => Object.assign(ui, { moved: {}, per: null, zoom: 'fit' });       // another study: its boxes are laid out anew
   function example() { fresh(); select(M.example().id); }
@@ -806,9 +807,13 @@
   $('#compute-all').addEventListener('click', () => compute(null, 'log'));
   $('#mode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setMode(b.dataset.mode === 'live'); });
   $('#stop').addEventListener('click', () => L.stop());
-  $('#example').addEventListener('click', example);
-  $('#restart').addEventListener('click', start);
-  $('#study-name').addEventListener('change', (e) => { study.name = e.target.value.trim() || 'Untitled study'; refresh(); });
+  /* Signed in, the example and a new study are studies of their own: the one in hand stays in the list. A first
+     study nobody touched is simply filled. Without accounts (the mock-up) there is one study, replaced in place. */
+  const untouched = () => study.steps.length <= 1 && !study.computed.size && !Object.keys(M.live.runs).length && study.name === 'Untitled study';
+  const another = (build) => { if (L.state.busy) return; if (!T.state.on || untouched()) build(); else T.fresh(build); };
+  $('#example').addEventListener('click', () => another(example));
+  $('#restart').addEventListener('click', () => another(start));
+  $('#study-name').addEventListener('change', (e) => { study.name = e.target.value.trim() || 'Untitled study'; M.touch(); refresh(); });
   $('.tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) { ui.tab = t.dataset.tab; $('#dock').classList.remove('closed'); refresh(); } });
   $('#main-switch').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { ui.main = b.dataset.main; ui.reveal = true; refresh(true); } });
   $('#inset-open').addEventListener('click', () => { ui.main = 'scene'; refresh(true); });
@@ -828,9 +833,34 @@
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { themeColors(); refresh(true); });
   window.addEventListener('resize', () => { if (ui.tab === 'results' || ui.main === 'graph') refresh(); });
 
+  // ------------------------------------------------------------------ whose studies: the account, and what the server keeps
+  /* What the store needs of the page: the study on screen as a document (with where its boxes were dragged), a
+     document put on screen, and whether a wave is computing. */
+  T.hooks.snapshot = () => Object.assign(M.serialize(), { layout: Object.fromEntries(Object.entries(ui.moved).filter(([id]) => id === 'system' || M.byId(id))) });
+  T.hooks.load = (kept) => {
+    fresh(); M.restore(kept.document);
+    ui.moved = Object.assign({}, kept.document.layout); M.setResults(kept.results || {});
+    select((study.steps.find(M.isCalc) || { id: 'system' }).id);
+    if (kept.job) setTimeout(() => L.resume(kept.job, () => refresh(true)), 0);       // a wave sent before this page was opened: follow it
+  };
+  T.hooks.busy = () => L.state.busy;
+  T.hooks.rename = (name) => { study.name = name; M.touch(); refresh(); };
+  // signed in, the example is offered where the studies are ("Studies"): the header keeps to what is done to the study in hand
+  T.on((s) => { L.state.study = s.id; $('#restart').textContent = s.on ? 'New study' : 'Start over'; $('#example').hidden = s.on; $('header.top').classList.toggle('with-account', s.on); });
+  OND.studies.mount({ h, $, fresh: () => another(start), example: () => another(example), blank: start });
+
   themeColors();
   start();
-  // Served by backend/serve.py, the page computes for real as soon as its HAPS is ready. Served as files, it stays a mock-up.
-  L.probe().then((info) => { if (info) { M.setLive(info.haps.ok); refresh(true); } });
-  OND.w2 = { model: M, ui, select, example, refresh };
+  /* Served by backend/serve.py, the page belongs to whoever signs in: their studies are read from the server and
+     kept there, and it computes for real as soon as the HAPS is ready. Served as files (tools/preview.py) no
+     account exists: it stays the mock-up, on its recorded results. */
+  OND.account.start({ slot: $('#account'), links: [{ label: 'The first workshop (mock-up)', href: '/first/' }],
+    onReturn: () => T.save(),                                     // what could not be saved while the session was over
+    onUser: async () => {
+      const info = await L.probe();
+      if (info) M.setLive(info.haps.ok);
+      await T.start();
+      refresh(true);
+    } });
+  OND.w2 = { model: M, ui, select, example, refresh, store: T };
 })(window.OND);
