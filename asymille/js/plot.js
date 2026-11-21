@@ -140,7 +140,10 @@ window.ASY = window.ASY || {};
 
   function layout(fig, data) {
     const W = fig.width * MM, H = fig.height * MM, S = fig.size, T = fig.tick, items = [], hit = { panels: [], warnings: [] };
-    const out = T.dir === 'out' || T.dir === 'both' ? T.len : 0;
+    /* How one axis draws its ticks and numbers: what it says itself, or what the page says for all of them. */
+    const style = (ax) => { const dir = ax.tickDir || T.dir, len = ax.tickLen != null ? ax.tickLen : T.len;
+      return { out: dir === 'out' || dir === 'both' ? len : 0, in: dir === 'in' || dir === 'both' ? len : 0, w: ax.tickWidth != null ? ax.tickWidth : fig.stroke.axis,
+        size: ax.tickSize != null ? ax.tickSize : S.tick, color: ax.color || '#000000', minor: ax.minor !== false }; };
     const text = (x, y, content, size, more) => { const r = Array.isArray(content) ? content : runs(content); if (r.length) items.push(Object.assign({ t: 'text', x: R(x), y: R(y), runs: r, size, anchor: 'middle', color: '#000000' }, more || {})); };
     const line = (paths, stroke, width, more) => { if (paths.length) items.push(Object.assign({ t: 'line', paths: paths.map((p) => p.map(R)), stroke, width }, more || {})); };
     items.push({ t: 'poly', pts: [0, 0, R(W), 0, R(W), R(H), 0, R(H)], fill: fig.background || '#ffffff', k: 'page' });
@@ -167,17 +170,17 @@ window.ASY = window.ASY || {};
     const gap = (fig.layout.gap || 0) * MM;
     const rowH = weights.map((w) => (H - gap * (rowsN - 1)) * w / total), rowY = rowH.map((_, r) => rowH.slice(0, r).reduce((a, b) => a + b, 0) + gap * r);
     const need = prepared.map((e) => {
-      const guessW = cellW * 0.75, guessH = rowH[e.row] * 0.75;
-      const ty = ticks(e.yr[0], e.yr[1], e.p.y, guessH, S.tick, false), ty2 = e.y2r ? ticks(e.y2r[0], e.y2r[1], e.p.y2, guessH, S.tick, false) : null;
-      const wide = (t) => Math.max(0, ...t.major.map((m) => textWidth(m.runs, S.tick)));
-      const tx = ticks(e.xr[0], e.xr[1], e.p.x, guessW, S.tick, true);
-      const lastHalf = tx.major.length ? textWidth(tx.major[tx.major.length - 1].runs, S.tick) / 2 : 0;
+      const guessW = cellW * 0.75, guessH = rowH[e.row] * 0.75, ax = style(e.p.x), ay = style(e.p.y), ay2 = e.p.y2 ? style(e.p.y2) : null;
+      const ty = ticks(e.yr[0], e.yr[1], e.p.y, guessH, ay.size, false), ty2 = e.y2r ? ticks(e.y2r[0], e.y2r[1], e.p.y2, guessH, ay2.size, false) : null;
+      const wide = (t, size) => Math.max(0, ...t.major.map((m) => textWidth(m.runs, size)));
+      const tx = ticks(e.xr[0], e.xr[1], e.p.x, guessW, ax.size, true);
+      const lastHalf = tx.major.length ? textWidth(tx.major[tx.major.length - 1].runs, ax.size) / 2 : 0;
       return {
-        l: 2 + (e.p.y.label ? S.label * 1.3 + 2 : 0) + wide(ty) + 3 + out,
-        r: ty2 ? 2 + (e.p.y2.label ? S.label * 1.3 + 2 : 0) + wide(ty2) + 3 + out : Math.max(4, lastHalf + 1.5),
-        t: 3 + (e.p.title ? S.title * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? S.tick * 1.25 : 0) + S.tick * 0.4,
-        b: e.shared ? Math.max(2, out) : 2 + (e.p.x.label ? S.label * 1.3 + 1 : 0) + S.tick * 1.15 + 3 + out,
-        wy: wide(ty), wy2: ty2 ? wide(ty2) : 0,
+        l: 2 + (e.p.y.label ? S.label * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out,
+        r: ty2 ? 2 + (e.p.y2.label ? S.label * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5),
+        t: 3 + (e.p.title ? (e.p.titleSize || S.title) * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? ay.size * 1.25 : 0) + S.tick * 0.4,
+        b: e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? S.label * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out,
+        wy: wide(ty, ay.size), wy2: ty2 ? wide(ty2, ay2.size) : 0,
       };
     });
     const maxOf = (key, test) => Math.max(0, ...prepared.filter(test).map((e) => need[e.index][key]));
@@ -190,14 +193,14 @@ window.ASY = window.ASY || {};
       const x1 = box.x + box.w, y1 = box.y + box.h, clip = [R(box.x), R(box.y), R(box.w), R(box.h)];
       const sx = scale(e.xr[0], e.xr[1], box.x, x1, p.x.scale === 'log', p.x.reverse), sy = scale(e.yr[0], e.yr[1], y1, box.y, p.y.scale === 'log', p.y.reverse);
       const sy2 = e.y2r ? scale(e.y2r[0], e.y2r[1], y1, box.y, p.y2.scale === 'log', p.y2.reverse) : null;
-      const tx = ticks(e.xr[0], e.xr[1], p.x, box.w, S.tick, true), ty = ticks(e.yr[0], e.yr[1], p.y, box.h, S.tick, false), ty2 = sy2 ? ticks(e.y2r[0], e.y2r[1], p.y2, box.h, S.tick, false) : null;
+      const AX = style(p.x), AY = style(p.y), AY2 = sy2 ? style(p.y2) : null;
+      const tx = ticks(e.xr[0], e.xr[1], p.x, box.w, AX.size, true), ty = ticks(e.yr[0], e.yr[1], p.y, box.h, AY.size, false), ty2 = sy2 ? ticks(e.y2r[0], e.y2r[1], p.y2, box.h, AY2.size, false) : null;
       const key = (what) => what + ':' + p.id;
 
-      // grid, under everything
-      const grid = [];
-      if (p.x.grid) tx.major.forEach((m) => { const X = sx.map(m.v); grid.push([X, box.y, X, y1]); });
-      if (p.y.grid) ty.major.forEach((m) => { const Y = sy.map(m.v); grid.push([box.x, Y, x1, Y]); });
-      line(grid, '#d0d0d0', fig.stroke.grid);
+      // grid, under everything: each axis has the colour and the line of its own
+      const gridOf = (ax, lines) => line(lines, ax.gridColor || '#d0d0d0', fig.stroke.grid, { dash: DASHES[ax.gridDash] ? DASHES[ax.gridDash].map((v) => R(v * Math.max(fig.stroke.grid, 0.5))) : null });
+      if (p.x.grid) gridOf(p.x, tx.major.map((m) => { const X = sx.map(m.v); return [X, box.y, X, y1]; }));
+      if (p.y.grid) gridOf(p.y, ty.major.map((m) => { const Y = sy.map(m.v); return [box.x, Y, x1, Y]; }));
 
       // notes that sit under the data: a highlighted span of x
       p.notes.filter((nt) => nt.type === 'span').forEach((nt) => {
@@ -271,35 +274,42 @@ window.ASY = window.ASY || {};
       });
 
       // the frame, the ticks, the numbers
-      const open = fig.frame === 'open', aw = fig.stroke.axis;
-      const frame = open ? [[box.x, box.y, box.x, y1, x1, y1].concat(sy2 ? [x1, box.y] : [])] : [[box.x, box.y, x1, box.y, x1, y1, box.x, y1, box.x, box.y - aw / 2]];
-      const marks = [], inward = T.dir === 'in' || T.dir === 'both' ? T.len : 0, mirror = T.mirror && !open;
-      const tickX = (v, len) => { const X = sx.map(v); if (!(X >= box.x - 0.01 && X <= x1 + 0.01)) return; marks.push([X, y1 - (inward ? len : 0), X, y1 + (out ? len : 0)]); if (mirror) marks.push([X, box.y, X, box.y + (inward ? len : 0) - (inward ? 0 : 0)]); };
-      const tickY = (s, v, len, right) => { const Y = s.map(v); if (!(Y >= box.y - 0.01 && Y <= y1 + 0.01)) return; const X = right ? x1 : box.x, dir = right ? -1 : 1; marks.push([X + dir * (inward ? len : 0), Y, X - dir * (out ? len : 0), Y]); if (mirror && !sy2 && !right && inward) marks.push([x1 - len, Y, x1, Y]); };
-      if (T.dir !== 'none') {
-        tx.major.forEach((m) => tickX(m.v, T.len)); tx.minor.forEach((v) => tickX(v, T.len * 0.55));
-        ty.major.forEach((m) => tickY(sy, m.v, T.len)); ty.minor.forEach((v) => tickY(sy, v, T.len * 0.55));
-        if (sy2) { ty2.major.forEach((m) => tickY(sy2, m.v, T.len, true)); ty2.minor.forEach((v) => tickY(sy2, v, T.len * 0.55, true)); }
+      const open = fig.frame === 'open', aw = fig.stroke.axis, mirror = T.mirror && !open, right = AY2 || AY;
+      const marksX = [], marksY = [], marksY2 = [], drawnOnly = (m) => m[0] !== m[2] || m[1] !== m[3];
+      const tickX = (v, f) => { const X = sx.map(v); if (!(X >= box.x - 0.01 && X <= x1 + 0.01)) return; marksX.push([X, y1 - AX.in * f, X, y1 + AX.out * f]); if (mirror) marksX.push([X, box.y, X, box.y + AX.in * f]); };
+      const tickY = (s, v, f, A, list, onRight) => { const Y = s.map(v); if (!(Y >= box.y - 0.01 && Y <= y1 + 0.01)) return; const X = onRight ? x1 : box.x, dir = onRight ? -1 : 1; list.push([X + dir * A.in * f, Y, X - dir * A.out * f, Y]); if (mirror && !sy2 && !onRight) list.push([x1 - A.in * f, Y, x1, Y]); };
+      tx.major.forEach((m) => tickX(m.v, 1)); if (AX.minor) tx.minor.forEach((v) => tickX(v, 0.55));
+      ty.major.forEach((m) => tickY(sy, m.v, 1, AY, marksY)); if (AY.minor) ty.minor.forEach((v) => tickY(sy, v, 0.55, AY, marksY));
+      if (sy2) { ty2.major.forEach((m) => tickY(sy2, m.v, 1, AY2, marksY2, true)); if (AY2.minor) ty2.minor.forEach((v) => tickY(sy2, v, 0.55, AY2, marksY2, true)); }
+      line(marksX.filter(drawnOnly), AX.color, AX.w); line(marksY.filter(drawnOnly), AY.color, AY.w); if (sy2) line(marksY2.filter(drawnOnly), AY2.color, AY2.w);
+      if (AX.color === AY.color && AY.color === right.color) {            // one colour: one line around, with true corners
+        line(open ? [[box.x, box.y, box.x, y1, x1, y1].concat(sy2 ? [x1, box.y] : [])] : [[box.x, box.y, x1, box.y, x1, y1, box.x, y1, box.x, box.y - aw / 2]], AX.color, aw, { join: 'miter', k: key('frame') });
+      } else {                                                           // each side in the colour of its axis, a half width longer so that the corners close
+        const half = aw / 2, side = (pts, color) => line([pts], color, aw, { k: key('frame') });
+        side([box.x - half, y1, x1 + half, y1], AX.color); side([box.x, box.y - half, box.x, y1 + half], AY.color);
+        if (!open) side([box.x - half, box.y, x1 + half, box.y], AX.color);
+        if (!open || sy2) side([x1, box.y - half, x1, y1 + half], right.color);
       }
-      line(marks.filter((m) => m[0] !== m[2] || m[1] !== m[3]), '#000000', aw);
-      line(frame, '#000000', aw, { join: 'miter', k: key('frame') });
       const inside = (v, s, a, b) => { const P = s.map(v); return P >= a - 0.01 && P <= b + 0.01; };
       if (!e.shared) {
-        const base = y1 + out + 2.5 + S.tick * 0.74;
-        tx.major.forEach((m) => { if (inside(m.v, sx, box.x, x1)) text(sx.map(m.v), base, m.runs, S.tick, { k: key('xaxis') }); });
-        const titleY = base + S.tick * 0.35 + 2 + S.label * 0.82;
-        if (p.x.label) text(box.x + box.w / 2, titleY, p.x.label, S.label, { k: key('xlabel') });
-        if (tx.factor) text(x1, p.x.label ? titleY : base + S.tick * 1.2, tx.factor, S.tick, { anchor: 'end', k: key('xaxis') });
+        const base = y1 + AX.out + 2.5 + AX.size * 0.74;
+        tx.major.forEach((m) => { if (inside(m.v, sx, box.x, x1)) text(sx.map(m.v), base, m.runs, AX.size, { color: AX.color, k: key('xaxis') }); });
+        const titleY = base + AX.size * 0.35 + 2 + S.label * 0.82;
+        if (p.x.label) text(box.x + box.w / 2, titleY, p.x.label, S.label, { color: AX.color, k: key('xlabel') });
+        if (tx.factor) text(x1, p.x.label ? titleY : base + AX.size * 1.2, tx.factor, AX.size, { anchor: 'end', color: AX.color, k: key('xaxis') });
       }
-      ty.major.forEach((m) => { if (inside(m.v, sy, box.y, y1)) text(box.x - out - 3, sy.map(m.v) + S.tick * 0.35, m.runs, S.tick, { anchor: 'end', k: key('yaxis') }); });
-      if (p.y.label) text(box.x - out - 3 - n.wy - 3 - S.label * 0.28, box.y + box.h / 2, p.y.label, S.label, { rotate: -90, k: key('ylabel') });
-      if (ty.factor) text(box.x, box.y - 2.5, ty.factor, S.tick, { anchor: 'start', k: key('yaxis') });
+      ty.major.forEach((m) => { if (inside(m.v, sy, box.y, y1)) text(box.x - AY.out - 3, sy.map(m.v) + AY.size * 0.35, m.runs, AY.size, { anchor: 'end', color: AY.color, k: key('yaxis') }); });
+      if (p.y.label) text(box.x - AY.out - 3 - n.wy - 3 - S.label * 0.28, box.y + box.h / 2, p.y.label, S.label, { rotate: -90, color: AY.color, k: key('ylabel') });
+      if (ty.factor) text(box.x, box.y - 2.5, ty.factor, AY.size, { anchor: 'start', color: AY.color, k: key('yaxis') });
       if (sy2) {
-        ty2.major.forEach((m) => { if (inside(m.v, sy2, box.y, y1)) text(x1 + out + 3, sy2.map(m.v) + S.tick * 0.35, m.runs, S.tick, { anchor: 'start', k: key('y2axis') }); });
-        if (p.y2.label) text(x1 + out + 3 + n.wy2 + 3 + S.label * 0.8, box.y + box.h / 2, p.y2.label, S.label, { rotate: -90, k: key('y2label') });
-        if (ty2.factor) text(x1, box.y - 2.5, ty2.factor, S.tick, { anchor: 'end', k: key('y2axis') });
+        ty2.major.forEach((m) => { if (inside(m.v, sy2, box.y, y1)) text(x1 + AY2.out + 3, sy2.map(m.v) + AY2.size * 0.35, m.runs, AY2.size, { anchor: 'start', color: AY2.color, k: key('y2axis') }); });
+        if (p.y2.label) text(x1 + AY2.out + 3 + n.wy2 + 3 + S.label * 0.8, box.y + box.h / 2, p.y2.label, S.label, { rotate: -90, color: AY2.color, k: key('y2label') });
+        if (ty2.factor) text(x1, box.y - 2.5, ty2.factor, AY2.size, { anchor: 'end', color: AY2.color, k: key('y2axis') });
       }
-      if (p.title) text(box.x + box.w / 2, box.y - S.tick * 0.4 - S.title * 0.3, p.title, S.title, { k: key('title') });
+      if (p.title) {
+        const size = p.titleSize || S.title, at = p.titleAlign === 'left' ? [box.x, 'start'] : p.titleAlign === 'right' ? [x1, 'end'] : [box.x + box.w / 2, 'middle'];
+        text(at[0], box.y - S.tick * 0.4 - size * 0.3, p.title, size, { anchor: at[1], color: p.titleColor || '#000000', weight: p.titleBold ? 'bold' : undefined, k: key('title') });
+      }
       const tag = fig.tags && fig.tags !== 'none' && fig.panels.length > 1 ? fig.tags.replace('a', String.fromCharCode(97 + e.index)).replace('A', String.fromCharCode(65 + e.index)) : '';
       if (tag) text(box.x + S.tag * 0.5, box.y + S.tag * 1.25, tag, S.tag, { anchor: 'start', weight: 'bold', k: key('tag') });
 
@@ -307,7 +317,7 @@ window.ASY = window.ASY || {};
       let legendBox = null;
       if (p.legend && p.legend.show !== false && legend.length) {
         const fs = S.legend, sample = fs * 2.3, padL = fs * 0.5, rowHt = fs * 1.4, widest = Math.max(...legend.map((l) => textWidth(l.label, fs)));
-        const w = padL + sample + fs * 0.45 + widest + padL, hgt = rowHt * legend.length + fs * 0.5, inset = fs * 0.6 + inward;
+        const w = padL + sample + fs * 0.45 + widest + padL, hgt = rowHt * legend.length + fs * 0.5, inset = fs * 0.6 + Math.max(AX.in, AY.in);
         const pos = p.legend.pos || 'ne';
         let lx = pos === 'custom' ? box.x + p.legend.x * box.w : pos.includes('w') ? box.x + inset : pos.includes('e') ? x1 - inset - w : box.x + (box.w - w) / 2;
         let ly = pos === 'custom' ? box.y + p.legend.y * box.h : pos.includes('s') ? y1 - inset - hgt : pos === 'e' || pos === 'w' ? box.y + (box.h - hgt) / 2 : box.y + inset + (tag && pos === 'nw' ? S.tag * 1.5 : 0);
