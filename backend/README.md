@@ -72,7 +72,7 @@ Everything is under `/api`, JSON in and out, and described at `/api/docs` outsid
 | `GET info` · `POST structure` | is the HAPS ready; a molecule by its name, from PubChem |
 | `GET guides` · `POST guides` · `DELETE guides/ID` | guided paths of the first workshop: read by members, published by administrators |
 | `GET admin/users` · `POST admin/users` · `PATCH admin/users/ID` · `DELETE admin/users/ID` · `GET admin/jobs` | administrators only |
-| `asymille/catalogue` · `asymille/projects…` · `asymille/model/…` · `asymille/fit` · `asymille/fit/global` · `asymille/analyse` · `asymille/figure` | Asymille: the projects of whoever is signed in, fits, operations on a curve, a figure as a file. Listed in `asymille/web/api.py` |
+| `asymille/catalogue` · `asymille/projects…` · `asymille/model/…` · `asymille/fit` · `asymille/fit/global` · `asymille/fit/compare` · `asymille/analyse` · `asymille/figure` | Asymille: the projects of whoever is signed in, fits, operations on a curve, a figure as a file. Listed in `asymille/web/api.py` |
 | `GET health` | for whatever watches the service |
 
 What is sent is validated by Pydantic models that refuse any field they do not describe (`app/schemas.py`).
