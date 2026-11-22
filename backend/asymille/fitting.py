@@ -4,6 +4,12 @@
     fit_global(datasets, spec, shared)   several datasets, the parameters named in `shared` common to all
     evaluate(spec, x)                    the model at its starting values, to look at before fitting
     guess(x, y, spec)                    starting values read from the data
+    compare(fits)                        which of several models of the same points the data support
+
+Two things a dataset may bring besides x, y and the errors of y. Errors of x (``sigma_x``): each point is then
+counted by its distance to the curve in units of its two error bars (orthogonal distance regression), not by its
+vertical distance. A measured response of the instrument (``response``, on the same x): a model that holds the
+``response`` component is convolved with it before it is compared with the data.
 
 Minimising is lmfit's (and scipy's behind it). What is added here is what a
 person publishing a fit needs around it: the statistics (χ², reduced χ², R²,
@@ -46,6 +52,7 @@ LOSSES = ("linear", "soft_l1", "huber", "cauchy")
 MAX_POINTS = 200_000
 MAX_DATASETS = 64
 TOLERANCE = 1e-13            # relative change of χ² and of the parameters at which a descent stops
+NO_RESPONSE = "the model holds a measured instrument response: choose the column that holds it, under Data"
 
 
 class FitError(ValueError):
@@ -58,9 +65,36 @@ class Data:
     y: Array
     w: Array                    # what each residual is multiplied by: 1/σ
     given: int                  # how many points were given, before the range and the cleaning
+    sx: Array | None = None     # the error of each x, when the fit counts them
+    grid: Array | None = None   # with a measured response: every x of the measurement, evenly spaced,
+    kernel: Array | None = None  # the response on it, of unit sum,
+    index: Array | None = None  # and where the fitted points are in it
 
 
-def prepare(x: Any, y: Any, sigma: Any = None, weights: str = "none", limits: Any = None) -> Data:
+def _response(xs: Array, response: Any) -> tuple[Array, Array, Array]:
+    """The rows that make the grid of a measured response, the grid, and the response on it with a sum of 1."""
+    try:
+        r = np.asarray(response, float)
+    except (TypeError, ValueError):
+        raise FitError("the response must be numbers") from None
+    if r.shape != xs.shape:
+        raise FitError("the response column must be as long as the data")
+    rows = np.isfinite(xs)
+    grid = xs[rows]
+    if len(grid) < 3:
+        raise FitError("a measured response needs at least three values of x")
+    steps = np.diff(grid)
+    mean = float(np.mean(steps))
+    if not (mean > 0 and np.all(steps > 0) and float(np.max(np.abs(steps - mean))) <= 0.02 * mean):
+        raise FitError(f"with a measured response, x must increase by even steps: here they go from {float(np.min(steps)):.6g} to {float(np.max(steps)):.6g}")
+    kernel = np.where(np.isfinite(r[rows]), r[rows], 0.0)
+    total = float(np.sum(kernel))
+    if not total > 0:
+        raise FitError("the response column holds nothing: its sum is not positive")
+    return rows, grid, kernel / total
+
+
+def prepare(x: Any, y: Any, sigma: Any = None, weights: str = "none", limits: Any = None, sigma_x: Any = None, response: Any = None) -> Data:
     """The points that are fitted: finite, inside the range, with a usable weight."""
     if weights not in WEIGHTS:
         raise FitError(f"weights are one of {', '.join(WEIGHTS)}")
@@ -100,7 +134,70 @@ def prepare(x: Any, y: Any, sigma: Any = None, weights: str = "none", limits: An
             raise FitError(f"{weights} weights need values of y that are not zero")
         size = np.where(size > 0, size, positive.min())
         w = 1 / np.sqrt(size) if weights == "statistical" else 1 / size
-    return Data(xs[keep], ys[keep], w[keep], len(xs))
+    data = Data(xs[keep], ys[keep], w[keep], len(xs))
+    if sigma_x is not None:
+        if weights != "instrumental":
+            raise FitError("errors on x are counted together with errors on y: choose the weights 1/σ² and an error column for y")
+        if response is not None:
+            raise FitError("errors on x cannot be counted with a measured response: x is then the grid of the instrument")
+        sx = np.asarray(sigma_x, float)
+        if sx.shape != xs.shape:
+            raise FitError("the error column of x must be as long as the data")
+        usable = np.isfinite(sx) & (sx >= 0)
+        if not np.any(keep & usable):
+            raise FitError("the error column of x holds no usable value")
+        keep &= usable
+        data = Data(xs[keep], ys[keep], w[keep], len(xs), sx=sx[keep])
+    if response is not None:
+        rows, data.grid, data.kernel = _response(xs, response)
+        data.index = (np.cumsum(rows) - 1)[keep]
+    return data
+
+
+def _at(model: Model, params: Any, d: Data, suffix: str = "") -> Array:
+    """The model at the points of a dataset, through the response of the instrument when there is one."""
+    if d.kernel is None:
+        return model.evaluate(params, d.x, suffix)
+    return model.evaluate(params, d.grid, suffix, d.kernel)[d.index]
+
+
+ODR_STEPS = 12              # how many times, at most, the foot of each point on the curve is refined
+
+
+def _residual(model: Model, params: Any, d: Data, suffix: str = "") -> Array:
+    """Model minus data in units of the error bars: what a fit makes small.
+
+    With errors on x, each point is moved along x by δ to the place of the curve nearest to it in units of its two
+    error bars, and counts by that distance: sqrt[((y − f(x + δ))/σy)² + (δ/σx)²]. δ is found by Gauss–Newton steps
+    from δ = 0, whose first is the “effective variance” σy² + f′² σx² (exact for a straight line). A step that
+    does not bring a point nearer is shortened, then refused: on a curved model a full step can overshoot.
+    """
+    if d.sx is None:
+        return (_at(model, params, d, suffix) - d.y) * d.w
+    sy, sx = 1 / d.w, d.sx
+    h = (float(np.ptp(d.x)) or max(abs(float(d.x[0])), 1.0)) * 1e-6
+
+    def distance(delta: Array) -> tuple[Array, Array]:
+        there = model.evaluate(params, d.x + delta, suffix)
+        return there, ((there - d.y) / sy) ** 2 + np.divide(delta, sx, out=np.zeros_like(delta), where=sx > 0) ** 2
+
+    with np.errstate(all="ignore"):
+        delta = np.zeros_like(d.x)
+        here, cost = distance(delta)
+        for _ in range(ODR_STEPS):
+            slope = (model.evaluate(params, d.x + delta + h, suffix) - model.evaluate(params, d.x + delta - h, suffix)) / (2 * h)
+            slope = np.where(np.isfinite(slope), slope, 0.0)
+            step = sx ** 2 * slope * (d.y - here + slope * delta) / (sy ** 2 + slope ** 2 * sx ** 2) - delta
+            if np.all(np.abs(step) <= 1e-10 * (sx + h)):
+                break
+            for part in (1.0, 0.25):
+                trial = delta + part * step
+                there, new = distance(trial)
+                nearer = new < cost                               # false where the model is not defined
+                delta, here, cost = np.where(nearer, trial, delta), np.where(nearer, there, here), np.where(nearer, new, cost)
+                if np.all(nearer | (step == 0)):
+                    break
+        return np.sign(here - d.y) * np.sqrt(cost)
 
 
 def _list(values: Array) -> list[float | None]:
@@ -119,12 +216,25 @@ def _model(spec: Any) -> Model:
 
 
 # ── before fitting: look at the model, read starting values from the data ────
-def evaluate(spec: Any, x: Any) -> dict[str, Any]:
-    """The model and each of its components at the values of its description."""
+def _shown(model: Model, parts: dict[str, Array]) -> dict[str, list[float | None]]:
+    """The components that are curves to draw: the response of the instrument is not one."""
+    return {cid: _list(part) for cid, part in parts.items() if model.response is None or cid != model.response.id}
+
+
+def evaluate(spec: Any, x: Any, response: Any = None) -> dict[str, Any]:
+    """The model and each of its components at the values of its description.
+
+    A model that holds a measured response needs it (``response``, on ``x``), and ``x`` is then the x of the data.
+    """
     model = _model(spec)
     xs = np.asarray(x, float)
     params = model.parameters()
-    return {"x": _list(xs), "y": _list(model.evaluate(params, xs)), "components": {cid: _list(part) for cid, part in model.parts(params, xs).items()}}
+    kernel = None
+    if model.response is not None:
+        if response is None:
+            raise FitError(NO_RESPONSE)
+        rows, xs, kernel = _response(xs, response)
+    return {"x": _list(xs), "y": _list(model.evaluate(params, xs, "", kernel)), "components": _shown(model, model.parts(params, xs, "", kernel))}
 
 
 def find_peaks(x: Array, y: Array, count: int) -> list[tuple[float, float, float]]:
@@ -169,15 +279,20 @@ def guess(x: Any, y: Any, spec: Any, limits: Any = None) -> dict[str, Any]:
         assert c.function is not None
         if c.function.guess is None:
             continue
-        target = rest
+        seen_x = data.x
         if c.function.kind == "baseline" and peaks:              # under peaks, a baseline is read from the lowest tenth of the points
             low = rest <= np.quantile(rest, 0.25)
             values = c.function.guess(data.x[low], rest[low]) if np.count_nonzero(low) > len(c.names) else c.function.guess(data.x, rest)
+        elif model.convolved(c):                                  # through a response, a curve is read after the maximum and counted from it
+            top = int(np.argmax(rest))
+            top = top if len(rest) - top > 3 else 0
+            seen_x = np.where(data.x >= data.x[top], data.x - data.x[top], np.nan)
+            values = c.function.guess(seen_x[top:], rest[top:])
         else:
-            values = c.function.guess(data.x, target)
+            values = c.function.guess(data.x, rest)
         found[c.id] = values
         merged = {**{n: s.value for n, s in c.settings.items()}, **values}
-        rest = rest - c.call(data.x, merged)
+        rest = rest - np.nan_to_num(c.call(seen_x, merged))
     if peaks:
         seen = find_peaks(data.x, rest, len(peaks))
         for c, (center, height, width) in zip(peaks, seen + seen[-1:] * (len(peaks) - len(seen)) if seen else [], strict=False):
@@ -221,10 +336,10 @@ class Options:
         return self
 
 
-def fit(x: Any, y: Any, spec: Any, *, sigma: Any = None, limits: Any = None, **options: Any) -> dict[str, Any]:
+def fit(x: Any, y: Any, spec: Any, *, sigma: Any = None, sigma_x: Any = None, response: Any = None, limits: Any = None, **options: Any) -> dict[str, Any]:
     """Fit one dataset. See ``Options`` for what can be chosen."""
     opt = Options(**options).checked()
-    out = _solve([prepare(x, y, sigma, opt.weights, limits)], _model(spec), [], opt)
+    out = _solve([prepare(x, y, sigma, opt.weights, limits, sigma_x, response)], _model(spec), [], opt)
     return {**out["datasets"][0], **{k: v for k, v in out.items() if k != "datasets"}}
 
 
@@ -237,7 +352,7 @@ def fit_global(datasets: list[dict[str, Any]], spec: Any, shared: list[str], *, 
     unknown = [n for n in shared if n not in model.names]
     if unknown:
         raise FitError(f"{unknown[0]} is not a parameter of the model")
-    return _solve([prepare(d.get("x"), d.get("y"), d.get("sigma"), opt.weights, limits) for d in datasets], model, list(shared), opt)
+    return _solve([prepare(d.get("x"), d.get("y"), d.get("sigma"), opt.weights, limits, d.get("sigma_x"), d.get("response")) for d in datasets], model, list(shared), opt)
 
 
 def _solve(sets: list[Data], model: Model, shared: list[str], opt: Options) -> dict[str, Any]:
@@ -247,6 +362,8 @@ def _solve(sets: list[Data], model: Model, shared: list[str], opt: Options) -> d
         model.parameters(suffix, into=params, tied_to={name: name + suffixes[0] for name in shared})
     varying = [n for n, p in params.items() if p.vary]
     total = sum(len(d.x) for d in sets)
+    if model.response is not None and any(d.kernel is None for d in sets):
+        raise FitError(NO_RESPONSE)
     if not varying:
         raise FitError("every parameter is fixed or tied: there is nothing to fit")
     for k, d in enumerate(sets):
@@ -260,7 +377,7 @@ def _solve(sets: list[Data], model: Model, shared: list[str], opt: Options) -> d
             raise FitError("a global search needs a lower and an upper bound on every varying parameter: " + ", ".join(open_ended[:6]) + " have none")
 
     def residual(p: lmfit.Parameters) -> Array:
-        parts = [(model.evaluate(p, d.x, s) - d.y) * d.w for d, s in zip(sets, suffixes, strict=True)]
+        parts = [_residual(model, p, d, s) for d, s in zip(sets, suffixes, strict=True)]
         r = np.concatenate(parts)
         return np.where(np.isfinite(r), r, 1e150)                 # a point where the model is not defined counts as very far
 
@@ -363,6 +480,7 @@ def _common(result: Any, model: Model, sets: list[Data], opt: Options, stopped: 
         "chisqr": _num(chisqr), "redchi": _num(result.redchi), "rsquared": _num(rsquared),
         "adj_rsquared": _num(1 - (1 - rsquared) * (n - 1) / (n - p)) if n > p else None,
         "aic": _num(result.aic), "bic": _num(result.bic), "errorbars": bool(result.errorbars), "warnings": warnings, "p_value": None,
+        "x_errors": any(d.sx is not None for d in sets), "response": model.response is not None,
     }
     if opt.weights == "instrumental" and result.nfree > 0:
         # with true error bars χ² follows a χ² law: the probability of a χ² at least this large if the model is right
@@ -456,11 +574,23 @@ def _describe(result: Any, model: Model, data: Data, suffix: str, opt: Options, 
                for i, (name, cid, label, value) in enumerate(model.derived(params, suffix))]
 
     low, high = float(np.min(data.x)), float(np.max(data.x))
-    grid = np.geomspace(low, high, opt.points) if opt.log_x and low > 0 else np.linspace(low, high, opt.points)
-    best = model.evaluate(params, grid, suffix)
-    curve: dict[str, Any] = {"x": _list(grid), "y": _list(best), "components": {cid: _list(part) for cid, part in model.parts(params, grid, suffix).items()},
-                             "band": None, "prediction": None}
-    spread = _propagate(result, lambda p: model.evaluate(p, grid, suffix))
+    if data.kernel is None:
+        grid = np.geomspace(low, high, opt.points) if opt.log_x and low > 0 else np.linspace(low, high, opt.points)
+        parts = model.parts(params, grid, suffix)
+
+        def drawn(p: Any) -> Array:
+            return model.evaluate(p, grid, suffix)
+    else:                                   # through a measured response the curve exists where the instrument measured, and nowhere between
+        assert data.grid is not None
+        inside = (data.grid >= low) & (data.grid <= high)
+        grid = data.grid[inside]
+        parts = {cid: part[inside] for cid, part in model.parts(params, data.grid, suffix, data.kernel).items()}
+
+        def drawn(p: Any) -> Array:
+            return model.evaluate(p, data.grid, suffix, data.kernel)[inside]
+    best = drawn(params)
+    curve: dict[str, Any] = {"x": _list(grid), "y": _list(best), "components": _shown(model, parts), "band": None, "prediction": None}
+    spread = _propagate(result, drawn)
     nfree = max(int(result.nfree), 1)
     if spread is not None:
         t = float(stats.t.ppf(0.5 + opt.level / 2, nfree))
@@ -468,9 +598,74 @@ def _describe(result: Any, model: Model, data: Data, suffix: str, opt: Options, 
         if opt.weights == "none":           # where a new measurement would fall: the band of the curve, widened by the scatter of the points
             wide = np.sqrt(spread ** 2 + float(result.redchi))
             curve["prediction"] = {"level": opt.level, "lower": _list(best - t * wide), "upper": _list(best + t * wide)}
-    fitted = model.evaluate(params, data.x, suffix)
+    fitted = _at(model, params, data, suffix)
     residual = data.y - fitted
+    counted = -_residual(model, params, data, suffix)           # as the fit counted them: along both axes when x has errors
     return {"params": rows, "derived": derived, "curve": curve, "npoints": int(len(data.x)), "given": data.given,
             "range": [low, high], "rmse": _num(math.sqrt(float(np.mean(residual ** 2)))),
-            "residuals": {"x": _list(data.x), "y": _list(residual), "standardised": _list(residual * data.w / math.sqrt(float(result.redchi) or 1.0))},
+            "residuals": {"x": _list(data.x), "y": _list(residual), "standardised": _list(counted / math.sqrt(float(result.redchi) or 1.0))},
             "fitted": {"x": _list(data.x), "y": _list(fitted)}, "equations": model.tex()}
+
+
+# ── which model ──────────────────────────────────────────────────────────────
+def compare(fits: list[dict[str, Any]]) -> dict[str, Any]:
+    """Which of several models, fitted to the same points with the same weights, the data support.
+
+    Each fit is ``{"name", "ndata", "nvarys", "chisqr"}``. Answered: for each, AIC, AICc (the correction for few
+    points) and BIC, computed as lmfit does (n ln(χ²/n) + 2k, + k ln n), and its Akaike weight: the share of support
+    it has among those compared. For each pair with different numbers of parameters, the F test of the fuller model
+    against the simpler one, which means something only when the simpler is a special case of the fuller.
+    """
+    if not 2 <= len(fits) <= 12:
+        raise FitError("between 2 and 12 fits are compared")
+    rows: list[dict[str, Any]] = []
+    for f in fits:
+        try:
+            name, n, k, chisqr = str(f["name"]), int(f["ndata"]), int(f["nvarys"]), float(f["chisqr"])
+        except (KeyError, TypeError, ValueError):
+            raise FitError("a fit to compare is a name, a number of points, a number of fitted parameters and a χ²") from None
+        if n != int(fits[0]["ndata"]):
+            raise FitError(f"“{name}” was fitted to {n} points and “{fits[0]['name']}” to {int(fits[0]['ndata'])}: only fits of the same points can be compared")
+        if not (math.isfinite(chisqr) and chisqr > 0):
+            raise FitError(f"the χ² of “{name}” is not a positive number: there is nothing to compare")
+        if not 1 <= k < n:
+            raise FitError(f"“{name}” has {k} fitted parameters for {n} points: it cannot be compared")
+        aic = n * math.log(chisqr / n) + 2 * k
+        rows.append({"name": name, "ndata": n, "nvarys": k, "chisqr": chisqr, "aic": aic, "bic": n * math.log(chisqr / n) + k * math.log(n),
+                     "aicc": aic + 2 * k * (k + 1) / (n - k - 1) if n - k - 1 > 0 else None})
+    by = "aicc" if all(r["aicc"] is not None for r in rows) else "aic"
+    lowest = min(r[by] for r in rows)
+    for r in rows:
+        r["delta"] = r[by] - lowest
+    total = sum(math.exp(-r["delta"] / 2) for r in rows)
+    for r in rows:
+        r["weight"] = math.exp(-r["delta"] / 2) / total
+    ranked = sorted(rows, key=lambda r: r["delta"])
+    best, second = ranked[0], ranked[1]
+    criterion = "ΔAICc" if by == "aicc" else "ΔAIC"
+    if second["delta"] < 2:
+        said = f"The data do not tell “{best['name']}” from “{second['name']}” ({criterion} = {second['delta']:.2f}, below 2): keep the simpler one unless there is another reason."
+    elif second["delta"] < 20:
+        said = (f"“{best['name']}” is the one the data support: “{second['name']}” is {math.exp(second['delta'] / 2):.3g} times less likely "
+                f"({criterion} = {second['delta']:.2f}{', a small difference' if second['delta'] < 6 else ''}).")
+    else:               # beyond 20 the ratio of likelihoods is a number nobody reads, and beyond 1400 not a number at all
+        said = f"“{best['name']}” is the one the data support: beside it “{second['name']}” has no support left ({criterion} = {second['delta']:.1f}; above 10 a model is usually set aside)."
+    tests = []
+    for i, a in enumerate(rows):
+        for b in rows[i + 1:]:
+            if a["nvarys"] == b["nvarys"]:
+                continue
+            simple, full = (a, b) if a["nvarys"] < b["nvarys"] else (b, a)
+            added, free = full["nvarys"] - simple["nvarys"], full["ndata"] - full["nvarys"]
+            if full["chisqr"] >= simple["chisqr"]:
+                tests.append({"simpler": simple["name"], "fuller": full["name"], "f": None, "p": None, "df": [added, free],
+                              "said": f"“{full['name']}” has {added} more parameter{'s' if added > 1 else ''} than “{simple['name']}” and does not fit better: there is nothing to test."})
+                continue
+            f_value = ((simple["chisqr"] - full["chisqr"]) / added) / (full["chisqr"] / free)
+            p = float(stats.f.sf(f_value, added, free))
+            verdict = "more than chance would (p < 0.05)" if p < 0.05 else "no more than chance could (p ≥ 0.05)"
+            chance = "= " + format(p, ".3g") if p >= 1e-300 else "< 1e-300"
+            tests.append({"simpler": simple["name"], "fuller": full["name"], "f": f_value, "p": p, "df": [added, free],
+                          "said": f"F({added}, {free}) = {f_value:.4g}, p {chance}: the {added} more parameter{'s' if added > 1 else ''} of “{full['name']}” improve the fit {verdict}. "
+                                  f"This test holds only if “{simple['name']}” is a special case of “{full['name']}”."})
+    return {"by": by, "fits": rows, "best": best["name"], "said": said, "tests": tests}

@@ -8,8 +8,9 @@
  *              a unit (what an axis writes), a role (x, y, yerr, xerr, label) and maybe a formula.
  *     graphs   a figure (plot.js): panels, axes, series. A series names a sheet and its columns,
  *              or a fit and one of its curves: it holds no data of its own.
- *     fits     the data fitted (a sheet, its x and y columns, a range), the model, the options,
- *              and what the server answered.
+ *     fits     the data fitted (a sheet, its x and y columns, their error columns, the column that
+ *              holds the response of the instrument, a range), the model, the options, and what
+ *              the server answered.
  *     series   the same fit on many files. A series names a fit (made on one sheet, its model), the
  *              other sheets it is repeated on, each with the value of what was varied between them
  *              (a temperature, a field), and keeps what each gave. A graph's own `series` are its
@@ -46,6 +47,7 @@ window.ASY = window.ASY || {};
     doc.view = Object.assign({ main: 'sheet', sheet: null, graph: null, fit: null }, doc.view || {});
     doc.graphs = doc.graphs || []; doc.fits = doc.fits || []; doc.log = doc.log || []; doc.series = doc.series || [];
     doc.sheets.forEach((s) => s.columns.forEach((c) => { if (c.made === undefined) c.made = null; }));          // a project saved before columns kept how they were made
+    doc.fits.forEach((f) => { if (f.xerr === undefined) f.xerr = null; if (f.response === undefined) f.response = null; });      // a project saved before fits counted errors of x and responses
     doc.series.forEach((sr) => sr.members.forEach((m) => { if (m.state === 'running') m.state = 'todo'; }));      // a page closed in the middle of a series
     if (!sheet(doc.view.sheet)) doc.view.sheet = doc.sheets.length ? doc.sheets[0].id : null;
     if (!graph(doc.view.graph)) doc.view.graph = doc.graphs.length ? doc.graphs[0].id : null;
@@ -93,7 +95,7 @@ window.ASY = window.ASY || {};
   function removeColumn(s, cid) {
     s.columns = s.columns.filter((c) => c.id !== cid);
     doc.graphs.forEach((g) => g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'data' && r.sheet === s.id && (r.x === cid || r.y === cid))); p.series.forEach((r) => { if (r.yerr === cid) r.yerr = null; if (r.xerr === cid) r.xerr = null; }); }));
-    doc.fits.forEach((f) => { if (f.sheet === s.id) { if (f.yerr === cid) f.yerr = null; f.more = f.more.filter((m) => m !== cid); if (f.x === cid || f.y === cid) { f.x = f.x === cid ? null : f.x; f.y = f.y === cid ? null : f.y; f.stale = true; } } });
+    doc.fits.forEach((f) => { if (f.sheet === s.id) { if (f.yerr === cid) f.yerr = null; if (f.xerr === cid) f.xerr = null; if (f.response === cid) { f.response = null; f.stale = true; } f.more = f.more.filter((m) => m !== cid); if (f.x === cid || f.y === cid) { f.x = f.x === cid ? null : f.x; f.y = f.y === cid ? null : f.y; f.stale = true; } } });
   }
   function removeSheet(sid) {
     doc.sheets = doc.sheets.filter((s) => s.id !== sid);
@@ -116,6 +118,7 @@ window.ASY = window.ASY || {};
     return s.columns.find((k) => k.role === 'x' && k !== c) || null;
   }
   const errOf = (s, c) => { const next = s.columns[s.columns.indexOf(c) + 1]; return next && next.role === 'yerr' ? next : null; };
+  const xerrOf = (s, c) => { const next = c ? s.columns[s.columns.indexOf(c) + 1] : null; return next && next.role === 'xerr' ? next : null; };      // the errors of an x column: the column after it, when its role says so
 
   /* Compute the columns that have a formula, from left to right. A, B… are the columns, i the row (from 1), n the number of rows. */
   function recompute(s) {
@@ -166,8 +169,8 @@ window.ASY = window.ASY || {};
   function removeGraph(gid) { doc.graphs = doc.graphs.filter((g) => g.id !== gid); doc.series.forEach((sr) => { if (sr.graph === gid) sr.graph = null; }); if (doc.view.graph === gid) { doc.view.graph = doc.graphs.length ? doc.graphs[0].id : null; if (!doc.view.graph) doc.view.main = 'sheet'; } }
   const colorFor = (g, panel) => { const pal = P.PALETTES[g.figure.palette] || P.PALETTES.okabe; return pal[panel.series.filter((r) => r.kind === 'data').length % pal.length]; };
   function addData(g, panel, s, y, more) {
-    const x = xOf(s, y), e = errOf(s, y);
-    const r = P.series(Object.assign({ id: id('r'), kind: 'data', sheet: s.id, x: x ? x.id : null, y: y.id, yerr: e ? e.id : null, xerr: null, color: colorFor(g, panel) }, more || {}));
+    const x = xOf(s, y), e = errOf(s, y), ex = xerrOf(s, x);
+    const r = P.series(Object.assign({ id: id('r'), kind: 'data', sheet: s.id, x: x ? x.id : null, y: y.id, yerr: e ? e.id : null, xerr: ex ? ex.id : null, color: colorFor(g, panel) }, more || {}));
     panel.series.push(r);
     if (!panel.x.label && x) panel.x.label = label(x);
     if (!panel[r.axis].label) panel[r.axis].label = label(y);
@@ -202,9 +205,14 @@ window.ASY = window.ASY || {};
     columnsOf.forEach((col, k) => {
       const base = col ? darker((panel.series.find((r) => r.kind === 'data' && r.sheet === f.sheet && r.y === col) || {}).color) : null;
       if (col) panel.series.forEach((r) => { if (mine(r) && r.column === col && r.part === 'total' && base) r.color = base; });
-      if (!has('total', col)) panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: 'total', column: col, type: 'line', color: base || '#c81d25', marker: 'none', label: '' }));
+      if (!has('total', col)) {
+        // a second fit on the same panel is told from the first: another colour, and each curve under the name of its fit
+        const others = panel.series.filter((r) => r.kind === 'fit' && r.fit !== f.id && r.part === 'total'), taken = others.length ? panel.series.map((r) => r.color) : [];
+        others.forEach((r) => { if (!r.label && fit(r.fit)) r.label = P.literal(fit(r.fit).name); });
+        panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: 'total', column: col, type: 'line', color: base || ['#c81d25', '#0072b2', '#009e73', '#cc79a7', '#e69f00'].find((c) => !taken.includes(c)) || '#c81d25', marker: 'none', label: others.length ? P.literal(f.name) : '' }));
+      }
       if (opt.band && !has('band', col)) panel.series.unshift(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: 'band', column: col, type: 'band', color: base || '#c81d25', legend: false }));
-      if (opt.components && (f.model.components || []).length > 1) f.model.components.forEach((c, i) => { if (!has(c.id, col)) panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: c.id, column: col, type: 'line', dash: 'dash', width: 0.8, color: P.PALETTES.okabe[(i + 2) % 8], marker: 'none', legend: k === 0 })); });
+      if (opt.components && (f.model.components || []).length > 1) f.model.components.forEach((c, i) => { if (c.fn !== 'response' && !has(c.id, col)) panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: c.id, column: col, type: 'line', dash: 'dash', width: 0.8, color: P.PALETTES.okabe[(i + 2) % 8], marker: 'none', legend: k === 0 })); });
     });
     return g;
   }
@@ -260,12 +268,26 @@ window.ASY = window.ASY || {};
   // ------------------------------------------------------------------ fits
   const fit = (fid) => doc.fits.find((f) => f.id === fid) || null;
   function addFit(s, x, y) {
-    const e = errOf(s, y);
-    const f = { id: id('f'), name: unique(doc.fits, 'Fit of ' + (y.title || y.name)).slice(0, 80), sheet: s.id, x: x ? x.id : null, y: y.id, yerr: e ? e.id : null, more: [], mode: 'single', shared: [], limits: null,
+    const e = errOf(s, y), ex = e ? xerrOf(s, x) : null;          // errors of x are counted with errors of y, not alone
+    const f = { id: id('f'), name: unique(doc.fits, 'Fit of ' + (y.title || y.name)).slice(0, 80), sheet: s.id, x: x ? x.id : null, y: y.id, yerr: e ? e.id : null, xerr: ex ? ex.id : null, response: null, more: [], mode: 'single', shared: [], limits: null,
       model: { components: [] }, options: { method: 'leastsq', weights: e ? 'instrumental' : 'none', absolute_sigma: false, loss: 'linear', level: 0.95, points: 800, intervals: false }, result: null, results: {}, stale: false };
     doc.fits.push(f); doc.view.fit = f.id;
     return f;
   }
+  /* The same data, the same model, under another name: to change the model and see which the data support. */
+  function duplicateFit(f) {
+    const k = JSON.parse(JSON.stringify(f));
+    Object.assign(k, { id: id('f'), name: unique(doc.fits, f.name).slice(0, 80), result: null, results: {}, stale: false });
+    doc.fits.push(k); doc.view.fit = k.id;
+    return k;
+  }
+  /* Two fits that can be compared: the same points, counted the same way. What differs is the model. */
+  function comparable(a, b) {
+    const same = (k) => JSON.stringify(a[k]) === JSON.stringify(b[k]), opt = (k) => a.options[k] === b.options[k];
+    return a !== b && !!a.result && !!b.result && !a.stale && !b.stale && ['sheet', 'x', 'y', 'mode', 'more', 'limits'].every(same) && ['weights', 'loss'].every(opt) &&
+      (a.options.weights !== 'instrumental' || (same('yerr') && same('xerr') && opt('absolute_sigma'))) && (a.options.method === 'least_squares') === (b.options.method === 'least_squares') && a.result.ndata === b.result.ndata;
+  }
+  const hasResponse = (f) => f.model.components.some((c) => c.fn === 'response');
   function removeFit(fid) {
     doc.fits = doc.fits.filter((f) => f.id !== fid);
     doc.series = doc.series.filter((sr) => sr.fit !== fid);
@@ -341,7 +363,7 @@ window.ASY = window.ASY || {};
       else if (c.formula) { try { ASY.expr.column(c.formula).names.forEach((n) => { const k = model.columns.find((q) => q.name === n && q !== c); if (k) walk(k.id); }); } catch (e) { /* a formula that does not read: nothing to follow */ } }
       else if (!need.includes(c)) need.push(c);
     };
-    [f.x, f.y, f.yerr].forEach((cid) => { if (cid) walk(cid); });
+    [f.x, f.y, f.yerr, f.options.weights === 'instrumental' ? f.xerr : null, hasResponse(f) ? f.response : null].forEach((cid) => { if (cid) walk(cid); });
     const short = need.find((c) => !originals(s)[originals(model).indexOf(c)]);
     return short ? 'it has ' + originals(s).length + ' column' + (originals(s).length === 1 ? '' : 's') + ' of data where “' + model.name + '” has ' + originals(model).length : '';
   }
@@ -356,8 +378,8 @@ window.ASY = window.ASY || {};
   }
   /* A mark of what a series was run with: the model, the columns, the range, the weights. Starting values are not in it. */
   function mark(f) {
-    const text = JSON.stringify([f.x, f.y, f.yerr, f.limits, f.options.weights, f.options.method, f.options.loss, f.options.absolute_sigma,
-      f.model.components.map((c) => [c.id, c.fn, c.expr || '', Object.entries(c.params).map(([n, p]) => [n, p.vary !== false, p.min, p.max, p.expr || '', p.vary === false ? p.value : null])])]);
+    const text = JSON.stringify([f.x, f.y, f.yerr, f.limits, f.options.weights, f.options.method, f.options.loss, f.options.absolute_sigma].concat(f.xerr || f.response ? [f.xerr, f.response] : [],       // added only when used: the mark of an older series stays what it was
+      [f.model.components.map((c) => [c.id, c.fn, c.expr || '', Object.entries(c.params).map(([n, p]) => [n, p.vary !== false, p.min, p.max, p.expr || '', p.vary === false ? p.value : null])])]));
     let h = 5381; for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
     return h.toString(16) + ':' + text.length;
   }
@@ -372,10 +394,9 @@ window.ASY = window.ASY || {};
   }
   /* What is sent to be fitted for one file of a series: the counterparts of the columns the fit reads. */
   function memberData(sr, s) {
-    const f = fit(sr.fit), model = sheet(f.sheet), x = counterpart(model, f.x, s), y = counterpart(model, f.y, s), e = counterpart(model, f.yerr, s);
+    const f = fit(sr.fit), model = sheet(f.sheet), x = counterpart(model, f.x, s), y = counterpart(model, f.y, s);
     if (!y) throw new Error('“' + s.name + '” has no column that is what “' + label(column(model, f.y)) + '” is in “' + model.name + '”');
-    const n = Math.max(y.values.length, x ? x.values.length : 0);
-    return { x: x ? nullable(numbers(x, n)) : Array.from({ length: n }, (_, i) => i + 1), y: nullable(numbers(y, n)), sigma: e ? nullable(numbers(e, n)) : null };
+    return sent(f, x, y, (cid) => counterpart(model, cid, s), s);
   }
   /* Give a file of the series the columns the model sheet computes: its formulas, and its operations done again on this file. `call(path, body)` asks the server. */
   async function replay(sr, s, call) {
@@ -430,10 +451,10 @@ window.ASY = window.ASY || {};
           if (step.from && step.from.sheet === f.sheet) lastSound = null;                              // the other side of the model sheet: start again from it
           const d = memberData(sr, s), near = sr.chain && step.from ? (sound(step.from.result) ? step.from.result : lastSound) : null;
           const start = near ? near.params : f.result && !f.stale ? f.result.params : null;
-          res = await call('asymille/fit', { x: d.x, y: d.y, sigma: d.sigma, model: start ? modelFrom(model, start) : model, limits, options });
+          res = await call('asymille/fit', Object.assign({ model: start ? modelFrom(model, start) : model, limits, options }, d));
           if (!sound(res)) {                                                                          // a second try, from starting values read from this file itself; the better of the two is kept
             const own = await call('asymille/model/guess', { x: d.x, y: d.y, model, limits });
-            const again = await call('asymille/fit', { x: d.x, y: d.y, sigma: d.sigma, model: own.model, limits, options });
+            const again = await call('asymille/fit', Object.assign({ model: own.model, limits, options }, d));
             if (sound(again) || (again.success && (!res.success || again.redchi < res.redchi))) res = again;
           }
         }
@@ -447,7 +468,8 @@ window.ASY = window.ASY || {};
     sr.ran = mark(f);
     return seriesTable(sr);
   }
-  const OF_X = ['center', 'sigma', 'gamma', 'fwhm', 'sigma_r', 'x0', 'width', 'tau', 'tau1', 'tau2', 'tau3', 'mode', 'median', 'half_life', 'period', 'km', 'k'], OF_Y = ['height', 'y0', 'c', 'intercept', 'low', 'high', 'top', 'vmax', 'qmax'];
+  const OF_X = ['center', 'sigma', 'gamma', 'fwhm', 'sigma_r', 'x0', 'width', 'tau', 'tau1', 'tau2', 'tau3', 'mode', 'median', 'half_life', 'period', 'km', 'k', 'shift', 'scale', 'pulse_fwhm', 'pp_width', 'theta', 't0', 'beta', 'v0', 'kt', 'resolution_fwhm'],
+    OF_Y = ['height', 'y0', 'c', 'intercept', 'low', 'high', 'top', 'vmax', 'qmax', 'e0', 'i0', 'ms', 'chi0', 'i_s'];
   /* What a series found, as a sheet: one row per file, in the order of what was varied; each parameter beside its uncertainty,
      so that it is plotted with its error bars; and a column that says which rows should not be trusted. Made again at each run, in place. */
   function seriesTable(sr) {
@@ -505,19 +527,41 @@ window.ASY = window.ASY || {};
   }
   /* What is sent to be fitted: the x, y and error columns of a fit, row for row. */
   function fitData(f, ycol) {
-    const s = sheet(f.sheet), x = column(s, f.x), y = column(s, ycol || f.y), e = column(s, f.yerr);
+    const s = sheet(f.sheet), x = column(s, f.x), y = column(s, ycol || f.y);
     if (!s || !y) throw new Error('the data of this fit are gone: choose its columns again');
-    const n = Math.max(y.values.length, x ? x.values.length : 0);
-    return { x: x ? nullable(numbers(x, n)) : Array.from({ length: n }, (_, i) => i + 1), y: nullable(numbers(y, n)), sigma: e ? nullable(numbers(e, n)) : null };
+    return sent(f, x, y, (cid) => column(s, cid), s);
+  }
+  /* The columns a fit sends, row for row. The errors of x go only with the weights that count errors, the response only for a model that holds one:
+     what is sent is what is used. `at` finds a column of the fit in the sheet that is fitted (the fit's own, or a file of a series). */
+  function sent(f, x, y, at, s) {
+    const n = Math.max(y.values.length, x ? x.values.length : 0), of = (c) => (c ? nullable(numbers(c, n)) : null);
+    const weighted = f.options.weights === 'instrumental', through = hasResponse(f);
+    const response = through ? at(f.response) : null;
+    if (through && !response) throw new Error(f.response ? '“' + s.name + '” has no column that is the response of the instrument' : 'The model holds a measured instrument response: choose the column that holds it, under Data');
+    return { x: x ? of(x) : Array.from({ length: n }, (_, i) => i + 1), y: of(y), sigma: of(at(f.yerr)), sigma_x: weighted ? of(at(f.xerr)) : null, response: of(response) };
+  }
+  /* What is asked to draw a model without fitting it: `points` spread over the range that is fitted. Through a measured response the model
+     exists on the x of the measurement only: these are sent with the response, and `cut` keeps what is in the range. */
+  function drawing(f, d, model, points) {
+    const inside = (v) => !f.limits || ((f.limits[0] == null || v >= f.limits[0]) && (f.limits[1] == null || v <= f.limits[1]));
+    if (d.response) {
+      const rows = d.x.map((v, i) => i).filter((i) => d.x[i] != null);
+      return { body: { model, x: rows.map((i) => d.x[i]), response: rows.map((i) => (d.response[i] == null ? 0 : d.response[i])) },
+        cut: (said) => { const keep = said.x.map((v, i) => i).filter((i) => inside(said.x[i])), pick = (a) => keep.map((i) => a[i]), parts = {}; Object.entries(said.components).forEach(([k, a]) => { parts[k] = pick(a); }); return { x: pick(said.x), y: pick(said.y), components: parts }; } };
+    }
+    const xs = d.x.filter((v, i) => v != null && d.y[i] != null && inside(v));
+    if (!xs.length) return null;
+    const lo = xs.reduce((a, b) => Math.min(a, b)), hi = xs.reduce((a, b) => Math.max(a, b));
+    return { body: { model, x: Array.from({ length: points }, (_, i) => lo + (hi - lo) * i / (points - 1)) }, cut: (said) => ({ x: said.x, y: said.y, components: said.components }) };
   }
   const componentId = (f, fn) => { const letter = (fn || 'c')[0].replace(/[^a-z]/, 'c'), used = new Set(f.model.components.map((c) => c.id)); for (let i = 1; ; i++) if (!used.has(letter + i)) return letter + i; };
 
   ASY.model = {
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
-    sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, recompute, changed, sortBy, sheetFrom, toText, unique,
+    sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, changed, sortBy, sheetFrom, toText, unique,
     graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, seriesData, resultOf,
-    fit, addFit, removeFit, fitData, componentId,
+    fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },
   };

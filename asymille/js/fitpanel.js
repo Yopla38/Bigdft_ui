@@ -34,7 +34,7 @@ window.ASY = window.ASY || {};
   function addComponent(f, fn) {
     const def = A().catalogue.functions.find((x) => x.name === fn);
     // p1, p2 for peaks, b1 for a baseline…: the letter says what the component is, the number tells them apart
-    const letter = fn === 'expression' ? 'u' : { 'Peaks': 'p', 'Baseline and polynomials': 'b', 'Exponential and power': 'e', 'Sigmoids and steps': 's', 'Oscillations': 'w', 'Physics and chemistry': 'm' }[def.family] || 'c';
+    const letter = fn === 'expression' ? 'u' : { 'Peaks': 'p', 'Baseline and polynomials': 'b', 'Exponential and power': 'e', 'Sigmoids and steps': 's', 'Oscillations': 'w', 'Physics and chemistry': 'm', 'Instrument response': 'r' }[def.family] || 'c';
     const c = { id: M.componentId(f, letter), fn, params: {} };
     if (fn === 'expression') { c.expr = 'a*x + b'; c.params = { a: { value: 1, vary: true, min: null, max: null, expr: '' }, b: { value: 0, vary: true, min: null, max: null, expr: '' } }; }
     else def.params.forEach((p) => { c.params[p.name] = { value: p.default, vary: true, min: p.min, max: p.max, expr: '' }; });
@@ -69,6 +69,7 @@ window.ASY = window.ASY || {};
 
     const s = M.sheet(f.sheet), cols = (opt) => ASY.inspect.columnOptions(s, opt), others = s ? s.columns.filter((c) => c.role === 'y' && c.id !== f.y) : [];
     const structural = { then: () => dirty(f), structural: true }, plain = { then: () => dirty(f) };
+    const through = M.hasResponse(f);
     const running = A().state.busy === 'fit:' + f.id;
     const res = f.result, byName = {};
     if (res) res.params.forEach((p) => { byName[p.name] = p; });
@@ -114,7 +115,11 @@ window.ASY = window.ASY || {};
         h('div', { class: 'cols2' }, ui.field('X', ui.sel(f, 'x', cols({ none: 'row number' }), { nullable: true, then: () => dirty(f) })), ui.field('Y', ui.sel(f, 'y', cols(), structural))),
         ui.field('Weights', ui.sel(f.options, 'weights', Object.entries(cat.weights).map(([k, v]) => [k, k === 'none' ? 'none: ' + v : v]), structural)),
         f.options.weights === 'instrumental' ? [ui.field('Error column (σ of each y)', ui.sel(f, 'yerr', cols({ none: 'choose' }), { nullable: true, then: () => dirty(f) })),
+          through ? null : ui.field('Error column of x', ui.sel(f, 'xerr', cols({ none: 'none: x is exact' }), { nullable: true, structural: true, then: () => { dirty(f); M.doc.graphs.forEach((k) => k.figure.panels.forEach((p) => p.series.forEach((r) => { if (r.kind === 'data' && r.sheet === f.sheet && r.y === f.y && f.xerr && !r.xerr) r.xerr = f.xerr; }))); } }),
+            f.xerr ? 'Each point then counts by its distance to the curve in units of its two error bars (orthogonal distance regression).' : 'Choose one when x was measured too: a fit that ignores its errors gives a slope that is too small.'),
           ui.chk(f.options, 'absolute_sigma', 'These σ are true: do not rescale the uncertainties by χ²', plain)] : null,
+        through ? ui.field('Response of the instrument', ui.sel(f, 'response', cols({ none: 'choose' }), { nullable: true, then: () => dirty(f) }),
+          'A column of this sheet: the response measured on the same x as the data, in even steps. Its scale does not matter; a constant background should be removed from it first.') : null,
         others.length ? ui.field('How many columns', ui.sel(f, 'mode', [['single', 'this column only'], ['batch', 'several columns, one after the other'], ['global', 'several columns, with shared parameters']], { then: () => { if (f.mode === 'single') { f.more = []; f.shared = []; } dirty(f); }, structural: true })) : null,
         f.mode !== 'single' ? h('div', {}, others.map((c) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.more.includes(c.id), onchange: (e) => { f.more = f.more.filter((k) => k !== c.id).concat(e.target.checked ? [c.id] : []); dirty(f); A().touch(); } }), M.label(c))),
           f.mode === 'global' ? h('small', { class: 'act-note' }, 'Open a parameter (…) to make it the same for every column.') : null) : null),
@@ -148,7 +153,9 @@ window.ASY = window.ASY || {};
         h('div', { class: 'acts' }, ui.btn('Show the components', () => { M.showFit(f, g, { components: true }); A().refresh(); }), ui.btn('Show the confidence band', () => { M.showFit(f, g, { band: true }); A().refresh(); }),
           ui.btn('Add a panel of residuals', () => { const where = M.showFit(f, g); if (where) M.showResiduals(f, where); A().refresh(); }))),
       ASY.seriespanel.section(f),
-      h('div', { class: 'acts', style: 'padding:12px 0' }, ui.btn('Delete this fit', () => { M.removeFit(f.id); A().refresh(); }, 'danger')),
+      h('div', { class: 'acts', style: 'padding:12px 0' },
+        ui.btn('Duplicate this fit', () => { const k = M.duplicateFit(f); M.log('Fit “' + k.name + '”: a copy of “' + f.name + '”, to try another model on the same data.'); A().refresh(); A().say('A copy: change its model and fit, the results will compare the two'); }, '', { title: 'The same data and the same model under another name: change the model, fit, and the results say which of the two the data support' }),
+        ui.btn('Delete this fit', () => { M.removeFit(f.id); A().refresh(); }, 'danger')),
       create,
     ];
   }
@@ -164,6 +171,7 @@ window.ASY = window.ASY || {};
     st.busy = 'fit:' + f.id; A().refresh();
     try {
       if (f.options.weights === 'instrumental' && !f.yerr) throw new Error('Instrumental weights need an error column: choose it under Data, or choose other weights.');
+      A().state.compared = null;
       if (!f.options.started) {            // nobody gave starting values yet: they are read from the data, as “Starting values from the data” does
         const d0 = M.fitData(f);
         f.model = (await api.post('asymille/model/guess', { x: d0.x, y: d0.y, model: f.model, limits: limitsOf(f) })).model; f.options.started = true;
@@ -177,13 +185,13 @@ window.ASY = window.ASY || {};
         said.datasets.forEach((d, i) => { results[columnsOf[i]] = kept(Object.assign({}, common, d)); });
       } else for (const col of columnsOf) {
         const d = M.fitData(f, col);
-        results[col] = kept(await api.post('asymille/fit', { x: d.x, y: d.y, sigma: d.sigma, model: f.model, limits: limitsOf(f), options: optionsOf(f) }));
+        results[col] = kept(await api.post('asymille/fit', Object.assign({ model: f.model, limits: limitsOf(f), options: optionsOf(f) }, d)));
       }
       f.result = results[f.y]; f.results = columnsOf.length > 1 ? results : {}; f.stale = false; M.previewOf.fit = null;
       const g = M.showFit(f, M.doc.view.main === 'graph' ? M.graph(M.doc.view.graph) : null);
       const r = f.result;
       M.log('Fit “' + f.name + '”: ' + f.model.components.map((c) => ASY.fnLabel(c)).join(' + ') + ' on ' + r.npoints + ' points' + (columnsOf.length > 1 ? ' (' + columnsOf.length + ' columns, ' + (f.mode === 'global' ? 'shared parameters' : 'one after the other') + ')' : '') +
-        ', ' + r.method_label + ', weights: ' + r.weights + '. Reduced χ² ' + ASY.fmt(r.redchi, 5) + ', R² ' + ASY.fmt(r.rsquared, 6) + (r.success ? '.' : '. It did not converge.'));
+        ', ' + r.method_label + ', weights: ' + r.weights + (r.x_errors ? ', errors of x counted' : '') + (r.response ? ', through the measured response' : '') + '. Reduced χ² ' + ASY.fmt(r.redchi, 5) + ', R² ' + ASY.fmt(r.rsquared, 6) + (r.success ? '.' : '. It did not converge.'));
       A().state.dock = 'results'; void g;
     } catch (e) { A().say(e.message, true); }
     st.busy = null; A().refresh();
@@ -197,10 +205,9 @@ window.ASY = window.ASY || {};
   /* The model at its starting values, drawn with the data: what the fit will start from. */
   async function preview(f) {
     try {
-      const d = M.fitData(f), xs = d.x.filter((v, i) => v != null && d.y[i] != null && (!f.limits || ((f.limits[0] == null || v >= f.limits[0]) && (f.limits[1] == null || v <= f.limits[1]))));
-      if (!xs.length) throw new Error('There are no data in this range.');
-      const lo = Math.min(...xs.slice(0, 1e5)), hi = Math.max(...xs.slice(0, 1e5)), grid = Array.from({ length: 400 }, (_, i) => lo + (hi - lo) * i / 399);
-      const said = await api.post('asymille/model/evaluate', { model: f.model, x: grid });
+      const ask = M.drawing(f, M.fitData(f), f.model, 400);
+      if (!ask) throw new Error('There are no data in this range.');
+      const said = ask.cut(await api.post('asymille/model/evaluate', ask.body));
       M.previewOf.fit = f.id; M.previewOf.curve = { x: said.x, y: said.y };
       if (f.result || Object.keys(f.results).length) { f.result = null; f.results = {}; f.stale = false; }
       M.showFit(f, M.doc.view.main === 'graph' ? M.graph(M.doc.view.graph) : null);
@@ -226,12 +233,13 @@ window.ASY = window.ASY || {};
   }
   /* A sentence for the methods of a paper: what was fitted, how, and how the uncertainties were obtained. */
   function methods(f, r) {
-    const cat = A().catalogue, named = (label) => (/^(Gaussian|Lorentzian|Voigt|Pseudo|Pearson|Moffat|Fano|Doniach|Hill|Arrhenius|Langmuir|Michaelis|Fermi)/.test(label) ? label : label[0].toLowerCase() + label.slice(1));
-    const names = f.model.components.map((c) => { if (c.fn === 'expression') return 'the function y = ' + c.expr; const n = named(ASY.fnLabel(c)); return (/^[aeiouAEIOU]/.test(n) ? 'an ' : 'a ') + n; });
+    const cat = A().catalogue, named = (label) => (/^(Gaussian|Lorentzian|Voigt|Pseudo|Pearson|Moffat|Fano|Doniach|Hill|Arrhenius|Langmuir|Michaelis|Fermi|Bi-Gaussian|Gompertz|Weibull|Planck|Langevin|Brillouin|Curie|Vogel)/.test(label) ? label : label[0].toLowerCase() + label.slice(1));
+    const names = f.model.components.filter((c) => c.fn !== 'response').map((c) => { if (c.fn === 'expression') return 'the function y = ' + c.expr; const n = named(ASY.fnLabel(c)); return (/^(two|three) /.test(n) ? '' : /^[aeiouAEIOU]/.test(n) ? 'an ' : 'a ') + n; });
     const model = names.length === 1 ? names[0] : 'the sum of ' + names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
-    const weights = { none: 'without weights', instrumental: 'with each point weighted by the inverse of its variance', statistical: 'with weights 1/y (counting statistics)', relative: 'with weights 1/y² (constant relative error)' }[r.weights];
+    const weights = r.x_errors ? 'with the errors of both x and y counted (orthogonal distance regression)' : { none: 'without weights', instrumental: 'with each point weighted by the inverse of its variance', statistical: 'with weights 1/y (counting statistics)', relative: 'with weights 1/y² (constant relative error)' }[r.weights];
+    const through = r.response ? ', convolved with the measured response of the instrument (iterative reconvolution)' : '';
     const errors = !r.errorbars ? 'The uncertainties could not be estimated.' : r.absolute_sigma ? 'Uncertainties are standard errors from the covariance matrix, with the measurement errors taken as absolute.' : 'Uncertainties are standard errors from the covariance matrix, scaled by the reduced χ².';
-    return 'The data (' + r.npoints + ' points' + (f.limits ? ', x from ' + ASY.fmt(r.range[0], 5) + ' to ' + ASY.fmt(r.range[1], 5) : '') + ') were fitted with ' + model + ' by non-linear least squares (' + r.method_label.replace(/,.*/, '') + ') ' + weights +
+    return 'The data (' + r.npoints + ' points' + (f.limits ? ', x from ' + ASY.fmt(r.range[0], 5) + ' to ' + ASY.fmt(r.range[1], 5) : '') + ') were fitted with ' + model + through + ' by non-linear least squares (' + r.method_label.replace(/,.*/, '') + ') ' + weights +
       ', using lmfit and SciPy through Asymille ' + cat.version + '. ' + errors + ' The fit gave a reduced χ² of ' + ASY.fmt(r.redchi, 4) + ' (R² = ' + ASY.fmt(r.rsquared, 5) + ', ' + r.nvarys + ' fitted parameters, ' + r.nfree + ' degrees of freedom).';
   }
   function curvesToSheet(f, r) {
@@ -274,10 +282,34 @@ window.ASY = window.ASY || {};
         h('div', { style: 'display:grid;gap:14px;min-width:0' },
           h('dl', { class: 'facts2' }, STATS.filter(([k]) => r[k] != null).flatMap(([k, label]) => [h('dt', {}, label), h('dd', {}, ASY.fmt(r[k], 6))]),
             h('dt', {}, 'Points fitted'), h('dd', {}, r.npoints + (r.given > r.npoints ? ' of ' + r.given : '')), h('dt', {}, 'Fitted parameters'), h('dd', {}, String(r.nvarys)), h('dt', {}, 'Degrees of freedom'), h('dd', {}, String(r.nfree)),
-            h('dt', {}, 'Method'), h('dd', { style: 'font-family:var(--sans)' }, r.method_label), h('dt', {}, 'Weights'), h('dd', { style: 'font-family:var(--sans)' }, r.weights + (r.absolute_sigma ? ', absolute' : ''))),
+            h('dt', {}, 'Method'), h('dd', { style: 'font-family:var(--sans)' }, r.method_label), h('dt', {}, 'Weights'), h('dd', { style: 'font-family:var(--sans)' }, r.weights + (r.absolute_sigma ? ', absolute' : '') + (r.x_errors ? ', errors of x counted' : '')),
+            r.response ? [h('dt', {}, 'Response'), h('dd', { style: 'font-family:var(--sans)' }, 'measured, convolved')] : null),
           r.correlations.filter((c) => Math.abs(c.value) >= 0.5).length ? h('div', {}, h('p', { class: 'label', style: 'margin-bottom:6px' }, 'Correlations above 0.5'),
             h('dl', { class: 'facts2' }, r.correlations.filter((c) => Math.abs(c.value) >= 0.5).slice(0, 12).flatMap((c) => [h('dt', {}, h('code', {}, c.a), ' · ', h('code', {}, c.b)), h('dd', {}, (c.value > 0 ? '+' : '−') + Math.abs(c.value).toFixed(3))]))) : null)),
+      which && which !== f.y ? null : comparison(f),
     ];
+  }
+  /* Which model: this fit beside the other fits of the same points. The server computes; nothing of it is kept in the project. */
+  function comparison(f) {
+    const st = A().state, peers = M.doc.fits.filter((k) => M.comparable(f, k));
+    if (!peers.length) return null;
+    const all = [f].concat(peers), key = all.map((k) => k.id + ':' + k.result.chisqr + ':' + k.result.nvarys).join('|'), got = st.compared && st.compared.key === key ? st.compared.said : null;
+    const ask = async () => {
+      try { st.compared = { key, said: await api.post('asymille/fit/compare', { fits: all.map((k) => ({ name: k.name, ndata: k.result.ndata, nvarys: k.result.nvarys, chisqr: k.result.chisqr })) }) }; }
+      catch (e) { A().say(e.message, true); }
+      A().redrawDock();
+    };
+    const crit = got ? (got.by === 'aicc' ? 'AICc' : 'AIC') : '';
+    return h('div', { class: 'compare', style: 'display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px' },
+      h('div', { class: 'res-head' }, h('h3', {}, 'Which model'), h('span', { class: 'acts' }, ui.btn(got ? 'Compare again' : 'Compare with ' + (peers.length === 1 ? '“' + peers[0].name + '”' : 'the ' + peers.length + ' other fits of these points'), ask, got ? '' : 'cta', { id: 'fit-compare' }))),
+      got ? [h('p', { class: 'say', style: 'font-size:14px;color:var(--fg)' }, got.said),
+        h('div', { style: 'overflow-x:auto' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Fit'), h('th', { class: 'num' }, 'Parameters'), h('th', { class: 'num' }, 'χ²'), h('th', { class: 'num' }, crit), h('th', { class: 'num' }, 'Δ' + crit), h('th', { class: 'num' }, 'Akaike weight'), h('th', { class: 'num' }, 'BIC'))),
+          h('tbody', {}, got.fits.map((k) => h('tr', {}, h('td', {}, k.name === got.best ? h('b', {}, k.name) : k.name), h('td', { class: 'num' }, String(k.nvarys)), h('td', { class: 'num' }, ASY.fmt(k.chisqr, 6)), h('td', { class: 'num' }, ASY.fmt(k[got.by], 6)),
+            h('td', { class: 'num' }, ASY.fmt(k.delta, 4)), h('td', { class: 'num' }, k.weight === 0 ? '0' : k.weight < 1e-4 ? k.weight.toExponential(1).replace('-', '−') : k.weight.toFixed(4)), h('td', { class: 'num' }, ASY.fmt(k.bic, 6))))))),
+        got.tests.map((t) => h('p', { class: 'say' }, t.said)),
+        h('small', { class: 'act-note' }, crit + ' and BIC are computed from χ², the number of points and the number of fitted parameters; the Akaike weight is the share of support a model has among those compared. A lower χ² alone is not a reason: more parameters always fit better.'),
+        h('div', { class: 'acts' }, ui.btn('Copy', () => copy([got.said].concat(got.fits.map((k) => [k.name, k.nvarys, k.chisqr, k[got.by], k.delta, k.weight, k.bic].join('\t')), got.tests.map((t) => t.said)).join('\n'), 'The comparison')))]
+        : h('p', { class: 'say' }, peers.length === 1 ? '“' + peers[0].name + '” was fitted to the same points with the same weights: the two can be compared.' : peers.length + ' other fits were made of the same points with the same weights: they can be compared.'));
   }
   function report() {
     const f = M.fit(M.doc.view.fit), r = f && (f.result || f.results[f.y]);

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -73,7 +74,7 @@ def test_the_same_guards_as_every_address_of_the_api(alice: Browser) -> None:
 
 def test_a_fit_an_operation_and_a_figure_for_who_is_signed_in(alice: Browser) -> None:
     catalogue = alice.get("/asymille/catalogue").json()
-    assert len(catalogue["functions"]) == 35 and len(catalogue["operations"]) == 18
+    assert len(catalogue["functions"]) == 56 and len(catalogue["operations"]) == 18
     assert catalogue["limits"]["document_bytes"] == 4 * 1024 * 1024                # ONDELETTE_MAX_BODY_BYTES: the page says how much room a project has left
     started = alice.post("/asymille/model/guess", {"x": X, "y": Y, "model": MODEL}).json()["model"]
     result = alice.post("/asymille/fit", {"x": X, "y": Y, "model": started}).json()
@@ -83,6 +84,24 @@ def test_a_fit_an_operation_and_a_figure_for_who_is_signed_in(alice: Browser) ->
     assert len(smooth["columns"][0]["values"]) == len(X)
     figure = {"width": 80, "height": 60, "font": "Arial", "background": "#ffffff", "items": [{"t": "line", "paths": [[10, 10, 200, 150]], "stroke": "#000000", "width": 1}]}
     assert alice.post("/asymille/figure", {"figure": figure, "format": "pdf"}).json()["mime"] == "application/pdf"
+    # errors on both axes, a decay through a measured response, and which of two models: the same answers as in Asymille's own tests
+    line = {"components": [{"id": "b", "fn": "linear", "params": {}}]}
+    px, py = [0.0, 0.9, 1.8, 2.6, 3.3, 4.4, 5.2, 6.1, 6.5, 7.4], [5.9, 5.4, 4.4, 4.6, 3.5, 3.7, 2.8, 2.8, 2.4, 1.5]
+    sx, sy = [w ** -0.5 for w in (1000, 1000, 500, 800, 200, 80, 60, 20, 1.8, 1.0)], [w ** -0.5 for w in (1.0, 1.8, 4.0, 8.0, 20, 20, 70, 70, 100, 500)]
+    york = alice.post("/asymille/fit", {"x": px, "y": py, "sigma": sy, "sigma_x": sx, "model": line, "options": {"weights": "instrumental"}}).json()
+    assert york["x_errors"] and {p["name"]: round(p["value"], 6) for p in york["params"]} == {"b_slope": -0.480533, "b_intercept": 5.47991}
+    t = [0.1 * i for i in range(300)]
+    pulse = [math.exp(-((v - 3) ** 2) / 0.08) for v in t]
+    total = sum(pulse)
+    decay = [sum(pulse[k] / total * 500 * math.exp(-(t[j] - t[k]) / 4.0) for k in range(j + 1)) + 2 for j in range(300)]
+    through = {"components": [{"id": "r1", "fn": "response", "params": {}}, {"id": "e1", "fn": "exp_decay", "params": {"y0": {"value": 0, "vary": False}}},
+                              {"id": "b1", "fn": "constant", "params": {}}]}
+    begun = alice.post("/asymille/model/guess", {"x": t, "y": decay, "model": through}).json()["model"]
+    seen = alice.post("/asymille/fit", {"x": t, "y": decay, "response": pulse, "model": begun}).json()
+    assert seen["response"] and {p["name"]: round(p["value"], 4) for p in seen["params"] if p["vary"]} == {"r1_shift": 0, "e1_A": 500, "e1_tau": 4, "b1_c": 2}
+    two = [{"name": "one", "ndata": 300, "nvarys": 3, "chisqr": 52.0}, {"name": "two", "ndata": 300, "nvarys": 5, "chisqr": 40.0}]
+    which = alice.post("/asymille/fit/compare", {"fits": two}).json()
+    assert which["best"] == "two" and which["tests"][0]["df"] == [2, 295]
     # what cannot be computed is said in the error shape of this server; an expression is never run as code
     refused = alice.post("/asymille/fit", {"x": X, "y": Y, "model": {"components": [{"id": "u", "fn": "expression", "expr": "__import__('os').getcwd()"}]}})
     said = refused.json()["error"]

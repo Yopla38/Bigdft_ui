@@ -37,6 +37,7 @@ from ..expressions import FUNCTIONS
 from .host import Host
 from .schemas import (
     AnalyseIn,
+    CompareIn,
     EvaluateIn,
     FigureIn,
     FitIn,
@@ -80,7 +81,8 @@ def build(host: Host) -> APIRouter:
         return {"version": __version__, "functions": functions.described(), "families": functions.FAMILIES,
                 "operations": analysis.described(), "operation_families": analysis.FAMILIES, "journals": journals.described(),
                 "methods": fitting.METHODS, "weights": fitting.WEIGHTS, "losses": list(fitting.LOSSES), "expression_functions": sorted(FUNCTIONS),
-                "fonts": figures.fonts(), "formats": figures.FORMATS, "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects, "document_bytes": host.document_bytes()}}
+                "fonts": figures.fonts(), "formats": figures.FORMATS,
+                "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects, "document_bytes": host.document_bytes()}}
 
     # ── projects ─────────────────────────────────────────────────────────────
     def owned(db: Session, owner: int, project_id: int) -> Any:
@@ -160,19 +162,24 @@ def build(host: Host) -> APIRouter:
 
     @router.post("/model/evaluate")
     def evaluate_model(body: EvaluateIn, owner: int = Owner) -> dict[str, Any]:
-        return computed(lambda: fitting.evaluate(body.model, body.x))
+        return computed(lambda: fitting.evaluate(body.model, body.x, body.response))
 
     # ── computing ────────────────────────────────────────────────────────────
     @router.post("/fit")
     def fit(body: FitIn, owner: int = Owner) -> dict[str, Any]:
         options = {**body.options.model_dump(), "timeout": host.limits.fit_timeout}
-        return computed(lambda: fitting.fit(_array(body.x), _array(body.y), body.model, sigma=_array(body.sigma), limits=body.limits, **options))
+        return computed(lambda: fitting.fit(_array(body.x), _array(body.y), body.model, sigma=_array(body.sigma), sigma_x=_array(body.sigma_x), response=_array(body.response),
+                                            limits=body.limits, **options))
 
     @router.post("/fit/global")
     def fit_global(body: GlobalFitIn, owner: int = Owner) -> dict[str, Any]:
         options = {**body.options.model_dump(), "timeout": host.limits.fit_timeout}
-        sets = [{"x": _array(d.x), "y": _array(d.y), "sigma": _array(d.sigma)} for d in body.datasets]
+        sets = [{"x": _array(d.x), "y": _array(d.y), "sigma": _array(d.sigma), "sigma_x": _array(d.sigma_x), "response": _array(d.response)} for d in body.datasets]
         return computed(lambda: fitting.fit_global(sets, body.model, body.shared, limits=body.limits, **options))
+
+    @router.post("/fit/compare")
+    def compare(body: CompareIn, owner: int = Owner) -> dict[str, Any]:
+        return computed(lambda: fitting.compare([f.model_dump() for f in body.fits]))
 
     @router.post("/analyse")
     def analyse(body: AnalyseIn, owner: int = Owner) -> dict[str, Any]:

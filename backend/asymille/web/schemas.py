@@ -69,6 +69,8 @@ class Fit(Strict):
     x: Ident | None = None
     y: Ident | None = None
     yerr: Ident | None = None
+    xerr: Ident | None = None                                                      # the errors of x, counted with those of y
+    response: Ident | None = None                                                  # the measured response of the instrument, for a model that holds one
     more: Annotated[list[Ident], Field(max_length=64)] = []                        # the other y columns fitted with the same model
     mode: Literal["single", "batch", "global"] = "single"
     shared: Annotated[list[Annotated[str, StringConstraints(max_length=40)]], Field(max_length=400)] = []
@@ -178,6 +180,8 @@ class FitIn(Strict):
     x: Numbers
     y: Numbers
     sigma: Numbers | None = None
+    sigma_x: Numbers | None = None
+    response: Numbers | None = None
     model: dict[str, JsonValue]
     limits: Limits2 = None
     options: FitOptions = FitOptions()
@@ -187,6 +191,8 @@ class Dataset(Strict):
     x: Numbers
     y: Numbers
     sigma: Numbers | None = None
+    sigma_x: Numbers | None = None
+    response: Numbers | None = None
 
 
 class GlobalFitIn(Strict):
@@ -206,7 +212,19 @@ class GuessIn(Strict):
 
 class EvaluateIn(Strict):
     model: dict[str, JsonValue]
-    x: Annotated[list[float], Field(min_length=1, max_length=20_000)]
+    x: Annotated[list[float], Field(min_length=1, max_length=200_000)]
+    response: Annotated[list[float], Field(max_length=200_000)] | None = None      # for a model that holds a measured response: on the same x, which is then the x of the data
+
+
+class Compared(Strict):
+    name: Annotated[str, StringConstraints(min_length=1, max_length=80)]
+    ndata: int = Field(ge=2, le=200_000)
+    nvarys: int = Field(ge=1, le=1000)
+    chisqr: float = Field(gt=0)
+
+
+class CompareIn(Strict):
+    fits: Annotated[list[Compared], Field(min_length=2, max_length=12)]
 
 
 class ModelText(Strict):

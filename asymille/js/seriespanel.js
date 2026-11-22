@@ -114,11 +114,9 @@ window.ASY = window.ASY || {};
     const key = sr.id + ':' + sr.current, m = sr.members.find((k) => k.sheet === sr.current), f = M.fit(sr.fit), s = M.sheet(sr.current);
     if (M.memberCurves[key] || !m || !m.result || !s || !A().catalogue) return;
     try {
-      const d = M.memberData(sr, s), xs = d.x.filter((v, i) => v != null && d.y[i] != null && (!f.limits || ((f.limits[0] == null || v >= f.limits[0]) && (f.limits[1] == null || v <= f.limits[1]))));
-      if (!xs.length) return;
-      const lo = xs.reduce((a, b) => Math.min(a, b)), hi = xs.reduce((a, b) => Math.max(a, b));
-      const said = await api.post('asymille/model/evaluate', { model: M.modelFrom(f.model, m.result.params), x: Array.from({ length: 600 }, (_, i) => lo + (hi - lo) * i / 599) });
-      M.memberCurves[key] = { x: said.x, y: said.y, components: said.components };
+      const ask = M.drawing(f, M.memberData(sr, s), M.modelFrom(f.model, m.result.params), 600);
+      if (!ask) return;
+      M.memberCurves[key] = ask.cut(await api.post('asymille/model/evaluate', ask.body));
       if (sr.current === m.sheet) A().redrawMain();
     } catch (e) { /* the table still says what was found */ }
   }

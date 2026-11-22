@@ -28,6 +28,7 @@ from typing import Any
 
 import lmfit
 import numpy as np
+from scipy import signal
 
 from . import functions
 from .expressions import FUNCTIONS, Expression, ExpressionError
@@ -142,6 +143,12 @@ class Model:
                 self.components.append(Component(cid, function.name, function.names,
                                                  {n: _setting(given.get(n), by_name[n], f"{cid}_{n}") for n in function.names}, function=function))
         self.names: list[str] = [f"{c.id}_{n}" for c in self.components for n in c.names]
+        responses = [c for c in self.components if c.function is not None and c.function.kind == "response"]
+        if len(responses) > 1:
+            raise ModelError("a model holds one instrument response at most")
+        self.response: Component | None = responses[0] if responses else None       # with it, the other components are convolved with a measured response
+        if self.response is not None and not any(self.convolved(c) for c in self.components):
+            raise ModelError("an instrument response needs something to act on: add a decay, a peak… beside it")
         allowed = set(self.names)
         for full, setting in self.settings():
             if setting.expr:
@@ -187,13 +194,34 @@ class Model:
         return {n: float(params[f"{component.id}_{n}{suffix}"].value) for n in component.names}
 
     # ------------------------------------------------------------------ computing
-    def parts(self, params: lmfit.Parameters, x: Array, suffix: str = "") -> dict[str, Array]:
-        return {c.id: c.call(x, self.values(params, c, suffix)) for c in self.components}
+    def convolved(self, c: Component) -> bool:
+        """Whether the instrument's response acts on this component: on all but the baselines, which are added as they are."""
+        return self.response is not None and c is not self.response and not (c.function is not None and c.function.kind == "baseline")
 
-    def evaluate(self, params: lmfit.Parameters, x: Array, suffix: str = "") -> Array:
-        total = np.zeros_like(x, dtype=float)
+    def parts(self, params: lmfit.Parameters, x: Array, suffix: str = "", kernel: Array | None = None) -> dict[str, Array]:
+        """Each component at ``x``.
+
+        With ``kernel`` (the response of the instrument on the same x, evenly spaced and of unit sum) the components are
+        what the instrument shows of them: f counted from the response, Σ R(x_k − shift) f(x_j − x_k) over k ≤ j.
+        """
+        if kernel is None or self.response is None:
+            return {c.id: c.call(x, self.values(params, c, suffix)) for c in self.components}
+        shift = float(params[f"{self.response.id}_shift{suffix}"].value)
+        seen = np.interp(x - shift, x, kernel, left=0.0, right=0.0)
+        since = x - x[0]
+        out: dict[str, Array] = {}
         for c in self.components:
-            total = total + c.call(x, self.values(params, c, suffix))
+            values = self.values(params, c, suffix)
+            if self.convolved(c):
+                out[c.id] = signal.fftconvolve(seen, c.call(since, values))[: len(x)]
+            else:
+                out[c.id] = c.call(x, values)
+        return out
+
+    def evaluate(self, params: lmfit.Parameters, x: Array, suffix: str = "", kernel: Array | None = None) -> Array:
+        total = np.zeros_like(x, dtype=float)
+        for part in self.parts(params, x, suffix, kernel).values():
+            total = total + part
         return total
 
     def derived(self, params: lmfit.Parameters, suffix: str = "") -> list[tuple[str, str, str, float]]:
