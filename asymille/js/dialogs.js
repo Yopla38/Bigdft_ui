@@ -20,8 +20,9 @@ window.ASY = window.ASY || {};
 
   // ------------------------------------------------------------------ bringing data in
   function importData(given) {
-    const d = dialog('Import data', true), files = [];
-    let current = 0, note = '';
+    const d = dialog('Import data', true), files = [], drawn = [];          // drawn: the graphs a project of Origin holds, to make again here from its sheets
+    let current = 0, note = '', group = 0;
+    const also = { graphs: true };
     const add = (text, name) => {
       try { const how = /^\s*<\?xml|^\s*<RSAPersist/.test(text.slice(0, 400)) ? null : ASY.importer.detect(text); files.push({ name, text, how, read: ASY.importer.read(text, name) }); }
       catch (e) { note = name + ': ' + e.message; }
@@ -34,10 +35,13 @@ window.ASY = window.ASY || {};
         try {
           const kind = ASY.files.kind(file.name, await file.slice(0, 16).arrayBuffer());
           if (!kind) { add(await file.text(), file.name); continue; }
-          for (const t of await ASY.files.read(await file.arrayBuffer(), file.name)) {
+          const tables = await ASY.files.read(await file.arrayBuffer(), file.name), from = ++group;
+          for (const t of tables) {
             if (t.text != null) add(t.text, t.name);
-            else { files.push({ name: t.name, text: null, how: null, read: Object.assign({ name: t.name }, t.read) }); if (t.said && t.said.length) note = file.name + ': ' + t.said[0]; }
+            else { files.push({ name: t.name, text: null, how: null, from, key: t.key, read: Object.assign({ name: t.name }, t.read) }); if (t.said && t.said.length) note = file.name + ': ' + t.said[0]; }
           }
+          if (tables.graphs && tables.graphs.length) drawn.push({ from, file: file.name, graphs: tables.graphs });
+          if (tables.left && tables.left.length) note = file.name + ': ' + tables.left.join('; ');
         } catch (e) { note = file.name + ': ' + (e.message || e); }
       }
       current = Math.min(before, Math.max(0, files.length - 1)); draw();
@@ -55,6 +59,9 @@ window.ASY = window.ASY || {};
         const r = f.read, cells = r.rows * r.columns.length, how = f.how;
         const set = (key, value) => { how[key] = value; reread(); };
         parts.push(files.length > 1 ? h('div', { class: 'seg', style: 'flex-wrap:wrap;max-height:120px;overflow:auto' }, files.map((x, i) => h('button', { type: 'button', 'aria-pressed': String(i === current), onclick: () => { current = i; draw(); } }, x.name))) : null,
+          drawn.length ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: also.graphs, onchange: (e) => { also.graphs = e.target.checked; } }),
+            'Also make the ' + drawn.reduce((a, k) => a + k.graphs.length, 0) + ' graph' + (drawn.reduce((a, k) => a + k.graphs.length, 0) > 1 ? 's' : '') + ' of the project: ' + drawn.flatMap((k) => k.graphs.map((g) => g.name)).slice(0, 8).join(', ') +
+            ' (curves, axes, titles, legend, texts and arrows; the sizes and the type are those of this page)') : null,
           files.length > 1 ? h('div', { class: 'acts' }, ui.btn('Leave this one out', () => { files.splice(current, 1); current = Math.min(current, files.length - 1); draw(); }, '', { title: 'It will not be imported' }), h('span', { class: 'muted' }, files.length + ' sheets will be imported')) : null,
           h('p', { class: 'say' }, h('b', {}, f.name), ': ' + r.rows + ' rows of ' + r.columns.length + ' columns' + (r.skipped ? ', ' + r.skipped + ' comment lines left out' : '') + (how ? '' : ' (' + r.meta[0] + ')') + '.'),
           how ? h('div', { class: 'cols3', style: 'gap:0 14px' },
@@ -67,12 +74,23 @@ window.ASY = window.ASY || {};
           r.meta.length && how ? h('details', {}, h('summary', { class: 'muted', style: 'cursor:pointer' }, r.meta.length + ' lines before the numbers'), h('pre', { class: 'code', style: 'max-height:140px' }, r.meta.join('\n'))) : null,
           cells > 400000 ? h('div', { class: 'notice' }, 'This is ' + cells.toLocaleString() + ' values: a project that large may be refused when it is saved. Import the columns you need.') : null,
           h('div', { class: 'acts' }, ui.btn(files.length > 1 ? 'Import ' + files.length + ' files, a sheet each' : 'Import as a new sheet', () => {
-            let last = null;
-            files.forEach((x) => { if (!x.read.rows) return; last = M.sheetFrom(x.read.name, x.read.columns, 'Imported from ' + x.name + '.'); M.log('Imported “' + x.name + '”: ' + x.read.rows + ' rows, ' + x.read.columns.length + ' columns, into the sheet “' + last.name + '”.'); });
+            let last = null, firstGraph = null;
+            const made = {};
+            files.forEach((x) => { if (!x.read.rows) return; last = M.sheetFrom(x.read.name, x.read.columns, 'Imported from ' + x.name + '.'); if (x.key) made[x.from + '/' + x.key] = last; M.log('Imported “' + x.name + '”: ' + x.read.rows + ' rows, ' + x.read.columns.length + ' columns, into the sheet “' + last.name + '”.'); });
             if (!last) { note = 'No row of numbers was found.'; return draw(); }
+            // the graphs of a project of Origin, made of the sheets that were just imported
+            const left = [];
+            if (also.graphs) drawn.forEach((k) => k.graphs.forEach((spec) => {
+              const g = M.graphFrom(spec, (table) => made[k.from + '/' + table] || null);
+              if (g) { firstGraph = firstGraph || g; M.log('Graph “' + g.name + '” made from “' + k.file + '”: ' + g.figure.panels.reduce((a, p) => a + p.series.length, 0) + ' curves' + (spec.said.length ? '. Not as in Origin: ' + spec.said.join('; ') : '') + '.'); }
+              spec.said.forEach((t) => { if (!left.includes(t)) left.push(t); });
+            }));
             const empty = M.doc.sheets.find((s) => s !== last && s.columns.every((c) => !c.values.length) && M.doc.sheets.length > 1 && !M.doc.fits.some((k) => k.sheet === s.id));
             if (empty && empty.name.startsWith('Sheet')) M.removeSheet(empty.id);
-            M.doc.view.sheet = last.id; M.doc.view.main = 'sheet'; d.el.close(); A().resetGrid(); A().refresh();
+            M.doc.view.sheet = last.id; M.doc.view.main = 'sheet';
+            if (firstGraph) { M.doc.view.graph = firstGraph.id; M.doc.view.main = 'graph'; A().state.tab.graph = 'series'; }
+            d.el.close(); A().resetGrid(); A().refresh();
+            if (left.length) A().say('Not as in Origin: ' + left.slice(0, 2).join('; ') + (left.length > 2 ? '… (the rest is under “What was done”)' : ''), true);
           }, 'cta')));
       }
       ASY.fill(d.body, ...parts.filter(Boolean));

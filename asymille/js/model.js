@@ -184,6 +184,47 @@ window.ASY = window.ASY || {};
     doc.view.graph = g.id; doc.view.main = 'graph';
     return g;
   }
+  /* A graph described from outside (read in a file of another program): panels, axes, curves that name the columns of sheets by their place, a legend, texts and arrows.
+     `sheetOf(table)` gives the sheet a table of that description became here, or nothing when it was not imported: its curves are then left. */
+  function graphFrom(spec, sheetOf) {
+    const g = addGraph(spec.name), fig = g.figure, AXIS = ['label', 'scale', 'min', 'max', 'step', 'reverse'];
+    let wide = false;
+    const axisOf = (a) => { const out = {}; AXIS.forEach((k) => { if (a && a[k] != null) out[k] = k === 'label' ? String(a[k]).slice(0, 400) : k === 'scale' ? (a[k] === 'log' ? 'log' : 'linear') : k === 'reverse' ? !!a[k] : isFinite(a[k]) ? Number(a[k]) : null; }); return out; };
+    fig.panels = [];
+    (spec.panels || []).forEach((ps) => {
+      const p = P.panel(id('p'));
+      Object.assign(p.x, axisOf(ps.x)); Object.assign(p.y, axisOf(ps.y)); if (ps.y2) p.y2 = P.axis(axisOf(ps.y2));
+      (ps.curves || []).forEach((c) => {
+        const s = sheetOf(c.table), at = (k) => (s && k != null && s.columns[k] ? s.columns[k] : null), y = at(c.y);
+        if (!y) return;
+        const x = at(c.x) || xOf(s, y), ye = at(c.yerr), xe = at(c.xerr);
+        p.series.push(P.series({ id: id('r'), kind: 'data', sheet: s.id, x: x ? x.id : null, y: y.id, yerr: ye ? ye.id : null, xerr: xe ? xe.id : null, axis: c.axis === 'y2' && p.y2 ? 'y2' : 'y',
+          type: P.TYPES[c.type] ? c.type : 'line', color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : colorFor(g, p), width: c.width > 0 ? c.width : null, dash: P.DASHES[c.dash] !== undefined ? c.dash : 'solid',
+          marker: P.MARKERS[c.marker] ? c.marker : 'circle', size: c.size > 0 ? c.size : 3.5, open: !!c.open, label: String(c.label || '').slice(0, 400), show: c.show !== false }));
+        if (!p.x.label && x) p.x.label = label(x);
+      });
+      if (!p.series.length) return;
+      // the legend goes to the corner nearest to where it stood: its size is not the same here
+      if (!ps.legend) p.legend.show = false;
+      else { const lx = ps.legend.x, ly = ps.legend.y, ew = lx < 0.3 ? 'w' : lx > 0.5 ? 'e' : '', ns = ly < 0.45 ? 'n' : ly > 0.6 ? 's' : ''; p.legend.pos = (ns + ew) || 'ne'; }
+      if (p.legend.show !== false && p.series.filter((r) => r.legend !== false).length > 8) { p.legend.pos = 'out'; wide = true; }          // many curves: the legend beside them, on a wider page
+      (ps.notes || []).forEach((n) => {
+        const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null), colour = /^#[0-9a-f]{6}$/i.test(n.color || '') ? n.color : '#000000';
+        if (n.type === 'text' && n.text && num(n.x) != null && num(n.y) != null) p.notes.push({ id: id('n'), type: 'text', coords: n.coords === 'data' ? 'data' : 'axes', x: n.x, y: n.y, text: String(n.text).slice(0, 4000), size: fig.size.label, color: colour });
+        else if ((n.type === 'arrow' || n.type === 'line') && [n.x, n.y, n.x2, n.y2].every((v) => num(v) != null)) p.notes.push({ id: id('n'), type: n.type, coords: n.coords === 'data' ? 'data' : 'axes', x: n.x, y: n.y, x2: n.x2, y2: n.y2, both: !!n.both, width: n.width > 0 ? n.width : 0.8, color: colour });
+      });
+      p.aspect = ps.aspect;
+      fig.panels.push(p);
+    });
+    if (!fig.panels.length) { removeGraph(g.id); return null; }
+    // the page: panels side by side or one under the other as they stood, and the height the first asks for its width
+    const cols = Math.max(1, Math.min(spec.cols || 1, fig.panels.length)), rowsN = Math.ceil(fig.panels.length / cols), aspect = fig.panels[0].aspect > 0 ? fig.panels[0].aspect : 0.7;
+    fig.layout.cols = cols;
+    fig.height = Math.round(ASY.clamp(fig.width / cols * aspect * rowsN, 45, 240));
+    if (wide) fig.width += 30;
+    fig.panels.forEach((p) => { delete p.aspect; });
+    return g;
+  }
   /* The curves of a fit on the graph where its data are drawn (or on the open graph). */
   function showFit(f, g, opt) {
     opt = opt || {};
@@ -636,7 +677,7 @@ window.ASY = window.ASY || {};
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, changed, sortBy, sheetFrom, toText, unique,
-    graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, refreshFitNotes, seriesData, resultOf,
+    graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, refreshFitNotes, seriesData, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },
