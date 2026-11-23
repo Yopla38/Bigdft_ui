@@ -22,7 +22,7 @@ uv run python serve.py               # run: server and client on http://localhos
 Sign in with one of the two seeded accounts, or create one. Without a HAPS the page works on the recorded BigDFT results; with the bridge started (`./bridge.sh`, see "Compute for real" below) it computes.
 
 ```bash
-uv run pytest                        # the API: accounts, sessions, CSRF, roles, isolation between users, studies, waves, Asymille's projects (38 tests)
+uv run pytest                        # the API: accounts, sessions, CSRF, roles, isolation between users, studies, waves, Asymille's projects and formats (39 tests)
 uv run mypy                          # the types of the server (strict)
 node ../tools/check_workshop.js      # the model of the page against a real BigDFT run, and a study saved and opened again
 ```

@@ -8,6 +8,7 @@ is styled, the last result of a fit, what was on screen) are kept as they are.
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -134,6 +135,27 @@ class ProjectDocument(Strict):
         if len({i.id for i in items}) != len(items):
             raise ValueError("two of them have the same id")
         return items
+
+
+class FormatIn(Strict):
+    """A format of a figure kept under a name. What it holds is the page's: the server keeps it and gives it back, to its owner only."""
+
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+    format: dict[Annotated[str, StringConstraints(max_length=40)], JsonValue]
+
+    @field_validator("format")
+    @classmethod
+    def _small(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if len(json.dumps(value)) > 8000:
+            raise ValueError("a format holds a size, a font and a few widths: this is too large to be one")
+        return value
+
+
+class FormatOut(Out):
+    id: int
+    name: str
+    format: dict[str, Any]
+    updated_at: datetime
 
 
 class ProjectCreate(Strict):

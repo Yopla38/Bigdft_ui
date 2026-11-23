@@ -100,7 +100,7 @@ h1,h2,h3,h4,p{margin:0}
 .paper{position:relative;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35);line-height:0;touch-action:none;user-select:none}
 .paper svg{display:block;width:100%;height:auto}
 .paper [data-k]{cursor:pointer}.paper.tool-pointer [data-k^="note:"],.paper.tool-pointer [data-k^="xlabel:"],.paper.tool-pointer [data-k^="ylabel:"],.paper.tool-pointer [data-k^="y2label:"],.paper.tool-pointer [data-k^="legend:"]{cursor:move}
-.paper .inplace{position:absolute;z-index:3;box-sizing:border-box;font:13px/1.35 var(--sans);padding:4px 7px;border:1px solid #0a7286;border-radius:4px;background:#fff;color:#111;box-shadow:0 4px 16px rgba(0,0,0,.25);user-select:text;outline:none}
+.paper textarea.inplace{resize:both;white-space:pre}.paper .inplace{position:absolute;z-index:3;box-sizing:border-box;font:13px/1.35 var(--sans);padding:4px 7px;border:1px solid #0a7286;border-radius:4px;background:#fff;color:#111;box-shadow:0 4px 16px rgba(0,0,0,.25);user-select:text;outline:none}
 .paper.tool-zoom,.paper.tool-range{cursor:crosshair}.paper.tool-pan{cursor:grab}.paper.tool-zoom [data-k],.paper.tool-range [data-k],.paper.tool-pan [data-k]{cursor:inherit}
 .band{position:absolute;border:1px solid #0a7286;background:rgba(10,114,134,.14);pointer-events:none}
 .paper-note{position:absolute;left:0;right:0;top:calc(100% + 8px);text-align:center;font:12px/1.3 var(--sans);color:var(--fg-3)}
@@ -286,6 +286,7 @@ dialog.dlg::backdrop{background:color-mix(in srgb,var(--bg) 62%,transparent);bac
 <script src="js/util.js"></script>
 <script src="js/expr.js"></script>
 <script src="js/importer.js"></script>
+<script src="js/files.js"></script>
 <script src="js/plot.js"></script>
 <script src="js/model.js"></script>
 <script src="js/store.js"></script>

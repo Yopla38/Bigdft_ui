@@ -9,6 +9,7 @@ from typing import Any
 @dataclass(frozen=True)
 class Limits:
     max_projects: int = 200             # projects one account may hold
+    max_formats: int = 60               # formats of a figure one account may keep
     fit_timeout: float = 30.0           # seconds a fit may take before it is stopped
     busy_wait: float = 20.0             # seconds a calculation waits for a free place before the server says it is busy
     workers: int = 4                    # calculations made at the same time, all accounts together

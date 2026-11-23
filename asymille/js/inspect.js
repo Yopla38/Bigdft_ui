@@ -159,6 +159,51 @@ window.ASY = window.ASY || {};
     fig.tick.len = Math.max(2, preset.tick_size * 0.4);
     fig.panels.forEach((p) => p.series.forEach((r) => { if (r.type !== 'band') r.size = Math.max(1.5, preset.tick_size * 0.4); }));
   }
+  /* The formats a person kept: on the server, under their account, when there is one; in this browser otherwise. Read once, then kept in step here. */
+  const kept = { list: null, loading: false, error: '', name: '', pick: '' };
+  const onServer = () => !!A().catalogue;
+  async function loadFormats() {
+    if (kept.loading) return;
+    kept.loading = true;
+    try { kept.list = onServer() ? await window.OND.api.get('asymille/formats') : JSON.parse(localStorage.getItem('asymille.formats') || '[]'); kept.error = ''; }
+    catch (e) { kept.list = []; kept.error = e.message || String(e); }
+    kept.loading = false; A().redrawAll();
+  }
+  async function keepFormat(fig) {
+    const name = kept.name.trim().slice(0, 60);
+    if (!name) return A().say('Give the format a name', true);
+    const format = P.formatOf(fig), had = kept.list.find((f) => f.name === name);
+    try {
+      let row;
+      if (onServer()) row = await window.OND.api.put('asymille/formats', { name, format });
+      else { row = { id: had ? had.id : 'l' + Date.now(), name, format }; localStorage.setItem('asymille.formats', JSON.stringify(kept.list.filter((f) => f.name !== name).concat([row]))); }
+      kept.list = kept.list.filter((f) => f.name !== name).concat([row]).sort((a, b) => a.name.localeCompare(b.name));
+      kept.pick = String(row.id); kept.name = '';
+      A().say(had ? '“' + name + '” now holds the format of this graph' : 'Kept as “' + name + '”'); A().redrawAll();
+    } catch (e) { A().say(e.message, true); }
+  }
+  async function dropFormat(f) {
+    try {
+      if (onServer()) await window.OND.api.del('asymille/formats/' + f.id);
+      kept.list = kept.list.filter((k) => k !== f); kept.pick = '';
+      if (!onServer()) localStorage.setItem('asymille.formats', JSON.stringify(kept.list));
+      A().say('“' + f.name + '” is no longer kept'); A().redrawAll();
+    } catch (e) { A().say(e.message, true); }
+  }
+  function formatsSection(g) {
+    const fig = g.figure;
+    if (kept.list === null) { loadFormats(); return ui.sec('My formats', '…', false, h('p', { class: 'say' }, 'Reading the formats you kept…')); }
+    const chosen = kept.list.find((f) => String(f.id) === kept.pick) || kept.list[0] || null;
+    return ui.sec('My formats', kept.list.length ? kept.list.length + ' kept' : 'none yet', kept.list.length > 0,
+      h('p', { class: 'say' }, 'The size, the type, the lines, the ticks and the colours of a graph, kept under a name of yours and given to other graphs' + (onServer() ? ', in any of your projects.' : '. Without a server they are kept in this browser only.')),
+      kept.error ? h('div', { class: 'notice' }, 'The formats could not be read: ' + kept.error) : null,
+      kept.list.length ? [ui.field('Give this graph the format', ui.sel(kept, 'pick', kept.list.map((f) => [String(f.id), f.name + (f.format && f.format.width ? ' · ' + f.format.width + ' × ' + f.format.height + ' mm' : '')]), { then: () => {}, structural: true })),
+        h('div', { class: 'acts' }, ui.btn('Apply it', () => { P.applyFormat(fig, chosen.format); M.log('Graph “' + g.name + '”: the format “' + chosen.name + '” was given to it.'); A().refresh(); A().say('“' + chosen.name + '” applied'); }, 'cta', { id: 'format-apply' }),
+          ui.btn('Delete it', () => dropFormat(chosen), 'danger', { title: 'It is no longer kept. The graphs that took it stay as they are' }))] : null,
+      ui.field('Keep the format of this graph as', h('input', { class: 'inp', type: 'text', id: 'format-name', maxlength: 60, value: kept.name, placeholder: 'e.g. PRB single column, my thesis', oninput: (e) => { kept.name = e.target.value; },
+        onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); keepFormat(fig); } } }), 'A name already used is given the format of this graph.'),
+      h('div', { class: 'acts' }, ui.btn('Keep it', () => keepFormat(fig), '', { id: 'format-keep' })));
+  }
   function pageTab(g) {
     const fig = g.figure, cat = A().catalogue, presets = cat ? cat.journals.presets : [], chosen = { id: fig.journal || '' };
     const groups = []; presets.forEach((p) => { let grp = groups.find((x) => x.group === p.publisher); if (!grp) groups.push(grp = { group: p.publisher, options: [] }); grp.options.push([p.id, p.label + ' · ' + p.width + ' mm']); });
@@ -169,6 +214,7 @@ window.ASY = window.ASY || {};
         ui.field('Size and type of', ui.sel(chosen, 'id', [['', 'my own size']].concat(groups), { then: () => { const p = presets.find((x) => x.id === chosen.id); if (p) applyJournal(fig, p); else fig.journal = null; }, structural: true }),
           preset ? (preset.note ? preset.note + ' ' : '') + 'Page of the journal: ' + preset.max_height + ' mm high at most. Widths are ' + cat.journals.checked + ': check the journal’s guide before submitting.' : 'Sets the width, the type and the line widths. Your data and your choices of colours stay.'),
         h('div', { class: 'cols2' }, ui.field('Width (mm)', ui.num(fig, 'width', { min: 20, max: 500, then: () => { fig.journal = fig.journal && preset && preset.width === fig.width ? fig.journal : null; }, structural: true })), ui.field('Height (mm)', ui.num(fig, 'height', { min: 15, max: 500, structural: true })))),
+      formatsSection(g),
       ui.sec('Type', fig.font, false,
         ui.field('Font', ui.sel(fig, 'font', (cat ? cat.fonts.map((f) => [f.name, f.name]) : [['Arial', 'Arial']]), { structural: true }), fontNote && fontNote.note ? 'In a file made by the server: ' + fontNote.note : null),
         h('div', { class: 'cols3' }, ui.field('Axis titles (pt)', ui.num(fig.size, 'label', { min: 3, max: 40 })), ui.field('Numbers (pt)', ui.num(fig.size, 'tick', { min: 3, max: 40 })), ui.field('Legend (pt)', ui.num(fig.size, 'legend', { min: 3, max: 40 }))),
@@ -190,8 +236,8 @@ window.ASY = window.ASY || {};
           fig.panels.length > 1 ? ui.btn('Remove the last panel', () => { fig.panels.pop(); if (fig.panels.length === 1) { fig.layout.ratios = []; fig.layout.shareX = false; } A().refresh(); }, 'danger') : null)),
       ui.sec('Style', 'from one graph to another', false,
         h('p', { class: 'say' }, 'The size, the type, the lines and the ticks of this graph can be given to another, so that the figures of a paper look alike.'),
-        h('div', { class: 'acts' }, ui.btn('Copy the style', () => { A().style = JSON.parse(JSON.stringify({ width: fig.width, height: fig.height, font: fig.font, background: fig.background, journal: fig.journal, palette: fig.palette, size: fig.size, stroke: fig.stroke, tick: fig.tick, frame: fig.frame })); try { localStorage.setItem('asymille.style', JSON.stringify(A().style)); } catch (e) { /* kept for this visit only */ } A().say('Style copied: open another graph and paste it'); }),
-          ui.btn('Paste the style', () => { let style = A().style; try { style = style || JSON.parse(localStorage.getItem('asymille.style')); } catch (e) { /* none */ } if (!style) return A().say('Copy the style of a graph first', true); Object.assign(fig, JSON.parse(JSON.stringify(style))); A().refresh(); }))),
+        h('div', { class: 'acts' }, ui.btn('Copy the style', () => { A().style = P.formatOf(fig); try { localStorage.setItem('asymille.style', JSON.stringify(A().style)); } catch (e) { /* kept for this visit only */ } A().say('Style copied: open another graph and paste it'); }),
+          ui.btn('Paste the style', () => { let style = A().style; try { style = style || JSON.parse(localStorage.getItem('asymille.style')); } catch (e) { /* none */ } if (!style) return A().say('Copy the style of a graph first', true); P.applyFormat(fig, style); A().refresh(); }))),
     ];
   }
 
@@ -214,7 +260,9 @@ window.ASY = window.ASY || {};
       h('p', { class: 'empty' }, panel.notes.length ? 'Drag one on the figure to move it; an arrow or a line is also taken by one of its ends. Double-click a text to rewrite it.' : 'A text, an arrow, a line marking a value, a highlighted range. Each can then be dragged on the figure.'),
       panel.notes.map((n) => h('div', { class: 'act' + (st.note === n.id ? ' on' : '') },
         h('div', { class: 'act-head' }, h('b', {}, NOTES[n.type]), ui.btn('Remove', () => { panel.notes = panel.notes.filter((k) => k !== n); A().refresh(); }, 'danger')),
-        n.type === 'text' ? [ui.field('Text', ui.txt(n, 'text'), 'E_{F}, cm^{-1}, \\alpha …'), h('div', { class: 'cols3' }, ui.field('x', ui.num(n, 'x')), ui.field('y', ui.num(n, 'y')), ui.field('Size (pt)', ui.num(n, 'size', { min: 3, max: 60 }))),
+        n.type === 'text' ? [ui.field('Text', (() => { const el = ui.txt(n, 'text', { area: true, max: 4000, structural: true, then: () => { n.fit = null; n.of = null; } }); el.rows = Math.min(12, Math.max(2, String(n.text || '').split('\n').length)); return el; })(),
+          n.fit && M.fit(n.fit) ? 'Written by the fit “' + M.fit(n.fit).name + '”, and written again each time it is run. Rewritten here, it is yours and the fit leaves it alone.' : 'E_{F}, cm^{-1}, \\alpha … One line under the other.'),
+          h('div', { class: 'cols3' }, ui.field('x', ui.num(n, 'x')), ui.field('y', ui.num(n, 'y')), ui.field('Size (pt)', ui.num(n, 'size', { min: 3, max: 60 }))), ui.chk(n, 'frame', 'In a frame, on white'),
           h('div', { class: 'cols2' }, ui.field('Placed in', ui.sel(n, 'coords', [['data', 'the units of the axes'], ['axes', 'fractions of the panel']], { then: () => { if (hp) { if (n.coords === 'axes') { n.x = 0.05; n.y = 0.92; } else { n.x = mid(hp.xr, 0.1); n.y = mid(hp.yr, 0.9); } } }, structural: true })), ui.chk(n, 'bold', 'Bold'))] : null,
         n.type === 'arrow' || n.type === 'line' ? h('div', { class: 'cols2' }, ui.field('From x', ui.num(n, 'x')), ui.field('From y', ui.num(n, 'y')), ui.field(n.type === 'arrow' ? 'To x (the head)' : 'To x', ui.num(n, 'x2')), ui.field('To y', ui.num(n, 'y2'))) : null,
         n.type === 'arrow' ? h('div', { class: 'cols2' }, ui.field('Size of the head (pt)', ui.num(n, 'head', { nullable: true, min: 1, max: 60, placeholder: 'from the width' })), ui.chk(n, 'both', 'A head at each end')) : null,
@@ -290,5 +338,5 @@ window.ASY = window.ASY || {};
     ];
   }
 
-  ASY.inspect = { seriesTab, axesTab, pageTab, notesTab, columnTab, analyseTab, seriesName, applyJournal, columnOptions, sheetOptions };
+  ASY.inspect = { seriesTab, axesTab, pageTab, notesTab, columnTab, analyseTab, seriesName, applyJournal, columnOptions, sheetOptions, forgetFormats: () => { kept.list = null; kept.pick = ''; } };
 })(window.ASY);

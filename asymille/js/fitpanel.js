@@ -159,8 +159,12 @@ window.ASY = window.ASY || {};
   }
 
   /* What the graph shows of this fit beside its curve. Each button says what it will do: show when it is not there, take away when it is. */
+  const plainOf = (c) => { const def = fnOf(c); return def ? def.plain : null; };
+  const WRITTEN = [['equation', 'Equation', 'The equation of the model, one line per component'], ['params', 'Parameters', 'Each parameter with its standard error'],
+    ['derived', 'Derived', 'Width, height, half-life…: what is computed from the parameters'], ['stats', 'χ² and R²', 'Reduced χ² and R²']];
   function onGraph(f, g) {
-    const on = M.shownOf(f), curves = f.model.components.filter((c) => c.fn !== 'response').length;
+    const on = M.shownOf(f), parts = f.model.components.filter((c) => c.fn !== 'response'), curves = parts.length;
+    const written = M.fitNote(f), of = written && written.note.of ? written.note.of : {};
     const flip = (what, show, hide) => () => { if (on[what]) hide(); else show(); A().refresh(); };
     return h('div', { class: 'on-graph', style: 'padding:10px 0;border-bottom:1px solid var(--line);display:grid;gap:6px' },
       h('p', { class: 'label' }, 'On the graph'),
@@ -170,7 +174,17 @@ window.ASY = window.ASY || {};
         ui.btn(on.band ? 'Hide the confidence band' : 'Show the confidence band', flip('band', () => M.showFit(f, g, { band: true }), () => M.hideFit(f, 'band')), on.band ? 'on' : '',
           { 'aria-pressed': String(on.band), title: 'Where the fitted curve lies with the confidence chosen under “How it is fitted”' }),
         ui.btn(on.residuals ? 'Remove the panel of residuals' : 'Add a panel of residuals', flip('residuals', () => { const where = M.showFit(f, g); if (where) M.showResiduals(f, where); }, () => M.hideResiduals(f)), on.residuals ? 'on' : '',
-          { 'aria-pressed': String(on.residuals), title: 'Data minus fit, in a panel under the data' })),
+          { 'aria-pressed': String(on.residuals), title: 'Data minus fit, in a panel under the data' }),
+        ui.btn(on.total ? 'Hide the curve of the fit' : 'Show the curve of the fit', () => { if (!on.total) M.showFit(f, g); M.drawTotal(f, !on.total); A().refresh(); }, '',
+          { 'aria-pressed': String(on.total), title: 'The sum of the components. Hidden, it stays hidden when the fit is run again' })),
+      // one by one: the components whose curve is drawn
+      curves > 1 ? h('div', { class: 'acts' }, h('span', { class: 'muted' }, 'Components drawn'),
+        parts.map((c) => { const shown = on.parts.includes(c.id); return ui.btn(c.id + ' · ' + ASY.fnLabel(c), () => { if (shown) M.hideFit(f, 'components', c.id); else M.showFit(f, g, { components: [c.id] }); A().refresh(); }, '',
+          { 'aria-pressed': String(shown), title: shown ? 'Take the curve of this component off the graph' : 'Draw the curve of this component' }); })) : null,
+      // what the fit writes on the graph: a text that follows the fit, and is dragged like any text
+      h('div', { class: 'acts' }, h('span', { class: 'muted' }, 'Written on the graph'),
+        WRITTEN.map(([key, label, title]) => ui.btn(label, () => { M.writeFit(f, g, Object.assign({}, of, { [key]: !of[key] }), plainOf); A().refresh(); }, '', { 'aria-pressed': String(!!of[key]), title }))),
+      written ? h('small', { class: 'act-note' }, 'A text on the graph, written again at each fit. Drag it; its size, a frame and its colour are under Notes. Rewrite it there and it is yours: the fit no longer changes it.') : null,
       (on.components || on.band || on.residuals) && !(f.result || Object.keys(f.results).length) ? h('small', { class: 'act-note' }, 'They are drawn once the fit is run: a model that is only previewed has no components, band or residuals yet.') : null);
   }
 
@@ -202,6 +216,7 @@ window.ASY = window.ASY || {};
         results[col] = kept(await api.post('asymille/fit', Object.assign({ model: f.model, limits: limitsOf(f), options: optionsOf(f) }, d)));
       }
       f.result = results[f.y]; f.results = columnsOf.length > 1 ? results : {}; f.stale = false; M.previewOf.fit = null;
+      M.refreshFitNotes(f, plainOf);
       const g = M.showFit(f, M.doc.view.main === 'graph' ? M.graph(M.doc.view.graph) : null);
       const r = f.result;
       M.log('Fit “' + f.name + '”: ' + f.model.components.map((c) => ASY.fnLabel(c)).join(' + ') + ' on ' + r.npoints + ' points' + (columnsOf.length > 1 ? ' (' + columnsOf.length + ' columns, ' + (f.mode === 'global' ? 'shared parameters' : 'one after the other') + ')' : '') +

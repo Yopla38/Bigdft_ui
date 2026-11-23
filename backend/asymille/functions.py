@@ -17,6 +17,7 @@ derived quantities agree with the curve.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -29,6 +30,77 @@ Array = Any
 KB = 8.617333262e-5          # Boltzmann constant, eV/K
 S2PI = math.sqrt(2 * math.pi)
 FWHM_G = 2 * math.sqrt(2 * math.log(2))           # FWHM of a Gaussian, in units of sigma
+
+
+# ── an equation on one line ──────────────────────────────────────────────────
+def _group(text: str, start: int) -> tuple[str, int]:
+    """What stands between the brace at ``start`` and the one that closes it, and where that one is."""
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start + 1:i], i
+    raise ValueError(f"a brace is not closed in {text}")
+
+
+_SYMBOL = r"(?:\\[A-Za-z]+|[A-Za-z])(?:_\{?[A-Za-z0-9]+\}?)?"
+_ONE = re.compile(rf"^(?:[0-9.]+|{_SYMBOL})$")                        # a number, or one symbol: what needs no parentheses under a fraction bar
+_PRODUCT = re.compile(rf"^[0-9.]*(?:{_SYMBOL})?$")                    # a number times one symbol: what needs none above it
+
+
+def _factor(text: str, alone: re.Pattern[str]) -> str:
+    text = text.strip()
+    return text if alone.match(text) else "(" + text + ")"
+
+
+def one_line(tex: str) -> str:
+    """An equation of the registry on one line, in the markup the page draws on a figure (``x_c``, ``^{2}``, ``\\sigma``).
+
+    The page raises or lowers one run of characters and nothing more, so a fraction is written a/b, e^{…} is written
+    exp(…), a root √(…). What this cannot write (cases, sums, integrals) is given by hand, as ``plain=`` of the entry.
+    """
+    t = tex
+    for junk in (r"\left", r"\right", r"\!", r"\,", r"\;"):
+        t = t.replace(junk, "")
+    for old, new in ((r"\quad", "  "), (r"\tfrac12", "1/2"), (r"\tfrac", r"\frac"), (r"\varphi", r"\phi"), (r"\ge ", "≥ "), (r"\le ", "≤ "), (r"\cdot", "·"), (r"\mathrm{d}", "d")):
+        t = t.replace(old, new)
+    t = re.sub(r"\\mathrm\{e\}\^", "exp", t)                         # e^{…} → exp{…}: the group becomes (…) below
+    t = re.sub(r"\\(?:operatorname|mathrm)\{([A-Za-z]+)\}", r"\1", t)
+    t = re.sub(r"\\(ln|sin|cos|tan|exp|coth|tanh|arctan|log|erfc|erf)(?![A-Za-z])", r"\1", t)
+    out, i = "", 0
+    while i < len(t):
+        if t.startswith(r"\frac{", i):
+            top, j = _group(t, i + 5)
+            bottom, k = _group(t, j + 1)
+            before, after = out.rstrip()[-1:], t[k + 1:].lstrip()[:1]
+            if before and (before.isalnum() or before in ")]}"):          # a factor stands before the fraction: a dot between them, so that a/b c/d is not read a/(b c)/d
+                out = out.rstrip() + " · "
+            out += _factor(one_line(top), _PRODUCT) + "/" + _factor(one_line(bottom), _ONE)
+            i = k + 1
+            if after and (after.isalnum() or after in "\\(["):
+                out += " · "
+                i += len(t[i:]) - len(t[i:].lstrip())
+        elif t.startswith(r"\sqrt{", i):
+            inner, j = _group(t, i + 5)
+            out += "√" + _factor(one_line(inner), _ONE)
+            i = j + 1
+        elif t.startswith("exp{", i):
+            inner, j = _group(t, i + 3)
+            out += "exp(" + one_line(inner) + ")"
+            i = j + 1
+        elif t[i] in "^_" and i + 1 < len(t) and t[i + 1] == "{":
+            inner, j = _group(t, i + 1)
+            inner = one_line(inner)
+            # deeper than one run of characters: written on the line, in parentheses
+            out += t[i] + "{" + inner + "}" if not re.search(r"[\^_{}]", inner) else ("^(" + inner + ")" if t[i] == "^" else "_" + inner)
+            i = j + 1
+        else:
+            out += t[i]
+            i += 1
+    return re.sub(r"  +", "  ", out).replace("-", "−").strip()
 
 
 @dataclass(frozen=True)
@@ -61,14 +133,17 @@ class Function:
     derived: tuple[Derived, ...] = ()
     from_peak: Callable[[float, float, float], dict[str, float]] | None = None      # (center, height, fwhm) → starting values
     guess: Callable[[Array, Array], dict[str, float]] | None = None                 # (x, y) → starting values
+    plain: str = ""                                             # the equation on one line, for a figure; written from `tex` when not given
     names: tuple[str, ...] = field(init=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "names", tuple(p.name for p in self.params))
+        if not self.plain:
+            object.__setattr__(self, "plain", one_line(self.tex))
 
     def described(self) -> dict[str, Any]:
         """What the page shows of it."""
-        return {"name": self.name, "label": self.label, "family": self.family, "kind": self.kind, "tex": self.tex, "note": self.note,
+        return {"name": self.name, "label": self.label, "family": self.family, "kind": self.kind, "tex": self.tex, "plain": self.plain, "note": self.note,
                 "params": [{"name": p.name, "label": p.label, "default": p.default, "min": p.min, "max": p.max, "symbol": p.symbol or p.name}
                            for p in self.params],
                 "derived": [{"name": d.name, "label": d.label} for d in self.derived]}
@@ -220,6 +295,7 @@ F("split_lorentzian", "Split Lorentzian", "Peaks",
   r"y = \frac{2A}{\pi(\sigma + \sigma_r)} \begin{cases} \sigma^2 / [(x-x_c)^2 + \sigma^2] & x < x_c \\ \sigma_r^2 / [(x-x_c)^2 + \sigma_r^2] & x \ge x_c \end{cases}",
   [AREA, CENTER, Param("sigma", "half width on the left", 1.0, min=0.0, symbol=r"\sigma"),
    Param("sigma_r", "half width on the right", 1.0, min=0.0, symbol=r"\sigma_r")], shapes.split_lorentzian, kind="peak",
+  plain=r"y = 2A/(\pi(\sigma + \sigma_r)) · s^2/((x − x_c)^2 + s^2),  s = \sigma for x < x_c, \sigma_r for x ≥ x_c",
   note="An asymmetric peak: a Lorentzian with one width on each side.",
   derived=(Derived("fwhm", "full width at half maximum", lambda p: p["sigma"] + p["sigma_r"]),
            Derived("height", "height of the maximum", lambda p: 2 * p["amplitude"] / (math.pi * (p["sigma"] + p["sigma_r"])))),
@@ -305,7 +381,8 @@ F("exp_decay2", "Two exponential decays", "Exponential and power", r"y = y_0 + A
   derived=(Derived("tau_mean", "amplitude-weighted mean time constant", lambda p: (p["A1"] * p["tau1"] + p["A2"] * p["tau2"]) / (p["A1"] + p["A2"])),))
 F("exp_decay3", "Three exponential decays", "Exponential and power", r"y = y_0 + \sum_{i=1}^{3} A_i\, \mathrm{e}^{-x/\tau_i}",
   [Y0] + [p for i in (1, 2, 3) for p in (Param(f"A{i}", f"amplitude {i}", 1.0, symbol=f"A_{i}"), Param(f"tau{i}", f"time constant {i}", 10.0 ** (i - 1), min=0.0, symbol=rf"\tau_{i}"))],
-  lambda x, y0=0.0, **p: y0 + sum(p[f"A{i}"] * _exp(x, p[f"tau{i}"]) for i in (1, 2, 3)), guess=_guess_decay_n(3))
+  lambda x, y0=0.0, **p: y0 + sum(p[f"A{i}"] * _exp(x, p[f"tau{i}"]) for i in (1, 2, 3)), guess=_guess_decay_n(3),
+  plain=r"y = y_0 + A_1 exp(−x/\tau_1) + A_2 exp(−x/\tau_2) + A_3 exp(−x/\tau_3)")
 F("exp_rise", "Exponential rise to a plateau", "Exponential and power", r"y = y_0 + A\left(1 - \mathrm{e}^{-x/\tau}\right)",
   [Param("y0", "value at x = 0", 0.0, symbol="y_0"), Param("A", "height of the rise", 1.0), TAU],
   lambda x, y0=0.0, A=1.0, tau=1.0: y0 + A * (1 - _exp(x, tau)),
@@ -405,6 +482,7 @@ F("split_gaussian", "Bi-Gaussian (two half widths)", "Peaks",
   r"y = \frac{2A}{\sqrt{2\pi}\,(\sigma + \sigma_r)} \begin{cases} \mathrm{e}^{-(x-x_c)^2 / 2\sigma^2} & x < x_c \\ \mathrm{e}^{-(x-x_c)^2 / 2\sigma_r^2} & x \ge x_c \end{cases}",
   [AREA, CENTER, Param("sigma", "width on the left", 1.0, min=0.0, symbol=r"\sigma"), Param("sigma_r", "width on the right", 1.0, min=0.0, symbol=r"\sigma_r")],
   _split_gaussian, kind="peak", note="An asymmetric peak: a Gaussian with one width on each side.",
+  plain=r"y = 2A/(√(2\pi)(\sigma + \sigma_r)) exp(−(x − x_c)^2 / 2s^2),  s = \sigma for x < x_c, \sigma_r for x ≥ x_c",
   derived=(Derived("fwhm", "full width at half maximum", lambda p: FWHM_G / 2 * (p["sigma"] + p["sigma_r"])),
            Derived("height", "height of the maximum", lambda p: 2 * p["amplitude"] / (S2PI * (p["sigma"] + p["sigma_r"])))),
   from_peak=lambda c, h, w: {"center": c, "sigma": w / FWHM_G, "sigma_r": w / FWHM_G, "amplitude": h * w / FWHM_G * S2PI})
@@ -469,6 +547,7 @@ F("decay2_gauss", "Two exponential decays after a Gaussian pulse", "Exponential 
    Param("A2", "second amplitude", 1.0, symbol="A_2"), Param("tau2", "second time constant", 10.0, min=0.0, symbol=r"\tau_2"), *PULSE],
   lambda x, y0=0.0, A1=1.0, tau1=1.0, A2=1.0, tau2=10.0, x0=0.0, sigma=0.1:
       y0 + A1 * _after_pulse(np.asarray(x, float) - x0, tau1, sigma) + A2 * _after_pulse(np.asarray(x, float) - x0, tau2, sigma), guess=_guess_pulse2,
+  plain=r"y = y_0 + d(A_1, \tau_1) + d(A_2, \tau_2),  d(A, \tau) = (A/2) exp(\sigma^2/(2\tau^2) − (x − x_0)/\tau) erfc((\sigma/\tau − (x − x_0)/\sigma)/√2)",
   derived=(Derived("tau_mean", "amplitude-weighted mean time constant", lambda p: (p["A1"] * p["tau1"] + p["A2"] * p["tau2"]) / (p["A1"] + p["A2"])),
            Derived("pulse_fwhm", "full width at half maximum of the pulse", lambda p: FWHM_G * p["sigma"])))
 F("power_offset", "Power law with an offset", "Exponential and power", r"y = y_0 + A\, x^{k}", [Param("y0", "offset: the value at x = 0", 0.0, symbol="y_0"), Param("A", "amplitude", 1.0), Param("k", "exponent", 1.0)],
@@ -587,6 +666,7 @@ F("fermi_gaussian", "Fermi–Dirac edge seen through a Gaussian resolution", "Ph
   [Param("amplitude", "level below the edge", 1.0, symbol="A"), Param("center", "position of the edge", 0.0, symbol=r"\mu"),
    Param("kt", "thermal width, in the unit of x", 0.025, min=0.0, symbol="k_B T"), Param("sigma", "resolution (standard deviation)", 0.05, min=0.0, symbol=r"\sigma")],
   _fermi_gaussian, guess=lambda x, y: (lambda s: {"amplitude": max(s["low"], s["high"]), "center": s["x0"]})(_guess_sigmoid(x, y)),
+  plain=r"y = A/(exp((x − \mu)/k_B T) + 1), seen through a Gaussian of width \sigma",
   note="The Fermi edge of a metal in photoemission. The temperature and the resolution widen the edge in nearly the same way: hold the one that is known.",
   derived=(Derived("resolution_fwhm", "resolution, full width at half maximum", lambda p: FWHM_G * p["sigma"]),))
 F("planck", "Planck's law (black body)", "Physics and chemistry", r"y = \frac{A}{x^{5} \left(\mathrm{e}^{c_2 / xT} - 1\right)}",
@@ -637,6 +717,7 @@ F("lorentzian_derivative", "Derivative of a Lorentzian (resonance line)", "Physi
 # ── what the instrument does to all of it ────────────────────────────────────
 F("response", "Measured instrument response", "Instrument response", r"y(x_j) = \sum_{k \le j} R(x_k - \delta)\, f(x_j - x_k),\quad \sum_k R(x_k) = 1",
   [Param("shift", "shift of the response along x", 0.0, symbol=r"\delta")], lambda x, shift=0.0: np.zeros_like(np.asarray(x, float)), kind="response",
+  plain=r"convolved with the measured response, shifted by \delta",
   note="With this in a model, the other components are convolved with a response measured on the same x as the data (a column chosen under Data): "
        "each is counted from the response, as f(x − x′), and is nothing before it. Baselines are added afterwards, as they are. "
        "For decays measured by photon counting, where the pulse is not short against the decay.")

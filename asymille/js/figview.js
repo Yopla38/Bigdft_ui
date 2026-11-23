@@ -30,7 +30,7 @@ window.ASY = window.ASY || {};
       if (f && f.limits) list.hit.panels.forEach((hp) => {
         const p = fig.panels[hp.index];
         if (!p.series.some((r) => (r.kind === 'data' && r.sheet === f.sheet && r.y === f.y) || (r.kind === 'fit' && r.fit === f.id))) return;
-        const b = hp.box, cut = (lo, hi) => { const a = ASY.clamp(lo, b.x, b.x + b.w), c = ASY.clamp(hi, b.x, b.x + b.w); if (c - a > 0.2) items.push({ t: 'poly', pts: [a, b.y, c, b.y, c, b.y + b.h, a, b.y + b.h], fill: '#000000', opacity: 0.07 }); };
+        const b = hp.box, cut = (lo, hi) => { const a = ASY.clamp(lo, b.x, b.x + b.w), c = ASY.clamp(hi, b.x, b.x + b.w); if (c - a > 0.2) items.push({ t: 'poly', pts: [a, b.y, c, b.y, c, b.y + b.h, a, b.y + b.h], fill: '#000000', opacity: 0.07, ghost: true }); };
         const [lo, hi] = f.limits, xa = lo == null ? null : hp.sx.map(lo), xb = hi == null ? null : hp.sx.map(hi);
         const left = Math.min(xa == null ? Infinity : xa, xb == null ? Infinity : xb), right = Math.max(xa == null ? -Infinity : xa, xb == null ? -Infinity : xb);
         if (isFinite(left)) cut(b.x, Math.min(left, right)); if (isFinite(right)) cut(Math.max(left, right), b.x + b.w);
@@ -61,11 +61,14 @@ window.ASY = window.ASY || {};
     const ends = (n, hp) => [toPt(n, hp, n.x, n.y), toPt(n, hp, n.x2, n.y2)];
     /* Rewrite a text where it is: a field over it, kept by Enter or by leaving it, given up by Escape. `at` is in pixels of the paper. */
     function edit(at, value, commit) {
-      const input = h('input', { class: 'inplace', type: 'text', value, spellcheck: 'false', 'aria-label': 'The text' }), width = Math.max(160, at.w || 0);
+      // several lines: a larger field, where Enter makes a new line and leaving it (or Ctrl+Enter) keeps the text
+      const lines = String(value).split('\n'), many = lines.length > 1;
+      const input = many ? h('textarea', { class: 'inplace', value, spellcheck: 'false', rows: Math.min(14, lines.length + 1), 'aria-label': 'The text' }) : h('input', { class: 'inplace', type: 'text', value, spellcheck: 'false', 'aria-label': 'The text' });
+      const width = Math.max(many ? 320 : 160, at.w || 0);
       Object.assign(input.style, { left: ASY.clamp(at.x, 0, Math.max(0, paper.clientWidth - width)) + 'px', top: Math.max(0, at.y) + 'px', width: width + 'px' });
       let over = false;
       const close = (keep) => { if (over) return; over = true; const v = input.value; input.remove(); if (keep && v !== value) { commit(v); ctx.changed(); } };
-      input.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') close(true); else if (ev.key === 'Escape') close(false); });
+      input.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter' && (!many || ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); close(true); } else if (ev.key === 'Escape') close(false); });
       input.addEventListener('blur', () => close(true));
       paper.append(input); input.focus(); input.select();
     }
@@ -182,7 +185,7 @@ window.ASY = window.ASY || {};
         const p = fig.panels.find((q) => q.id === id);
         if (p && AXIS_OF[kind] && p[AXIS_OF[kind]]) return edit(over, p[AXIS_OF[kind]].label || '', (v) => { p[AXIS_OF[kind]].label = v.trim().slice(0, 400); });
         if (p && kind === 'title') return edit(over, p.title || '', (v) => { p.title = v.trim().slice(0, 400); });
-        if (kind === 'note') { let note = null; fig.panels.forEach((q) => q.notes.forEach((n) => { if (n.id === id) note = n; })); if (note && note.type === 'text') return edit(over, note.text || '', (v) => { note.text = v.slice(0, 400); }); if (note) return; }
+        if (kind === 'note') { let note = null; fig.panels.forEach((q) => q.notes.forEach((n) => { if (n.id === id) note = n; })); if (note && note.type === 'text') return edit(over, note.text || '', (v) => { note.text = v.slice(0, 4000); note.fit = null; note.of = null; }); if (note) return; }
       }
       if (!hp) return;
       const p = panelOf(hp);

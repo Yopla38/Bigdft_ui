@@ -26,20 +26,36 @@ window.ASY = window.ASY || {};
       try { const how = /^\s*<\?xml|^\s*<RSAPersist/.test(text.slice(0, 400)) ? null : ASY.importer.detect(text); files.push({ name, text, how, read: ASY.importer.read(text, name) }); }
       catch (e) { note = name + ': ' + e.message; }
     };
-    const take = async (list) => { for (const file of list) { if (file.size > 80e6) { note = file.name + ' is larger than 80 MB'; continue; } add(await file.text(), file.name); } current = Math.max(0, files.length - list.length); draw(); };
+    /* A spreadsheet or an Origin project holds several sheets: each comes as a file of its own, to look at and to leave out. */
+    const take = async (list) => {
+      const before = files.length;
+      for (const file of list) {
+        if (file.size > 80e6) { note = file.name + ' is larger than 80 MB'; continue; }
+        try {
+          const kind = ASY.files.kind(file.name, await file.slice(0, 16).arrayBuffer());
+          if (!kind) { add(await file.text(), file.name); continue; }
+          for (const t of await ASY.files.read(await file.arrayBuffer(), file.name)) {
+            if (t.text != null) add(t.text, t.name);
+            else { files.push({ name: t.name, text: null, how: null, read: Object.assign({ name: t.name }, t.read) }); if (t.said && t.said.length) note = file.name + ': ' + t.said[0]; }
+          }
+        } catch (e) { note = file.name + ': ' + (e.message || e); }
+      }
+      current = Math.min(before, Math.max(0, files.length - 1)); draw();
+    };
     const reread = () => { const f = files[current]; try { f.read = Object.assign(ASY.importer.parse(f.text, f.how), { name: f.read.name }); note = ''; } catch (e) { note = e.message; } draw(); };
-    const input = h('input', { type: 'file', multiple: true, hidden: true, accept: '.txt,.dat,.csv,.tsv,.asc,.xy,.prn,.Specan,.xml,text/*', onchange: (e) => take([...e.target.files]) });
+    const input = h('input', { type: 'file', multiple: true, hidden: true, accept: '.txt,.dat,.csv,.tsv,.asc,.xy,.prn,.Specan,.xml,.xlsx,.xlsm,.ods,.opj,.org,text/*', onchange: (e) => take([...e.target.files]) });
     function draw() {
       const f = files[current];
       const drop = h('div', { class: 'drop', ondragover: (e) => { e.preventDefault(); drop.classList.add('over'); }, ondragleave: () => drop.classList.remove('over'), ondrop: (e) => { e.preventDefault(); drop.classList.remove('over'); take([...e.dataTransfer.files]); } },
-        h('p', {}, files.length ? 'Drop more files here' : 'Drop files here: text with columns of numbers (.txt, .dat, .csv…), or a Tektronix .Specan spectrum'),
+        h('p', {}, files.length ? 'Drop more files here' : 'Drop files here: text with columns of numbers (.txt, .dat, .csv…), a spreadsheet (.xlsx, .ods), a project of Origin (.opj), or a Tektronix .Specan spectrum'),
         h('div', { class: 'acts' }, ui.btn('Choose files', () => input.click(), files.length ? '' : 'cta'), ui.btn('Paste from the clipboard', async () => { try { const text = await navigator.clipboard.readText(); if (!text.trim()) throw new Error('empty'); add(text, 'Pasted data'); current = files.length - 1; draw(); } catch (e) { note = 'The clipboard holds no text, or the browser did not allow reading it: click a cell of a sheet and press Ctrl+V instead.'; draw(); } })),
         h('p', { class: 'muted' }, 'A file is read here, in the browser. The separator, the decimal mark and the lines of heading are detected; you can correct them before importing.'));
       const parts = [drop, input, note ? h('div', { class: 'notice err' }, note) : null];
       if (f) {
         const r = f.read, cells = r.rows * r.columns.length, how = f.how;
         const set = (key, value) => { how[key] = value; reread(); };
-        parts.push(files.length > 1 ? h('div', { class: 'seg' }, files.map((x, i) => h('button', { type: 'button', 'aria-pressed': String(i === current), onclick: () => { current = i; draw(); } }, x.name))) : null,
+        parts.push(files.length > 1 ? h('div', { class: 'seg', style: 'flex-wrap:wrap;max-height:120px;overflow:auto' }, files.map((x, i) => h('button', { type: 'button', 'aria-pressed': String(i === current), onclick: () => { current = i; draw(); } }, x.name))) : null,
+          files.length > 1 ? h('div', { class: 'acts' }, ui.btn('Leave this one out', () => { files.splice(current, 1); current = Math.min(current, files.length - 1); draw(); }, '', { title: 'It will not be imported' }), h('span', { class: 'muted' }, files.length + ' sheets will be imported')) : null,
           h('p', { class: 'say' }, h('b', {}, f.name), ': ' + r.rows + ' rows of ' + r.columns.length + ' columns' + (r.skipped ? ', ' + r.skipped + ' comment lines left out' : '') + (how ? '' : ' (' + r.meta[0] + ')') + '.'),
           how ? h('div', { class: 'cols3', style: 'gap:0 14px' },
             ui.field('Columns are separated by', h('select', { class: 'inp', onchange: (e) => set('separator', e.target.value) }, [['tab', 'tabs'], ['semicolon', 'semicolons'], ['comma', 'commas'], ['space', 'blanks']].map(([v, l]) => h('option', { value: v, selected: how.separator === v }, l)))),

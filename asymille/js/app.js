@@ -246,6 +246,7 @@ window.ASY = window.ASY || {};
     const signedIn = async () => {
       try { app.catalogue = await api.get('asymille/catalogue'); } catch (e) { app.catalogue = null; app.say('The server did not give its list of functions: ' + e.message, true); }
       await T.start();
+      I.forgetFormats();                 // the formats kept are those of who is signed in now
       app.resetGrid(); app.refresh();
     };
     // plugged into Ondelette, the account menu leads to its workshops, as theirs lead here

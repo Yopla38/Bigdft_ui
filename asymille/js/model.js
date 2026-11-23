@@ -212,7 +212,7 @@ window.ASY = window.ASY || {};
         panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: 'total', column: col, type: 'line', color: base || ['#c81d25', '#0072b2', '#009e73', '#cc79a7', '#e69f00'].find((c) => !taken.includes(c)) || '#c81d25', marker: 'none', label: others.length ? P.literal(f.name) : '' }));
       }
       if (opt.band && !has('band', col)) panel.series.unshift(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: 'band', column: col, type: 'band', color: base || '#c81d25', legend: false }));
-      if (opt.components && (f.model.components || []).length > 1) f.model.components.forEach((c, i) => { if (c.fn !== 'response' && !has(c.id, col)) panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: c.id, column: col, type: 'line', dash: 'dash', width: 0.8, color: P.PALETTES.okabe[(i + 2) % 8], marker: 'none', legend: k === 0 })); });
+      if (opt.components && (f.model.components || []).length > 1) f.model.components.forEach((c, i) => { if (c.fn !== 'response' && (opt.components === true || opt.components.includes(c.id)) && !has(c.id, col)) panel.series.push(P.series({ id: id('r'), kind: 'fit', fit: f.id, part: c.id, column: col, type: 'line', dash: 'dash', width: 0.8, color: P.PALETTES.okabe[(i + 2) % 8], marker: 'none', legend: k === 0 })); });
     });
     return g;
   }
@@ -229,14 +229,69 @@ window.ASY = window.ASY || {};
   }
   /* What of a fit the graphs show beside its curve: the curves of its components, its band, a panel of what it leaves. */
   const OF_THE_FIT = ['total', 'band', 'prediction', 'residuals'];
-  const isPart = { components: (r) => !OF_THE_FIT.includes(r.part), band: (r) => r.part === 'band', residuals: (r) => r.part === 'residuals' };
+  const isPart = { components: (r) => !OF_THE_FIT.includes(r.part), band: (r) => r.part === 'band', residuals: (r) => r.part === 'residuals', total: (r) => r.part === 'total' };
   function shownOf(f) {
     const all = doc.graphs.flatMap((g) => g.figure.panels.flatMap((p) => p.series)).filter((r) => r.kind === 'fit' && r.fit === f.id);
-    return { components: all.some(isPart.components), band: all.some(isPart.band), residuals: all.some(isPart.residuals) };
+    return { components: all.some(isPart.components), band: all.some(isPart.band), residuals: all.some(isPart.residuals), total: all.some((r) => isPart.total(r) && r.show !== false),
+      parts: [...new Set(all.filter(isPart.components).map((r) => r.part))] };         // which components have their curve on a graph
   }
-  /* Take the components or the band of a fit off the graphs; its curve stays. */
-  function hideFit(f, what) {
-    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'fit' && r.fit === f.id && isPart[what](r))); }));
+  /* Take the components (all, or the one named) or the band of a fit off the graphs; its curve stays. */
+  function hideFit(f, what, part) {
+    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'fit' && r.fit === f.id && isPart[what](r) && (!part || r.part === part))); }));
+  }
+  /* The curve of the fit itself is hidden, not taken away: it keeps its colour and its place, and a new fit does not bring it back. */
+  function drawTotal(f, on) {
+    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => p.series.forEach((r) => { if (r.kind === 'fit' && r.fit === f.id && r.part === 'total') r.show = !!on; })));
+  }
+
+  // ------------------------------------------------------------------ a fit written on its graph
+  /* An expression typed by a person, in the markup a figure draws: a·b, x^{2}, \tau_{1}. */
+  function shownExpression(text) {
+    return String(text).replace(/[A-Za-z][A-Za-z0-9_]*/g, (name) => {
+      const m = /^([A-Za-z]+?)(?:_?(\d+)|_([A-Za-z]))?$/.exec(name), index = m ? m[2] || m[3] : null;
+      if (m && P.GREEK[m[1]]) return '\\' + m[1] + (index ? '_{' + index + '}' : '{}');
+      return /^[A-Za-z]+_[A-Za-z0-9]$/.test(name) ? name : name.replace(/_/g, '\\_');           // x_0 is written with its index; a longer name keeps its underscore
+    }).replace(/\^\s*(-?[A-Za-z0-9.]+)/g, '^{$1}').replace(/\^(?!\{)/g, '\\^').replace(/\*/g, '·').replace(/-/g, '−');
+  }
+  /* What a fit says of itself in a few lines: its equation, the parameters found, what is derived from them, how good it is.
+     `plainOf(component)` gives the equation of a function of the registry on one line (the catalogue holds it). */
+  function fitText(f, of, plainOf) {
+    const r = f.result || f.results[f.y] || null, comps = f.model.components.filter((c) => c.fn !== 'response'), many = comps.length > 1, lines = [];
+    const named = (id, name) => P.literal(many ? id + ' ' + name : name), num = (v, e) => (e != null ? ASY.pm(v, e) : ASY.fmt(v, 6));
+    if (of.equation) {
+      if (many) lines.push('y = ' + comps.map((c) => 'y_{' + c.id + '}').join(' + '));
+      comps.forEach((c) => { const eq = c.fn === 'expression' ? 'y = ' + shownExpression(c.expr || '') : (plainOf && plainOf(c)) || 'y = ' + P.literal(c.fn); lines.push(many ? eq.replace(/^y(?= =)/, 'y_{' + c.id + '}') : eq); });
+      const through = f.model.components.find((c) => c.fn === 'response');
+      if (through) lines.push((plainOf && plainOf(through)) || 'convolved with the measured response');
+    }
+    if (r && of.params) r.params.forEach((q) => { if (q.value != null) lines.push(named(q.component, q.param) + ' = ' + num(q.value, q.vary || q.tied ? q.stderr : null) + (q.vary || q.tied ? '' : ' (held)')); });
+    if (r && of.derived) r.derived.forEach((d) => { if (d.value != null) lines.push(named(d.component, d.name.slice(d.component.length + 1)) + ' = ' + num(d.value, d.stderr)); });
+    if (r && of.stats) { if (r.redchi != null) lines.push('reduced \\chi^2 = ' + ASY.fmt(r.redchi, 4)); if (r.rsquared != null) lines.push('R^2 = ' + ASY.fmt(r.rsquared, 5)); }
+    return lines.join('\n');
+  }
+  /* The text a fit wrote on a graph: a note that names the fit, written again at each fit until a person rewrites it. */
+  function fitNote(f) {
+    for (const g of doc.graphs) for (const p of g.figure.panels) { const n = p.notes.find((k) => k.type === 'text' && k.fit === f.id); if (n) return { note: n, panel: p, graph: g }; }
+    return null;
+  }
+  /* Write on the graph what `of` names (equation, params, derived, stats), or take the text away when it names nothing. */
+  function writeFit(f, g, of, plainOf) {
+    const had = fitNote(f), any = of.equation || of.params || of.derived || of.stats;
+    if (!any) { if (had) had.panel.notes = had.panel.notes.filter((n) => n !== had.note); return null; }
+    let n = had ? had.note : null;
+    if (!n) {
+      g = g || doc.graphs.find((k) => k.figure.panels.some((p) => p.series.some((r) => r.kind === 'data' && r.sheet === f.sheet && r.y === f.y))) || graph(doc.view.graph);
+      if (!g) return null;
+      const panel = g.figure.panels.find((p) => p.series.some((r) => r.kind === 'data' && r.sheet === f.sheet && r.y === f.y)) || g.figure.panels[0];
+      n = { id: id('n'), type: 'text', fit: f.id, of: {}, text: '', color: '#000000', x: 0.04, y: 0.93, coords: 'axes', size: g.figure.size.legend, frame: false };
+      panel.notes.push(n);
+    }
+    n.of = { equation: !!of.equation, params: !!of.params, derived: !!of.derived, stats: !!of.stats };
+    n.text = fitText(f, n.of, plainOf);
+    return n;
+  }
+  function refreshFitNotes(f, plainOf) {
+    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => p.notes.forEach((n) => { if (n.type === 'text' && n.fit === f.id && n.of) n.text = fitText(f, n.of, plainOf); })));
   }
   /* Take the panel of residuals away, and give the figure back the height it had before it. */
   function hideResiduals(f) {
@@ -311,6 +366,7 @@ window.ASY = window.ASY || {};
   function removeFit(fid) {
     doc.fits = doc.fits.filter((f) => f.id !== fid);
     doc.series = doc.series.filter((sr) => sr.fit !== fid);
+    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => p.notes.forEach((n) => { if (n.fit === fid) { n.fit = null; n.of = null; } })));          // what the fit wrote stays, as a text of the person's
     doc.graphs.forEach((g) => { g.figure.panels = g.figure.panels.filter((p) => !(p.series.length && p.series.every((r) => r.kind === 'fit' && r.fit === fid && r.part === 'residuals')) || g.figure.panels.length === 1); g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'fit' && r.fit === fid)); }); if (g.figure.panels.length === 1) { g.figure.layout.ratios = []; g.figure.layout.shareX = false; } });
     if (doc.view.fit === fid) doc.view.fit = doc.fits.length ? doc.fits[doc.fits.length - 1].id : null;
   }
@@ -580,7 +636,7 @@ window.ASY = window.ASY || {};
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, changed, sortBy, sheetFrom, toText, unique,
-    graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, shownOf, hideFit, hideResiduals, seriesData, resultOf,
+    graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, refreshFitNotes, seriesData, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },

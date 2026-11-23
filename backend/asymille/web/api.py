@@ -7,12 +7,16 @@
     PUT    …/asymille/projects/ID            {document, revision}: 409 when it was changed elsewhere since that revision
     DELETE …/asymille/projects/ID
     POST   …/asymille/projects/ID/duplicate  a copy
+    GET    …/asymille/formats                the formats of a figure this person kept, by name
+    PUT    …/asymille/formats                {name, format}: kept under that name, in place of one of the same name
+    DELETE …/asymille/formats/ID
     POST   …/asymille/model/parse            {text} → a model read from its one-line notation
     POST   …/asymille/model/write            {model} → {text}
     POST   …/asymille/model/guess            {x, y, model, limits} → the model, with starting values read from the data
     POST   …/asymille/model/evaluate         {model, x} → the model and its components at their starting values
     POST   …/asymille/fit                    {x, y, sigma, model, limits, options} → the result of a fit
     POST   …/asymille/fit/global             {datasets, model, shared, limits, options} → several datasets, shared parameters
+    POST   …/asymille/fit/compare            {fits} → which of several models of the same points the data support
     POST   …/asymille/analyse                {operation, args, x, y, x2, y2} → new columns, numbers, a sentence
     POST   …/asymille/figure                 {figure, format, dpi} → the figure as a file (PDF, EPS, SVG, PNG, TIFF), in base64
 
@@ -41,6 +45,8 @@ from .schemas import (
     EvaluateIn,
     FigureIn,
     FitIn,
+    FormatIn,
+    FormatOut,
     GlobalFitIn,
     GuessIn,
     ModelIn,
@@ -51,7 +57,7 @@ from .schemas import (
     ProjectSummary,
     ProjectUpdate,
 )
-from .tables import define, now
+from .tables import define, formats, now
 
 REFUSALS = (fitting.FitError, models.ModelError, analysis.AnalysisError, figures.FigureError)
 
@@ -59,6 +65,7 @@ REFUSALS = (fitting.FitError, models.ModelError, analysis.AnalysisError, figures
 def build(host: Host) -> APIRouter:
     """The router of Asymille for this host. Include it in the host's API router, behind its guards."""
     Project = define(host)
+    Format = formats(host)
     router = APIRouter(prefix="/asymille", tags=["asymille"])
     places = threading.BoundedSemaphore(host.limits.workers)
     Db = Depends(host.db)
@@ -82,7 +89,7 @@ def build(host: Host) -> APIRouter:
                 "operations": analysis.described(), "operation_families": analysis.FAMILIES, "journals": journals.described(),
                 "methods": fitting.METHODS, "weights": fitting.WEIGHTS, "losses": list(fitting.LOSSES), "expression_functions": sorted(FUNCTIONS),
                 "fonts": figures.fonts(), "formats": figures.FORMATS,
-                "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects, "document_bytes": host.document_bytes()}}
+                "limits": {"points": fitting.MAX_POINTS, "components": models.MAX_COMPONENTS, "projects": host.limits.max_projects, "formats": host.limits.max_formats, "document_bytes": host.document_bytes()}}
 
     # ── projects ─────────────────────────────────────────────────────────────
     def owned(db: Session, owner: int, project_id: int) -> Any:
@@ -146,6 +153,35 @@ def build(host: Host) -> APIRouter:
         db.add(copy)
         db.commit()
         return copy
+
+    # ── the formats a person kept for their figures ──────────────────────────
+    @router.get("/formats", response_model=list[FormatOut])
+    def list_formats(owner: int = Owner, db: Session = Db) -> list[Any]:
+        return list(db.scalars(select(Format).where(Format.owner_id == owner).order_by(Format.name, Format.id)))
+
+    @router.put("/formats", response_model=FormatOut)
+    def keep_format(body: FormatIn, owner: int = Owner, db: Session = Db) -> Any:
+        """Keep a format under a name; a format of that name is replaced."""
+        kept = db.scalar(select(Format).where(Format.owner_id == owner, Format.name == body.name))
+        if kept is None:
+            count = db.scalar(select(func.count()).select_from(Format).where(Format.owner_id == owner)) or 0
+            if count >= host.limits.max_formats:
+                raise host.error(409, "too_many_formats", f"an account keeps {host.limits.max_formats} formats at most: delete one first")
+            kept = Format(owner_id=owner, name=body.name, format=body.format)
+            db.add(kept)
+        else:
+            kept.format = body.format
+            kept.updated_at = now()
+        db.commit()
+        return kept
+
+    @router.delete("/formats/{format_id}", status_code=204)
+    def delete_format(format_id: int, owner: int = Owner, db: Session = Db) -> None:
+        kept = db.scalar(select(Format).where(Format.id == format_id, Format.owner_id == owner))
+        if kept is None:
+            raise host.error(404, "not_found", "this format does not exist, or is not yours")
+        db.delete(kept)
+        db.commit()
 
     # ── models ───────────────────────────────────────────────────────────────
     @router.post("/model/parse")

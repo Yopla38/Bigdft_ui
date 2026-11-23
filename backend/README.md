@@ -37,7 +37,7 @@ That is enough to sign in, build studies and find them again: without a HAPS the
 Check it:
 
 ```bash
-uv run pytest                            # the API: accounts, sessions, roles, isolation between users, studies, waves, Asymille's projects (38 tests, no HAPS needed)
+uv run pytest                            # the API: accounts, sessions, roles, isolation between users, studies, waves, Asymille's projects and formats (39 tests, no HAPS needed)
 uv run mypy                              # the types of app/ (strict)
 uv run ruff check app tests serve.py migrations
 ONDELETTE_EMAIL=… ONDELETTE_PASSWORD=… node ../tools/check_live.js    # the whole chain, computing: 18 BigDFT runs, a few minutes
@@ -72,7 +72,7 @@ Everything is under `/api`, JSON in and out, and described at `/api/docs` outsid
 | `GET info` · `POST structure` | is the HAPS ready; a molecule by its name, from PubChem |
 | `GET guides` · `POST guides` · `DELETE guides/ID` | guided paths of the first workshop: read by members, published by administrators |
 | `GET admin/users` · `POST admin/users` · `PATCH admin/users/ID` · `DELETE admin/users/ID` · `GET admin/jobs` | administrators only |
-| `asymille/catalogue` · `asymille/projects…` · `asymille/model/…` · `asymille/fit` · `asymille/fit/global` · `asymille/fit/compare` · `asymille/analyse` · `asymille/figure` | Asymille: the projects of whoever is signed in, fits, operations on a curve, a figure as a file. Listed in `asymille/web/api.py` |
+| `asymille/catalogue` · `asymille/projects…` · `asymille/formats…` · `asymille/model/…` · `asymille/fit` · `asymille/fit/global` · `asymille/fit/compare` · `asymille/analyse` · `asymille/figure` | Asymille: the projects of whoever is signed in, fits, operations on a curve, a figure as a file. Listed in `asymille/web/api.py` |
 | `GET health` | for whatever watches the service |
 
 What is sent is validated by Pydantic models that refuse any field they do not describe (`app/schemas.py`).
@@ -206,8 +206,8 @@ Asymille knows nothing of this server. `app/asymille.py` gives it what it asks f
 |---|---|
 | Accounts | The page loads this server's own `shared/api.js` and `shared/account.js`: the same sign-in, the same profile menu. Its API answers 401 to nobody |
 | Guards | Its router is included in the `/api` router: every address passes `csrf_guard` |
-| Isolation | Its one table, `asymille_projects`, carries `owner_id` (`ondelete="CASCADE"`) and is read with it in the query itself: a project of someone else answers 404. Deleting an account deletes its projects |
-| Database | The table is defined on `models.Base` and created by the migration `0002` |
+| Isolation | Its two tables, `asymille_projects` and `asymille_formats` (the formats of a figure a person kept under a name), carry `owner_id` (`ondelete="CASCADE"`) and are read with it in the query itself: a project or a format of someone else answers 404. Deleting an account deletes both |
+| Database | The tables are defined on `models.Base` and created by the migrations `0002` and `0003` |
 | What it accepts | A project is validated by a model that refuses unknown fields. An expression typed by a person (a custom fit function, a tie between parameters) is walked as a syntax tree, never evaluated: `test_asymille.py` sends `__import__('os')` through it |
 | Errors | Its refusals leave as `AppError`, in the one error shape |
 

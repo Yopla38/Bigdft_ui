@@ -50,16 +50,36 @@ def test_a_project_is_kept_under_its_owner_and_nobody_else_sees_it(alice: Browse
     assert alice.delete(f"/asymille/projects/{project['id']}").status_code == 204 and alice.get("/asymille/projects").json() == []
 
 
-def test_an_account_that_is_deleted_takes_its_projects_with_it(alice: Browser, admin: Browser) -> None:
+FORMAT = {"width": 86, "height": 64, "font": "Helvetica", "journal": None, "size": {"label": 8, "tick": 7}, "stroke": {"axis": 0.5, "line": 1},
+          "tick": {"dir": "in", "len": 3, "mirror": True}, "frame": "box"}
+
+
+def test_a_format_of_a_figure_is_kept_under_its_owner_and_nobody_else_sees_it(alice: Browser, bob: Browser) -> None:
+    kept = alice.put("/asymille/formats", {"name": "PRB single column", "format": FORMAT})
+    assert kept.status_code == 200 and kept.json()["format"] == FORMAT
+    assert alice.put("/asymille/formats", {"name": "PRB single column", "format": dict(FORMAT, width=90)}).json()["id"] == kept.json()["id"]            # the same name: replaced
+    assert [(f["name"], f["format"]["width"]) for f in alice.get("/asymille/formats").json()] == [("PRB single column", 90)]
+    # for another account it does not exist; a name of theirs may be the same
+    assert bob.get("/asymille/formats").json() == [] and bob.delete(f"/asymille/formats/{kept.json()['id']}").status_code == 404
+    assert bob.put("/asymille/formats", {"name": "PRB single column", "format": {"width": 60}}).json()["id"] != kept.json()["id"]
+    assert alice.get("/asymille/formats").json()[0]["format"]["width"] == 90
+    assert alice.put("/asymille/formats", {"name": "x", "format": {}, "owner_id": bob.user["id"]}).status_code == 422          # nothing says whose it is but the session
+    assert alice.delete(f"/asymille/formats/{kept.json()['id']}").status_code == 204
+    assert alice.get("/asymille/formats").json() == [] and len(bob.get("/asymille/formats").json()) == 1
+
+
+def test_an_account_that_is_deleted_takes_its_projects_and_its_formats_with_it(alice: Browser, admin: Browser) -> None:
     from sqlalchemy import func, select
 
-    from app.asymille import Project
+    from app.asymille import Project, host
     from app.db import get_sessionmaker
+    from asymille.web.tables import formats
 
     assert alice.post("/asymille/projects", {"document": document()}).status_code == 201
+    assert alice.put("/asymille/formats", {"name": "Thesis", "format": FORMAT}).status_code == 200
     assert admin.delete(f"/admin/users/{alice.user['id']}").status_code == 204
     with get_sessionmaker()() as db:
-        assert db.scalar(select(func.count()).select_from(Project)) == 0
+        assert db.scalar(select(func.count()).select_from(Project)) == 0 and db.scalar(select(func.count()).select_from(formats(host))) == 0
 
 
 def test_the_same_guards_as_every_address_of_the_api(alice: Browser) -> None:
@@ -116,7 +136,7 @@ def test_the_page_is_served_as_the_workshops_are(browser: Browser) -> None:
     assert f'<script nonce="{nonce}">' in page.text and "<script>" not in page.text
     assert browser.http.get("/asymille", follow_redirects=False).status_code == 308
     scripts = [line.split('"')[1] for line in page.text.splitlines() if line.startswith('<script src="') and "://" not in line]
-    assert len(scripts) == 15 and scripts[:2] == ["shared/api.js", "shared/account.js"]
+    assert len(scripts) == 16 and scripts[:2] == ["shared/api.js", "shared/account.js"] and "js/files.js" in scripts
     for script in scripts:
         assert browser.http.get("/asymille/" + script).status_code == 200, script
     # signing in is this server's: the page loads the account script of the workshops, not Asymille's stand-in
