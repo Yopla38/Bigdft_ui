@@ -145,7 +145,9 @@ window.ASY = window.ASY || {};
     /* How one axis draws its ticks and numbers: what it says itself, or what the page says for all of them. */
     const style = (ax) => { const dir = ax.tickDir || T.dir, len = ax.tickLen != null ? ax.tickLen : T.len;
       return { out: dir === 'out' || dir === 'both' ? len : 0, in: dir === 'in' || dir === 'both' ? len : 0, w: ax.tickWidth != null ? ax.tickWidth : fig.stroke.axis,
-        size: ax.tickSize != null ? ax.tickSize : S.tick, color: ax.color || '#000000', minor: ax.minor !== false }; };
+        size: ax.tickSize != null ? ax.tickSize : S.tick, color: ax.color || '#000000', minor: ax.minor !== false,
+        // its title: a size of its own, bold or italic, and moved from its place by a hand (labelDx, labelDy, in points)
+        title: ax.labelSize != null ? ax.labelSize : S.label, weight: ax.labelBold ? 'bold' : undefined, slant: ax.labelItalic ? 'italic' : undefined, dx: +ax.labelDx || 0, dy: +ax.labelDy || 0 }; };
     const text = (x, y, content, size, more) => { const r = Array.isArray(content) ? content : runs(content); if (r.length) items.push(Object.assign({ t: 'text', x: R(x), y: R(y), runs: r, size, anchor: 'middle', color: '#000000' }, more || {})); };
     const line = (paths, stroke, width, more) => { if (paths.length) items.push(Object.assign({ t: 'line', paths: paths.map((p) => p.map(R)), stroke, width }, more || {})); };
     items.push({ t: 'poly', pts: [0, 0, R(W), 0, R(W), R(H), 0, R(H)], fill: fig.background || '#ffffff', k: 'page' });
@@ -184,11 +186,11 @@ window.ASY = window.ASY || {};
       const listed = e.p.legend && e.p.legend.show !== false && e.p.legend.pos === 'out' ? e.drawn.filter((q) => q.s.legend !== false && q.s.type !== 'band').map((q) => q.s.label || q.d.label || '') : [];
       const beside = listed.length ? 6 + S.legend * 3.75 + Math.max(...listed.map((t) => textWidth(t, S.legend))) : 0;
       return {
-        l: 2 + (e.p.y.label ? S.label * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out,
-        r: (ty2 ? 2 + (e.p.y2.label ? S.label * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5)) + beside,
+        l: 2 + (e.p.y.label ? ay.title * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out,
+        r: (ty2 ? 2 + (e.p.y2.label ? ay2.title * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5)) + beside,
         beside,
         t: 3 + (e.p.title ? (e.p.titleSize || S.title) * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? ay.size * 1.25 : 0) + S.tick * 0.4,
-        b: e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? S.label * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out,
+        b: e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? ax.title * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out,
         wy: wide(ty, ay.size), wy2: ty2 ? wide(ty2, ay2.size) : 0,
       };
     });
@@ -277,7 +279,11 @@ window.ASY = window.ASY || {};
           const [ax, ay] = at(nt.x, nt.y), [bx, by] = at(nt.x2, nt.y2);
           if ([ax, ay, bx, by].every(isFinite)) {
             line([[ax, ay, bx, by]], c, w, { dash, k });
-            if (nt.type === 'arrow') { const ang = Math.atan2(by - ay, bx - ax), L = 4 + w * 2, spread = 0.42; items.push({ t: 'poly', pts: [bx, by, bx - L * Math.cos(ang - spread), by - L * Math.sin(ang - spread), bx - L * Math.cos(ang + spread), by - L * Math.sin(ang + spread)].map(R), fill: c, k }); }
+            if (nt.type === 'arrow') {
+              const L = nt.head > 0 ? nt.head : 4 + w * 2, spread = 0.42;
+              const head = (tx, ty, ang) => items.push({ t: 'poly', pts: [tx, ty, tx - L * Math.cos(ang - spread), ty - L * Math.sin(ang - spread), tx - L * Math.cos(ang + spread), ty - L * Math.sin(ang + spread)].map(R), fill: c, k });
+              head(bx, by, Math.atan2(by - ay, bx - ax)); if (nt.both) head(ax, ay, Math.atan2(ay - by, ax - bx));
+            }
           }
         } else if (nt.type === 'text') { const [X, Y] = at(nt.x, nt.y); if (isFinite(X) && isFinite(Y)) text(X, Y, nt.text || '', nt.size || S.label, { anchor: nt.anchor || 'start', color: c, k, weight: nt.bold ? 'bold' : undefined }); }
       });
@@ -303,16 +309,16 @@ window.ASY = window.ASY || {};
       if (!e.shared) {
         const base = y1 + AX.out + 2.5 + AX.size * 0.74;
         tx.major.forEach((m) => { if (inside(m.v, sx, box.x, x1)) text(sx.map(m.v), base, m.runs, AX.size, { color: AX.color, k: key('xaxis') }); });
-        const titleY = base + AX.size * 0.35 + 2 + S.label * 0.82;
-        if (p.x.label) text(box.x + box.w / 2, titleY, p.x.label, S.label, { color: AX.color, k: key('xlabel') });
+        const titleY = base + AX.size * 0.35 + 2 + AX.title * 0.82;
+        if (p.x.label) text(box.x + box.w / 2 + AX.dx, titleY + AX.dy, p.x.label, AX.title, { color: AX.color, weight: AX.weight, style: AX.slant, k: key('xlabel') });
         if (tx.factor) text(x1, p.x.label ? titleY : base + AX.size * 1.2, tx.factor, AX.size, { anchor: 'end', color: AX.color, k: key('xaxis') });
       }
       ty.major.forEach((m) => { if (inside(m.v, sy, box.y, y1)) text(box.x - AY.out - 3, sy.map(m.v) + AY.size * 0.35, m.runs, AY.size, { anchor: 'end', color: AY.color, k: key('yaxis') }); });
-      if (p.y.label) text(box.x - AY.out - 3 - n.wy - 3 - S.label * 0.28, box.y + box.h / 2, p.y.label, S.label, { rotate: -90, color: AY.color, k: key('ylabel') });
+      if (p.y.label) text(box.x - AY.out - 3 - n.wy - 3 - AY.title * 0.28 + AY.dx, box.y + box.h / 2 + AY.dy, p.y.label, AY.title, { rotate: -90, color: AY.color, weight: AY.weight, style: AY.slant, k: key('ylabel') });
       if (ty.factor) text(box.x, box.y - 2.5, ty.factor, AY.size, { anchor: 'start', color: AY.color, k: key('yaxis') });
       if (sy2) {
         ty2.major.forEach((m) => { if (inside(m.v, sy2, box.y, y1)) text(x1 + AY2.out + 3, sy2.map(m.v) + AY2.size * 0.35, m.runs, AY2.size, { anchor: 'start', color: AY2.color, k: key('y2axis') }); });
-        if (p.y2.label) text(x1 + AY2.out + 3 + n.wy2 + 3 + S.label * 0.8, box.y + box.h / 2, p.y2.label, S.label, { rotate: -90, color: AY2.color, k: key('y2label') });
+        if (p.y2.label) text(x1 + AY2.out + 3 + n.wy2 + 3 + AY2.title * 0.8 + AY2.dx, box.y + box.h / 2 + AY2.dy, p.y2.label, AY2.title, { rotate: -90, color: AY2.color, weight: AY2.weight, style: AY2.slant, k: key('y2label') });
         if (ty2.factor) text(x1, box.y - 2.5, ty2.factor, AY2.size, { anchor: 'end', color: AY2.color, k: key('y2axis') });
       }
       if (p.title) {
@@ -331,7 +337,7 @@ window.ASY = window.ASY || {};
         let lx = pos === 'custom' ? box.x + p.legend.x * box.w : pos.includes('w') ? box.x + inset : pos.includes('e') ? x1 - inset - w : box.x + (box.w - w) / 2;
         let ly = pos === 'custom' ? box.y + p.legend.y * box.h : pos.includes('s') ? y1 - inset - hgt : pos === 'e' || pos === 'w' ? box.y + (box.h - hgt) / 2 : box.y + inset + (tag && pos === 'nw' ? S.tag * 1.5 : 0);
         if (pos === 'out') { lx = x1 + (colR[e.col] - n.beside) + 6; ly = box.y; }
-        legendBox = { x: lx, y: ly, w, h: hgt };
+        legendBox = { x: lx, y: ly, w, h: hgt, rows: legend.map((l, i) => ({ id: l.s.id, label: l.label, x: lx + padL + sample + fs * 0.45, y: ly + fs * 0.25 + rowHt * i, h: rowHt })) };
         if (p.legend.frame) items.push({ t: 'poly', pts: [lx, ly, lx + w, ly, lx + w, ly + hgt, lx, ly + hgt].map(R), fill: '#ffffff', stroke: '#000000', width: aw * 0.8, k: key('legend') });
         legend.forEach((l, i) => {
           const cy = ly + fs * 0.25 + rowHt * (i + 0.5), x0 = lx + padL, k = key('legend');
@@ -376,7 +382,12 @@ window.ASY = window.ASY || {};
     const common = (it) => (it.opacity != null && it.opacity !== 1 ? ' opacity="' + it.opacity + '"' : '') + clipOf(it.clip) + (opt.keys && it.k ? ' data-k="' + esc(it.k) + '"' : '');
     const d = (p, close) => { let s = 'M' + p[0] + ' ' + p[1]; for (let i = 2; i < p.length; i += 2) s += 'L' + p[i] + ' ' + p[i + 1]; return s + (close ? 'Z' : ''); };
     for (const it of list.items) {
-      if (it.t === 'line') body.push('<path d="' + it.paths.map((p) => d(p)).join('') + '" fill="none" stroke="' + it.stroke + '" stroke-width="' + it.width + '"' + (it.dash ? ' stroke-dasharray="' + it.dash.join(' ') + '"' : '') + ' stroke-linejoin="' + (it.join === 'round' ? 'round' : 'miter') + '" stroke-linecap="' + (it.cap === 'round' ? 'round' : 'butt') + '"' + common(it) + '/>');
+      if (it.t === 'line') {
+        const path = it.paths.map((p) => d(p)).join('');
+        body.push('<path d="' + path + '" fill="none" stroke="' + it.stroke + '" stroke-width="' + it.width + '"' + (it.dash ? ' stroke-dasharray="' + it.dash.join(' ') + '"' : '') + ' stroke-linejoin="' + (it.join === 'round' ? 'round' : 'miter') + '" stroke-linecap="' + (it.cap === 'round' ? 'round' : 'butt') + '"' + common(it) + '/>');
+        // on screen only: a curve or a line of a note is a hair wide, and a pointer needs more than that to take it
+        if (opt.keys && it.k && it.width < 6 && /^(series|note):/.test(it.k)) body.push('<path d="' + path + '" fill="none" stroke="#000000" stroke-opacity="0" stroke-width="6"' + clipOf(it.clip) + ' data-k="' + esc(it.k) + '"/>');
+      }
       else if (it.t === 'poly') body.push('<path d="' + d(it.pts, true) + '" fill="' + (it.fill || 'none') + '"' + (it.stroke ? ' stroke="' + it.stroke + '" stroke-width="' + (it.width || 0.5) + '"' : '') + common(it) + '/>');
       else if (it.t === 'marks') {
         const z = it.size, r = R(z / 2); let path = '';
@@ -394,7 +405,7 @@ window.ASY = window.ASY || {};
           inner += '<tspan' + (dy ? ' dy="' + dy + '"' : '') + (r.v ? ' font-size="' + R(it.size * 0.7) + '"' : '') + '>' + esc(r.s) + '</tspan>';
           shift = want;
         }
-        body.push('<text x="' + it.x + '" y="' + it.y + '" font-size="' + it.size + '" text-anchor="' + (it.anchor || 'start') + '" fill="' + (it.color || '#000000') + '"' + (it.weight === 'bold' ? ' font-weight="bold"' : '') +
+        body.push('<text x="' + it.x + '" y="' + it.y + '" font-size="' + it.size + '" text-anchor="' + (it.anchor || 'start') + '" fill="' + (it.color || '#000000') + '"' + (it.weight === 'bold' ? ' font-weight="bold"' : '') + (it.style === 'italic' ? ' font-style="italic"' : '') +
           (it.rotate ? ' transform="rotate(' + it.rotate + ' ' + it.x + ' ' + it.y + ')"' : '') + ' xml:space="preserve"' + common(it) + '>' + inner + '</text>');
       }
     }

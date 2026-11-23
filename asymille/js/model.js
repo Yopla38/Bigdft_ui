@@ -227,6 +227,26 @@ window.ASY = window.ASY || {};
     fig.panels.splice(top + 1, 0, p);
     if (fig.panels.length === 2) { fig.layout.cols = 1; fig.layout.ratios = [3, 1]; fig.layout.shareX = true; fig.height = Math.round(fig.height * 1.25); }
   }
+  /* What of a fit the graphs show beside its curve: the curves of its components, its band, a panel of what it leaves. */
+  const OF_THE_FIT = ['total', 'band', 'prediction', 'residuals'];
+  const isPart = { components: (r) => !OF_THE_FIT.includes(r.part), band: (r) => r.part === 'band', residuals: (r) => r.part === 'residuals' };
+  function shownOf(f) {
+    const all = doc.graphs.flatMap((g) => g.figure.panels.flatMap((p) => p.series)).filter((r) => r.kind === 'fit' && r.fit === f.id);
+    return { components: all.some(isPart.components), band: all.some(isPart.band), residuals: all.some(isPart.residuals) };
+  }
+  /* Take the components or the band of a fit off the graphs; its curve stays. */
+  function hideFit(f, what) {
+    doc.graphs.forEach((g) => g.figure.panels.forEach((p) => { p.series = p.series.filter((r) => !(r.kind === 'fit' && r.fit === f.id && isPart[what](r))); }));
+  }
+  /* Take the panel of residuals away, and give the figure back the height it had before it. */
+  function hideResiduals(f) {
+    doc.graphs.forEach((g) => {
+      const fig = g.figure, before = fig.panels.length, mine = (r) => r.kind === 'fit' && r.fit === f.id && r.part === 'residuals';
+      fig.panels = fig.panels.filter((p) => !(p.series.length && p.series.every(mine)) || fig.panels.length === 1);
+      fig.panels.forEach((p) => { p.series = p.series.filter((r) => !mine(r)); });
+      if (before === 2 && fig.panels.length === 1) { fig.layout.ratios = []; fig.layout.shareX = false; fig.height = Math.round(fig.height / 1.25); }
+    });
+  }
   const resultOf = (f, col) => (col && f.results[col] ? f.results[col] : f.mode === 'single' || !col ? f.result : null);
   /* What a series draws: the columns it names, or the curve of the fit it names. */
   function seriesData(r) {
@@ -560,7 +580,7 @@ window.ASY = window.ASY || {};
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, changed, sortBy, sheetFrom, toText, unique,
-    graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, seriesData, resultOf,
+    graph, addGraph, removeGraph, addData, plot, showFit, showResiduals, shownOf, hideFit, hideResiduals, seriesData, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },

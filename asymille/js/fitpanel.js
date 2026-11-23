@@ -139,6 +139,7 @@ window.ASY = window.ASY || {};
         ui.btn('Starting values from the data', () => guess(f), '', { disabled: running || !f.model.components.length, title: 'Read the baseline and the most prominent peaks from the data' }),
         ui.btn('Preview', () => preview(f), '', { disabled: running || !f.model.components.length, title: 'Draw the model at its starting values, without fitting' }),
         res && !f.stale ? ui.btn('Start from the result', () => { f.model.components.forEach((c) => Object.entries(c.params).forEach(([n, spec]) => { const got = byName[c.id + '_' + n]; if (got && got.value != null && !spec.expr) spec.value = Number(got.value.toPrecision(8)); })); A().refresh(); }, '', { title: 'Make the fitted values the new starting values' }) : null),
+      onGraph(f, g),
       ui.sec('The model on one line', 'to copy, to paste', false,
         h('p', { class: 'say' }, 'The same model as text: keep it in a notebook, paste it into another fit. ', h('code', {}, '~'), ' starts from, ', h('code', {}, '='), ' holds at, ', h('code', {}, '> <'), ' bound, and after ', h('code', {}, '|'), ' come the ties.'),
         h('textarea', { class: 'inp', id: 'model-text', rows: 4, spellcheck: 'false', style: 'font:12px/1.5 var(--mono);margin:8px 0', placeholder: 'p1:gaussian(center~5, sigma~1) + bg:linear()' }, textOf && textOf.fit === f.id ? textOf.text : ''),
@@ -149,15 +150,28 @@ window.ASY = window.ASY || {};
         f.options.method === 'least_squares' ? ui.field('Outliers', ui.sel(f.options, 'loss', [['linear', 'count fully (least squares)'], ['soft_l1', 'count less: soft L1'], ['huber', 'count less: Huber'], ['cauchy', 'count much less: Cauchy']], plain)) : null,
         h('div', { class: 'cols2' }, ui.field('Confidence level of the band', ui.num(f.options, 'level', { min: 0.5, max: 0.999, then: () => dirty(f) })), ui.field('Points of the curve drawn', ui.num(f.options, 'points', { min: 50, max: 20000, int: true, then: () => dirty(f) }))),
         ui.chk(f.options, 'intervals', 'Also profile χ² for each parameter (asymmetric intervals; slower)', plain)),
-      ui.sec('On the graph', '', !!res,
-        h('div', { class: 'acts' }, ui.btn('Show the components', () => { M.showFit(f, g, { components: true }); A().refresh(); }), ui.btn('Show the confidence band', () => { M.showFit(f, g, { band: true }); A().refresh(); }),
-          ui.btn('Add a panel of residuals', () => { const where = M.showFit(f, g); if (where) M.showResiduals(f, where); A().refresh(); }))),
       ASY.seriespanel.section(f),
       h('div', { class: 'acts', style: 'padding:12px 0' },
         ui.btn('Duplicate this fit', () => { const k = M.duplicateFit(f); M.log('Fit “' + k.name + '”: a copy of “' + f.name + '”, to try another model on the same data.'); A().refresh(); A().say('A copy: change its model and fit, the results will compare the two'); }, '', { title: 'The same data and the same model under another name: change the model, fit, and the results say which of the two the data support' }),
         ui.btn('Delete this fit', () => { M.removeFit(f.id); A().refresh(); }, 'danger')),
       create,
     ];
+  }
+
+  /* What the graph shows of this fit beside its curve. Each button says what it will do: show when it is not there, take away when it is. */
+  function onGraph(f, g) {
+    const on = M.shownOf(f), curves = f.model.components.filter((c) => c.fn !== 'response').length;
+    const flip = (what, show, hide) => () => { if (on[what]) hide(); else show(); A().refresh(); };
+    return h('div', { class: 'on-graph', style: 'padding:10px 0;border-bottom:1px solid var(--line);display:grid;gap:6px' },
+      h('p', { class: 'label' }, 'On the graph'),
+      h('div', { class: 'acts' },
+        ui.btn(on.components ? 'Hide the components' : 'Show the components', flip('components', () => M.showFit(f, g, { components: true }), () => M.hideFit(f, 'components')), on.components ? 'on' : '',
+          { 'aria-pressed': String(on.components), disabled: curves < 2 && !on.components, title: curves < 2 ? 'A model of one component: its curve is the fit itself' : 'The curve of each component of the model, dashed, under the fit' }),
+        ui.btn(on.band ? 'Hide the confidence band' : 'Show the confidence band', flip('band', () => M.showFit(f, g, { band: true }), () => M.hideFit(f, 'band')), on.band ? 'on' : '',
+          { 'aria-pressed': String(on.band), title: 'Where the fitted curve lies with the confidence chosen under “How it is fitted”' }),
+        ui.btn(on.residuals ? 'Remove the panel of residuals' : 'Add a panel of residuals', flip('residuals', () => { const where = M.showFit(f, g); if (where) M.showResiduals(f, where); }, () => M.hideResiduals(f)), on.residuals ? 'on' : '',
+          { 'aria-pressed': String(on.residuals), title: 'Data minus fit, in a panel under the data' })),
+      (on.components || on.band || on.residuals) && !(f.result || Object.keys(f.results).length) ? h('small', { class: 'act-note' }, 'They are drawn once the fit is run: a model that is only previewed has no components, band or residuals yet.') : null);
   }
 
   // ------------------------------------------------------------------ asking the server

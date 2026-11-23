@@ -11,6 +11,7 @@ window.ASY = window.ASY || {};
   const A = () => ASY.app;
 
   // ------------------------------------------------------------------ controls bound to a field of the project
+  const folds = {};                 // the parts a person opened or closed, for this visit
   const done = (opt) => { if (opt && opt.then) opt.then(); if (opt && opt.structural) A().refresh(); else A().touch(); };
   const ui = ASY.ui = {
     field: (label, control, hint) => h('label', { class: 'field2' }, h('span', {}, label), control, hint ? h('small', {}, hint) : null),
@@ -39,7 +40,14 @@ window.ASY = window.ASY || {};
     },
     chk: (obj, key, label, opt) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: opt && opt.invert ? !obj[key] : obj[key] !== false && !!obj[key], onchange: (e) => { obj[key] = opt && opt.invert ? !e.target.checked : e.target.checked; done(opt); } }), label),
     col: (obj, key, opt) => h('input', { type: 'color', value: obj[key] || '#000000', 'aria-label': 'Colour', oninput: (e) => { obj[key] = e.target.value; A().redrawMain(); }, onchange: (e) => { obj[key] = e.target.value; done(opt); } }),
-    sec: (title, hint, open, ...kids) => h('details', { class: 'sec', open }, h('summary', {}, title, h('span', {}, hint || '')), h('div', {}, kids)),
+    /* A part of a panel that opens and closes. What a person opened or closed stays so while the page is drawn again around it:
+       `open` is only how it starts. `key` tells apart two parts of the same title. */
+    sec: (title, hint, open, ...kids) => ui.fold('sec', title, title, hint, open, kids),
+    fold(cls, key, title, hint, open, kids) {
+      const v = M.doc.view, k = v.main + '/' + (A().state.tab[v.main === 'graph' ? 'graph' : 'sheet']) + '/' + key;
+      const el = h('details', { class: cls, open: k in folds ? folds[k] : open }, h('summary', { onclick: () => { folds[k] = !el.open; } }, title, hint == null ? null : h('span', {}, hint || '')), h('div', {}, kids));
+      return el;
+    },
     btn: (label, act, cls, attrs) => h('button', Object.assign({ class: 'btn small' + (cls ? ' ' + cls : ''), type: 'button', onclick: act }, attrs || {}), label),
   };
   const columnOptions = (s, opt) => (opt && opt.none ? [[null, opt.none]] : []).concat(s ? s.columns.map((c) => [c.id, c.name + (c.title ? ' · ' + c.title : '')]) : []);
@@ -98,28 +106,35 @@ window.ASY = window.ASY || {};
 
   // ------------------------------------------------------------------ a graph: its axes and legend
   function axisFields(ax, name) {
-    return [ui.field('Title', ui.txt(ax, 'label', { placeholder: 'e.g. Energy (eV)' })),
+    const moved = !!(ax.labelDx || ax.labelDy);
+    return [ui.field('Title', ui.txt(ax, 'label', { placeholder: 'e.g. Energy (eV)' }), 'Double-click it on the figure to rewrite it there; drag it to move it.'),
+      h('div', { class: 'cols3' }, ui.field('Size of the title (pt)', ui.num(ax, 'labelSize', { nullable: true, min: 3, max: 60, placeholder: 'of the page' })),
+        ui.field('Size of the numbers (pt)', ui.num(ax, 'tickSize', { nullable: true, min: 3, max: 40, placeholder: 'of the page' })),
+        ui.field('Decimals', ui.num(ax, 'decimals', { nullable: true, min: 0, max: 10, int: true }))),
+      h('div', { class: 'cols3' }, ui.chk(ax, 'labelBold', 'Title in bold'), ui.chk(ax, 'labelItalic', 'Title in italic'),
+        moved ? ui.btn('Put the title back', () => { ax.labelDx = ax.labelDy = null; A().refresh(); }, '', { title: 'It was dragged on the figure: back to its place under or beside the axis' }) : h('span', {})),
       h('div', { class: 'cols3' }, ui.field('From', ui.num(ax, 'min', { nullable: true })), ui.field('To', ui.num(ax, 'max', { nullable: true })), ui.field('Step', ui.num(ax, 'step', { nullable: true, min: 0 }))),
-      h('div', { class: 'cols2' }, ui.field('Scale', ui.sel(ax, 'scale', [['linear', 'linear'], ['log', 'logarithmic']])), ui.field('Decimals', ui.num(ax, 'decimals', { nullable: true, min: 0, max: 10, int: true }))),
-      h('div', { class: 'cols2' }, ui.chk(ax, 'grid', 'Grid lines'), ui.chk(ax, 'reverse', 'Reversed')),
-      h('details', { class: 'own-axis', open: ['tickDir', 'tickLen', 'tickWidth', 'tickSize', 'color', 'gridColor', 'gridDash'].some((k) => ax[k] != null && ax[k] !== 'solid') || ax.minor === false },
-        h('summary', {}, 'Ticks, numbers and grid of this axis'),
-        h('div', { class: 'cols2' },
+      h('div', { class: 'cols3' }, ui.field('Scale', ui.sel(ax, 'scale', [['linear', 'linear'], ['log', 'logarithmic']])), ui.chk(ax, 'grid', 'Grid lines'), ui.chk(ax, 'reverse', 'Reversed')),
+      ui.fold('own-axis', 'own-axis:' + name, 'Ticks, colour and grid of this axis', null, ['tickDir', 'tickLen', 'tickWidth', 'color', 'gridColor', 'gridDash'].some((k) => ax[k] != null && ax[k] !== 'solid') || ax.minor === false, [
+        h('div', { class: 'cols3' },
           ui.field('Ticks point', ui.sel(ax, 'tickDir', [[null, 'as the page says'], ['in', 'inwards'], ['out', 'outwards'], ['both', 'both ways'], ['none', 'no ticks']], { nullable: true })),
-          ui.field('Size of the numbers (pt)', ui.num(ax, 'tickSize', { nullable: true, min: 3, max: 40, placeholder: 'of the page' }))),
-        h('div', { class: 'cols2' },
           ui.field('Tick length (pt)', ui.num(ax, 'tickLen', { nullable: true, min: 0.5, max: 20, placeholder: 'of the page' })),
           ui.field('Tick width (pt)', ui.num(ax, 'tickWidth', { nullable: true, min: 0.1, max: 6, placeholder: 'of the page' }))),
         h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: ax.minor !== false, onchange: (e) => { ax.minor = e.target.checked; A().touch(); } }), 'Small ticks between the numbered ones'),
         h('div', { class: 'cols2' },
           ui.field('Colour of the axis', h('div', { class: 'row2' }, ui.col(ax, 'color'), h('span', { class: 'muted' }, 'its line, ticks, numbers and title'))),
           ui.field('Grid', h('div', { class: 'row2' }, h('input', { type: 'color', value: ax.gridColor || '#d0d0d0', 'aria-label': 'Colour of the grid', oninput: (e) => { ax.gridColor = e.target.value; A().redrawMain(); }, onchange: (e) => { ax.gridColor = e.target.value; A().touch(); } }),
-            ui.sel(ax, 'gridDash', [[null, 'solid'], ['dash', 'dashed'], ['dot', 'dotted'], ['dashdot', 'dash-dot']], { nullable: true }))))),
+            ui.sel(ax, 'gridDash', [[null, 'solid'], ['dash', 'dashed'], ['dot', 'dotted'], ['dashdot', 'dash-dot']], { nullable: true }))))]),
       h('div', { class: 'acts' }, ui.btn('Show all the data', () => { ax.min = ax.max = ax.step = null; A().refresh(); }, '', { title: 'Back to an automatic range for the ' + name + ' axis' }))];
   }
   function axesTab(g) {
     const st = A().state, fig = g.figure, panel = fig.panels.find((p) => p.id === st.panel) || fig.panels[0];
+    const cat = A().catalogue;
     return [fig.panels.length > 1 ? ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i)]), { structural: true })) : null,
+      ui.sec('Type', fig.font, false,
+        ui.field('Font of the figure', ui.sel(fig, 'font', (cat ? cat.fonts.map((f) => [f.name, f.name]) : [['Arial', 'Arial']]), { structural: true }), 'One font for the whole figure: journals ask for it. Each axis has its own sizes, below.'),
+        h('div', { class: 'cols3' }, ui.field('Axis titles (pt)', ui.num(fig.size, 'label', { min: 3, max: 40 })), ui.field('Numbers (pt)', ui.num(fig.size, 'tick', { min: 3, max: 40 })), ui.field('Legend (pt)', ui.num(fig.size, 'legend', { min: 3, max: 40 }))),
+        h('p', { class: 'muted' }, 'The sizes of the page, for every axis that does not say its own.')),
       ui.sec('Title above the panel', P.plain(panel.title) || 'none', !!panel.title,
         ui.field('Text', ui.txt(panel, 'title', { structural: true }), 'E_{F}, cm^{-1}, \\alpha …'),
         h('div', { class: 'cols3' }, ui.field('Size (pt)', ui.num(panel, 'titleSize', { nullable: true, min: 3, max: 60, placeholder: 'of the page' })),
@@ -133,7 +148,7 @@ window.ASY = window.ASY || {};
           : h('div', { class: 'acts' }, ui.btn('Add a second Y axis', () => { panel.y2 = P.axis(); A().refresh(); }), h('span', { class: 'muted' }, 'Then choose “right” as the axis of a series.'))),
       ui.sec('Legend', panel.legend.show === false ? 'hidden' : '', false,
         ui.chk(panel.legend, 'show', 'Shown'), ui.chk(panel.legend, 'frame', 'In a frame'),
-        ui.field('Place', ui.sel(panel.legend, 'pos', [['ne', 'top right'], ['nw', 'top left'], ['se', 'bottom right'], ['sw', 'bottom left'], ['n', 'top'], ['s', 'bottom'], ['e', 'right'], ['w', 'left'], ['out', 'outside, on the right'], ['custom', 'where it was dragged']]), 'Or drag it on the figure.'))];
+        ui.field('Place', ui.sel(panel.legend, 'pos', [['ne', 'top right'], ['nw', 'top left'], ['se', 'bottom right'], ['sw', 'bottom left'], ['n', 'top'], ['s', 'bottom'], ['e', 'right'], ['w', 'left'], ['out', 'outside, on the right'], ['custom', 'where it was dragged']]), 'Or drag it on the figure. Double-click a name in it to rewrite it there.'))];
   }
 
   // ------------------------------------------------------------------ a graph: its page
@@ -196,12 +211,13 @@ window.ASY = window.ASY || {};
     };
     return [fig.panels.length > 1 ? ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i)]), { structural: true })) : null,
       h('div', { class: 'acts', style: 'padding:10px 0' }, Object.entries(NOTES).map(([type, label]) => ui.btn('+ ' + label, () => add(type)))),
-      panel.notes.length ? null : h('p', { class: 'empty' }, 'A text, an arrow, a line marking a value, a highlighted range. A text or a line can then be dragged on the figure.'),
+      h('p', { class: 'empty' }, panel.notes.length ? 'Drag one on the figure to move it; an arrow or a line is also taken by one of its ends. Double-click a text to rewrite it.' : 'A text, an arrow, a line marking a value, a highlighted range. Each can then be dragged on the figure.'),
       panel.notes.map((n) => h('div', { class: 'act' + (st.note === n.id ? ' on' : '') },
         h('div', { class: 'act-head' }, h('b', {}, NOTES[n.type]), ui.btn('Remove', () => { panel.notes = panel.notes.filter((k) => k !== n); A().refresh(); }, 'danger')),
         n.type === 'text' ? [ui.field('Text', ui.txt(n, 'text'), 'E_{F}, cm^{-1}, \\alpha …'), h('div', { class: 'cols3' }, ui.field('x', ui.num(n, 'x')), ui.field('y', ui.num(n, 'y')), ui.field('Size (pt)', ui.num(n, 'size', { min: 3, max: 60 }))),
           h('div', { class: 'cols2' }, ui.field('Placed in', ui.sel(n, 'coords', [['data', 'the units of the axes'], ['axes', 'fractions of the panel']], { then: () => { if (hp) { if (n.coords === 'axes') { n.x = 0.05; n.y = 0.92; } else { n.x = mid(hp.xr, 0.1); n.y = mid(hp.yr, 0.9); } } }, structural: true })), ui.chk(n, 'bold', 'Bold'))] : null,
         n.type === 'arrow' || n.type === 'line' ? h('div', { class: 'cols2' }, ui.field('From x', ui.num(n, 'x')), ui.field('From y', ui.num(n, 'y')), ui.field(n.type === 'arrow' ? 'To x (the head)' : 'To x', ui.num(n, 'x2')), ui.field('To y', ui.num(n, 'y2'))) : null,
+        n.type === 'arrow' ? h('div', { class: 'cols2' }, ui.field('Size of the head (pt)', ui.num(n, 'head', { nullable: true, min: 1, max: 60, placeholder: 'from the width' })), ui.chk(n, 'both', 'A head at each end')) : null,
         n.type === 'vline' ? ui.field('At x', ui.num(n, 'x')) : null, n.type === 'hline' ? ui.field('At y', ui.num(n, 'y')) : null,
         n.type === 'span' ? h('div', { class: 'cols3' }, ui.field('From x', ui.num(n, 'x')), ui.field('To x', ui.num(n, 'x2')), ui.field('Opacity', ui.num(n, 'opacity', { min: 0.02, max: 1 }))) : null,
         h('div', { class: 'row2' }, ui.col(n, 'color'), n.type === 'text' || n.type === 'span' ? null : ui.num(n, 'width', { min: 0.1, max: 10, placeholder: 'width (pt)' }),

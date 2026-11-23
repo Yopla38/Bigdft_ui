@@ -6,8 +6,10 @@
  * The figure is laid out by plot.js; this file shows its SVG and turns the pointer into changes
  * of the figure: drag a rectangle to zoom, drag to move, wheel to zoom about the pointer,
  * double-click to see everything again; drag across x to set the range of the fit; drag the
- * legend or a text; click a curve to select it. A change made by hand is a change of the figure
- * (its axes, its legend): it is saved and exported like any other. */
+ * legend, the title of an axis, a text, a line or an arrow (by its middle, or by one end);
+ * double-click a text (a name in the legend, the title of an axis, a note) to rewrite it where
+ * it is; click a curve to select it. A change made by hand is a change of the figure (its axes,
+ * its legend, its notes): it is saved and exported like any other. */
 window.ASY = window.ASY || {};
 (function (ASY) {
   'use strict';
@@ -33,6 +35,16 @@ window.ASY = window.ASY || {};
         const left = Math.min(xa == null ? Infinity : xa, xb == null ? Infinity : xb), right = Math.max(xa == null ? -Infinity : xa, xb == null ? -Infinity : xb);
         if (isFinite(left)) cut(b.x, Math.min(left, right)); if (isFinite(right)) cut(Math.max(left, right), b.x + b.w);
       });
+      // on screen only: the two ends of the line or the arrow that is selected, to take it by
+      const chosen = ctx.note ? ctx.note() : null;
+      if (chosen) fig.panels.forEach((p, i) => p.notes.forEach((n) => {
+        const hp = list.hit.panels.find((q) => q.index === i);
+        if (n.id !== chosen || !hp || (n.type !== 'line' && n.type !== 'arrow')) return;
+        const pts = ends(n, hp).flat();
+        if (pts.every(isFinite)) items.push({ t: 'marks', pts, size: 5, fill: '#ffffff', stroke: '#0a7286', width: 0.9, verts: P.MARKERS.square.verts, k: 'note:' + n.id });
+      }));
+      // a panel of residuals with nothing in it says why
+      const empty = fig.panels.some((p) => p.series.some((r) => r.kind === 'fit' && r.part === 'residuals' && r.show !== false && !M.seriesData(r)));
       paper.innerHTML = P.svg(Object.assign({}, list, { items }), { keys: true });
       paper.append(note);
       const mm = 96 / 25.4, room = stage.clientWidth - 44, roomH = stage.clientHeight - 64;
@@ -40,8 +52,24 @@ window.ASY = window.ASY || {};
       paper.style.width = Math.max(120, fig.width * mm * scale) + 'px';
       paper.className = 'paper tool-' + ctx.tool();
       ASY.fill(note, fig.width + ' × ' + fig.height + ' mm · shown at ' + Math.round(scale * 100) + ' %' + (list.items.some((it) => it.t === 'marks' && it.pts.length >= 40000) ? ' · every symbol could not be drawn: only one in a few is' : ''),
-        list.hit.warnings.map((w) => h('span', { class: 'warn' }, w)));
+        list.hit.warnings.concat(empty ? ['The panel of residuals is empty: it shows what the last fit left, and this model was changed or only previewed since. Press Fit.'] : []).map((w) => h('span', { class: 'warn' }, w)));
     }
+    /* A place of a note, from what it keeps (the units of the axes, or fractions of the panel) to points of the page, and back. */
+    const toPt = (n, hp, x, y) => (n.coords === 'axes' ? [hp.box.x + x * hp.box.w, hp.box.y + (1 - y) * hp.box.h] : [hp.sx.map(x), hp.sy.map(y)]);
+    const fromPt = (n, hp, X, Y) => (n.coords === 'axes' ? [Number(((X - hp.box.x) / hp.box.w).toFixed(4)), Number((1 - (Y - hp.box.y) / hp.box.h).toFixed(4))]
+      : [round(hp.sx.inv(X), hp.sx.hi - hp.sx.lo), round(hp.sy.inv(Y), hp.sy.hi - hp.sy.lo)]);
+    const ends = (n, hp) => [toPt(n, hp, n.x, n.y), toPt(n, hp, n.x2, n.y2)];
+    /* Rewrite a text where it is: a field over it, kept by Enter or by leaving it, given up by Escape. `at` is in pixels of the paper. */
+    function edit(at, value, commit) {
+      const input = h('input', { class: 'inplace', type: 'text', value, spellcheck: 'false', 'aria-label': 'The text' }), width = Math.max(160, at.w || 0);
+      Object.assign(input.style, { left: ASY.clamp(at.x, 0, Math.max(0, paper.clientWidth - width)) + 'px', top: Math.max(0, at.y) + 'px', width: width + 'px' });
+      let over = false;
+      const close = (keep) => { if (over) return; over = true; const v = input.value; input.remove(); if (keep && v !== value) { commit(v); ctx.changed(); } };
+      input.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') close(true); else if (ev.key === 'Escape') close(false); });
+      input.addEventListener('blur', () => close(true));
+      paper.append(input); input.focus(); input.select();
+    }
+    const AXIS_OF = { xlabel: 'x', ylabel: 'y', y2label: 'y2' };
     const point = (e) => { const r = paper.getBoundingClientRect(), k = list.width * P.MM / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, k }; };
     const panelAt = (pt) => list.hit.panels.find((p) => pt.x >= p.box.x && pt.x <= p.box.x + p.box.w && pt.y >= p.box.y && pt.y <= p.box.y + p.box.h) || null;
     const within = (pt, r) => r && pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
@@ -56,15 +84,26 @@ window.ASY = window.ASY || {};
     }
 
     paper.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || !list) return;
+      if (e.button !== 0 || !list || (e.target.closest && e.target.closest('input'))) return;
       const pt = point(e), hp = panelAt(pt), tool = ctx.tool(), marked = e.target.closest && e.target.closest('[data-k]'), key = marked ? marked.getAttribute('data-k') : null;        // a text is clicked on one of its runs
       if (tool === 'pointer') {
         const legendOf = list.hit.panels.find((p) => within(pt, p.legend));
-        if (legendOf) drag = { kind: 'legend', hp: legendOf, dx: pt.x - legendOf.legend.x, dy: pt.y - legendOf.legend.y, moved: false };
+        if (legendOf) drag = { kind: 'legend', hp: legendOf, from: pt, dx: pt.x - legendOf.legend.x, dy: pt.y - legendOf.legend.y, moved: false };
         else if (key && key.startsWith('note:')) {
           const fig = ctx.graph().figure; let found = null;
           fig.panels.forEach((p, i) => p.notes.forEach((n) => { if ('note:' + n.id === key) found = { n, hp: list.hit.panels.find((q) => q.index === i) }; }));
-          if (found && (found.n.type === 'text' || found.n.type === 'vline' || found.n.type === 'hline')) drag = { kind: 'note', n: found.n, hp: found.hp, moved: false };
+          if (found && found.hp) {
+            const n = found.n, near = (q, d) => Math.hypot(pt.x - q[0], pt.y - q[1]) < d;
+            drag = { kind: 'note', n, hp: found.hp, from: pt, grab: 'whole', moved: false };
+            // a line or an arrow is taken by the end the pointer is on, or by its middle; a highlighted range by one of its edges, or whole
+            if (n.type === 'line' || n.type === 'arrow') { [drag.a, drag.b] = ends(n, found.hp); drag.grab = near(drag.b, 5) ? 'b' : near(drag.a, 5) ? 'a' : 'whole'; }
+            else if (n.type === 'span') { drag.a = [found.hp.sx.map(n.x), 0]; drag.b = [found.hp.sx.map(n.x2), 0]; drag.grab = Math.abs(pt.x - drag.a[0]) < 3 ? 'a' : Math.abs(pt.x - drag.b[0]) < 3 ? 'b' : 'whole'; }
+            else if (n.type === 'text') drag.a = toPt(n, found.hp, n.x, n.y);              // a text keeps the place of the pointer in it: it does not jump to it
+          }
+          ctx.picked(key);
+        } else if (key && AXIS_OF[key.split(':')[0]]) {
+          const [kind, id] = key.split(':'), p = ctx.graph().figure.panels.find((q) => q.id === id), ax = p ? p[AXIS_OF[kind]] : null, of = list.hit.panels.find((q) => q.id === id);
+          if (ax && of) drag = { kind: 'axlabel', ax, hp: of, from: pt, dx: +ax.labelDx || 0, dy: +ax.labelDy || 0, moved: false };
           ctx.picked(key);
         } else if (key) ctx.picked(key); else if (hp) ctx.picked('panel:' + hp.id);
       } else if (hp && (tool === 'zoom' || tool === 'range')) {
@@ -78,6 +117,8 @@ window.ASY = window.ASY || {};
       const pt = point(e);
       if (!drag) { const hp = panelAt(pt); ctx.readout(hp ? 'x ' + ASY.fmt(hp.sx.inv(pt.x), 5) + '   y ' + ASY.fmt(hp.sy.inv(pt.y), 5) : ''); return; }
       const b = drag.hp.box;
+      // a click is not a drag: what is taken moves once the pointer has gone two points away
+      if ((drag.kind === 'legend' || drag.kind === 'note' || drag.kind === 'axlabel') && !drag.moved && drag.from && Math.hypot(pt.x - drag.from.x, pt.y - drag.from.y) < 2) return;
       if (drag.kind === 'zoom' || drag.kind === 'range') {
         const r = paper.getBoundingClientRect(), k = 1 / pt.k, x0 = ASY.clamp(Math.min(drag.x, pt.x), b.x, b.x + b.w), x1 = ASY.clamp(Math.max(drag.x, pt.x), b.x, b.x + b.w);
         const full = drag.kind === 'range' || Math.abs(pt.y - drag.y) < 4, y0 = full ? b.y : ASY.clamp(Math.min(drag.y, pt.y), b.y, b.y + b.h), y1 = full ? b.y + b.h : ASY.clamp(Math.max(drag.y, pt.y), b.y, b.y + b.h);
@@ -96,11 +137,19 @@ window.ASY = window.ASY || {};
         p.legend.pos = 'custom'; p.legend.x = Number(((pt.x - drag.dx - b.x) / b.w).toFixed(4)); p.legend.y = Number(((pt.y - drag.dy - b.y) / b.h).toFixed(4));
         drag.moved = true; draw();
       } else if (drag.kind === 'note') {
-        const n = drag.n, hp = drag.hp;
-        if (n.type === 'vline') n.x = round(hp.sx.inv(pt.x), hp.sx.hi - hp.sx.lo);
+        const n = drag.n, hp = drag.hp, dx = pt.x - drag.from.x, dy = pt.y - drag.from.y;
+        if (n.type === 'line' || n.type === 'arrow') {
+          if (drag.grab !== 'b') [n.x, n.y] = fromPt(n, hp, drag.a[0] + dx, drag.a[1] + dy);
+          if (drag.grab !== 'a') [n.x2, n.y2] = fromPt(n, hp, drag.b[0] + dx, drag.b[1] + dy);
+        } else if (n.type === 'span') {
+          if (drag.grab !== 'b') n.x = round(hp.sx.inv(drag.a[0] + dx), hp.sx.hi - hp.sx.lo);
+          if (drag.grab !== 'a') n.x2 = round(hp.sx.inv(drag.b[0] + dx), hp.sx.hi - hp.sx.lo);
+        } else if (n.type === 'vline') n.x = round(hp.sx.inv(pt.x), hp.sx.hi - hp.sx.lo);
         else if (n.type === 'hline') n.y = round(hp.sy.inv(pt.y), hp.sy.hi - hp.sy.lo);
-        else if (n.coords === 'axes') { n.x = Number(((pt.x - b.x) / b.w).toFixed(4)); n.y = Number((1 - (pt.y - b.y) / b.h).toFixed(4)); }
-        else { n.x = round(hp.sx.inv(pt.x), hp.sx.hi - hp.sx.lo); n.y = round(hp.sy.inv(pt.y), hp.sy.hi - hp.sy.lo); }
+        else if (drag.a) [n.x, n.y] = fromPt(n, hp, drag.a[0] + dx, drag.a[1] + dy);
+        drag.moved = true; draw();
+      } else if (drag.kind === 'axlabel') {
+        drag.ax.labelDx = Number((drag.dx + pt.x - drag.from.x).toFixed(1)); drag.ax.labelDy = Number((drag.dy + pt.y - drag.from.y).toFixed(1));
         drag.moved = true; draw();
       }
     });
@@ -118,8 +167,25 @@ window.ASY = window.ASY || {};
     paper.addEventListener('pointerup', end); paper.addEventListener('pointercancel', end);
     paper.addEventListener('pointerleave', () => { if (!drag) ctx.readout(''); });
     paper.addEventListener('dblclick', (e) => {
-      const pt = point(e), hp = panelAt(pt); if (!hp) return;
-      const fig = ctx.graph().figure, p = panelOf(hp);
+      if (!list || (e.target.closest && e.target.closest('input'))) return;
+      const pt = point(e), hp = panelAt(pt), fig = ctx.graph().figure;
+      if (ctx.tool() === 'pointer') {            // on a text: rewrite it where it is
+        const of = list.hit.panels.find((q) => within(pt, q.legend));
+        if (of) {
+          const rows = of.legend.rows, row = rows.find((r) => pt.y >= r.y && pt.y < r.y + r.h) || rows[0], series = fig.panels[of.index].series.find((r) => r.id === row.id);
+          if (series) edit({ x: row.x / pt.k - 4, y: row.y / pt.k - 3, w: (of.legend.x + of.legend.w - row.x) / pt.k + 30 }, series.label || row.label, (v) => { series.label = v.trim() === row.label && !series.label ? '' : v.trim().slice(0, 400); });
+          return;
+        }
+        // the paper holds the pointer since the first click, so the event names the paper: what is under the pointer is asked of the document
+        const under = document.elementFromPoint(e.clientX, e.clientY), el = under && under.closest ? under.closest('[data-k]') : null, [kind, id] = el ? el.getAttribute('data-k').split(':') : [];
+        const r = el ? el.getBoundingClientRect() : null, pr = paper.getBoundingClientRect(), over = r ? { x: r.left - pr.left + r.width / 2 - 100, y: r.top - pr.top + r.height / 2 - 14, w: 200 } : null;
+        const p = fig.panels.find((q) => q.id === id);
+        if (p && AXIS_OF[kind] && p[AXIS_OF[kind]]) return edit(over, p[AXIS_OF[kind]].label || '', (v) => { p[AXIS_OF[kind]].label = v.trim().slice(0, 400); });
+        if (p && kind === 'title') return edit(over, p.title || '', (v) => { p.title = v.trim().slice(0, 400); });
+        if (kind === 'note') { let note = null; fig.panels.forEach((q) => q.notes.forEach((n) => { if (n.id === id) note = n; })); if (note && note.type === 'text') return edit(over, note.text || '', (v) => { note.text = v.slice(0, 400); }); if (note) return; }
+      }
+      if (!hp) return;
+      const p = panelOf(hp);
       (fig.layout.shareX ? fig.panels : [p]).forEach((q) => { q.x.min = q.x.max = null; });
       p.y.min = p.y.max = null; if (p.y2) p.y2.min = p.y2.max = null;
       ctx.changed();

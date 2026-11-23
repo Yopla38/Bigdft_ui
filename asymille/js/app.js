@@ -150,17 +150,22 @@ window.ASY = window.ASY || {};
     const what = v.main === 'graph' && g ? 'graph:' + g.id : s ? 'sheet:' + s.id : 'none';
     const rename = (obj, max) => h('input', { class: 'name', type: 'text', value: obj.name, maxlength: max, 'aria-label': 'Name', onchange: (e) => { obj.name = e.target.value.trim().slice(0, max) || obj.name; app.touch(); } });
     if (what.startsWith('graph')) {
-      if (shown !== 'graph') { ASY.fill(main); view = ASY.figview(main, { graph: () => M.graph(M.doc.view.graph), tool: () => state.tool, fit: () => (state.tab.graph === 'fit' ? M.fit(M.doc.view.fit) : null), changed: () => app.refresh(),
+      if (shown !== 'graph') { ASY.fill(main); view = ASY.figview(main, { graph: () => M.graph(M.doc.view.graph), tool: () => state.tool, fit: () => (state.tab.graph === 'fit' ? M.fit(M.doc.view.fit) : null), note: () => (state.tab.graph === 'notes' ? state.note : null), changed: () => app.refresh(),
         readout: (t) => { const el = $('#readout'); if (el) el.textContent = t; },
         ranged: (a, b) => { const f = M.fit(M.doc.view.fit); if (!f) return; const r = (x) => Number(x.toPrecision(5)); f.limits = [r(a), r(b)]; if (f.result || Object.keys(f.results).length) f.stale = true; state.tool = 'pointer'; app.refresh(); },
-        picked: (key) => { const [kind, id] = key.split(':'); const fig = M.graph(M.doc.view.graph).figure;
+        picked: (key) => { const [kind, id] = key.split(':'); const fig = M.graph(M.doc.view.graph).figure, before = state.tab.graph + ':' + state.note;
           if (kind === 'series') { state.tab.graph = 'series'; state.series = id; const p = fig.panels.find((q) => q.series.some((r) => r.id === id)); if (p) state.panel = p.id; }
           else if (kind === 'note') { state.tab.graph = 'notes'; state.note = id; const p = fig.panels.find((q) => q.notes.some((n) => n.id === id)); if (p) state.panel = p.id; }
           else if (['xlabel', 'ylabel', 'y2label', 'xaxis', 'yaxis', 'y2axis', 'title', 'frame', 'legend'].includes(kind)) { state.tab.graph = 'axes'; state.panel = id; }
           else if (kind === 'panel') { state.panel = id; }
           else return;
-          drawInspector(); } }); shown = 'graph'; grid = null; }
-      const tools = [['pointer', 'Select', 'Click a curve, an axis or the legend to change it; drag the legend or a text'], ['zoom', 'Zoom', 'Drag a rectangle; the wheel zooms; double-click shows everything again'], ['pan', 'Move', 'Drag the curves; double-click shows everything again'], ['range', 'Fit range', 'Drag across the part of the curve to fit']];
+          drawInspector();
+          if (kind === 'note') {
+            // the figure is drawn again only when another note is chosen (to show its ends): drawing it under a double-click would lose the double-click
+            if (before !== 'notes:' + id) view.draw();
+            const card = $('#insp-body .act.on'); if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest' });
+          } } }); shown = 'graph'; grid = null; }
+      const tools = [['pointer', 'Select', 'Click a curve, an axis or the legend to change it. Drag the legend, the title of an axis, a text, a line or an arrow (by its middle or by one end). Double-click a text to rewrite it'], ['zoom', 'Zoom', 'Drag a rectangle; the wheel zooms; double-click shows everything again'], ['pan', 'Move', 'Drag the curves; double-click shows everything again'], ['range', 'Fit range', 'Drag across the part of the curve to fit']];
       ASY.fill(bar, rename(g, 80),
         h('div', { class: 'seg', role: 'group', 'aria-label': 'What the pointer does' }, tools.map(([id, label, title]) => h('button', { type: 'button', title, 'aria-pressed': String(state.tool === id), disabled: id === 'range' && !M.fit(v.fit), onclick: () => { state.tool = id; drawMain(); if (id === 'range') { state.tab.graph = 'fit'; drawInspector(); } } }, label))),
         ui.btn('Show all', () => { g.figure.panels.forEach((p) => { p.x.min = p.x.max = p.y.min = p.y.max = null; if (p.y2) p.y2.min = p.y2.max = null; }); app.refresh(); }, '', { title: 'Automatic range on every axis' }),
