@@ -444,6 +444,13 @@ window.ASY = window.ASY || {};
     return f;
   }
 
+  /* Is there, drawn on the same graph, another curve with the same title made of another sheet? The legend then names the sheet as well:
+     two files that each have a column “Intensity” would give two rows alike. A name given to the curve (its `label`) is used as it is. */
+  function twin(r, p, s, y) {
+    const name = y.title || y.name, g = doc.graphs.find((k) => k.figure.panels.some((q) => q === p || q.series.some((c) => c === r || c.id === r.id)));
+    const all = g ? g.figure.panels.flatMap((q) => q.series) : p ? p.series : [];
+    return all.some((k) => { if (k === r || k.id === r.id || k.kind !== 'data' || k.follow || k.show === false || k.sheet === s.id) return false; const t = sheet(k.sheet), c = t && column(t, k.y); return !!c && (c.title || c.name) === name; });
+  }
   /* What a series draws: the columns it names, the curve of the fit it names, or the function it is. `p` is its panel, when the caller knows it. */
   function seriesData(r, p) {
     if (r.kind === 'fn') return fnData(r, p);
@@ -475,7 +482,7 @@ window.ASY = window.ASY || {};
     const ye = at(r.yerr), xe = at(r.xerr);
     let ys = numbers(y, n);
     if (r.shift) ys = ys.map((v) => v + r.shift);
-    const out = { x: x ? numbers(x, n) : Array.from({ length: n }, (_, i) => i + 1), y: ys, yerr: ye ? numbers(ye, n) : null, xerr: xe ? numbers(xe, n) : null, label: sr ? P.literal(s.name) : y.title || y.name };
+    const out = { x: x ? numbers(x, n) : Array.from({ length: n }, (_, i) => i + 1), y: ys, yerr: ye ? numbers(ye, n) : null, xerr: xe ? numbers(xe, n) : null, label: sr ? P.literal(s.name) : (y.title || y.name) + (twin(r, p, s, y) ? ' · ' + P.literal(s.name) : '') };
     const flag = r.unless ? column(s, r.unless) : null;          // the rows another column marks (a fit to check) are left out of this curve
     if (flag) { const keep = []; for (let i = 0; i < n; i++) if (flag.values[i] == null) keep.push(i); ['x', 'y', 'yerr', 'xerr'].forEach((k) => { if (out[k]) out[k] = keep.map((i) => out[k][i]); }); out.left = n - keep.length; }
     return out;

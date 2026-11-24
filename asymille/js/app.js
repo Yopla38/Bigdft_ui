@@ -33,6 +33,11 @@ window.ASY = window.ASY || {};
   app.changedSheet = (s) => { M.changed(s); app.refresh(); };
 
   // ------------------------------------------------------------------ what the buttons do
+  /* Show a sheet with one of its columns selected: where a curve, a fit or a formula came from. */
+  app.openColumn = (s, c) => {
+    M.doc.view.sheet = s.id; M.doc.view.main = 'sheet'; state.tab.sheet = 'column'; app.refresh();
+    const at = s.columns.indexOf(c); if (grid && at >= 0) { grid.select(at); grid.focus(); drawInspector(); }
+  };
   app.plot = (s, ys, type) => {
     const g = M.plot(s, ys, type);
     M.log('Graph “' + g.name + '”: ' + ys.map((y) => M.label(y)).join(', ') + ' against ' + (M.label(M.xOf(s, ys[0])) || 'the row number') + '.');

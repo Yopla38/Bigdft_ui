@@ -60,8 +60,11 @@ window.ASY = window.ASY || {};
     if (r.kind === 'fn') return 'y = ' + (r.expr || '…');
     if (r.kind === 'member') return 'Fit of the file shown';
     if (r.kind === 'fit') { const f = M.fit(r.fit); return (r.part === 'total' ? 'Fit' : r.part === 'band' ? 'Confidence band' : r.part === 'residuals' ? 'Residuals' : r.part) + (f ? ' · ' + f.name : ''); }
-    return d ? d.label : 'missing data';
+    return d ? P.plain(d.label) : 'missing data';
   }
+  /* The sheet and the column a curve of data draws; nothing for a curve of a fit, a function, or the file a series shows. */
+  const originOf = (r) => { if (r.kind !== 'data' || r.follow) return null; const s = M.sheet(r.sheet), y = s && M.column(s, r.y); return y ? { s, y } : null; };
+  const originSaid = (r) => { const o = originOf(r); return o ? 'Sheet “' + o.s.name + '”, column ' + o.y.name + (o.y.title ? ' · ' + P.plain(M.label(o.y)) : '') : ''; };
   /* A function drawn on the graph: its formula, the value of each of its parameters, and how far it is drawn. A parameter is typed, or stepped (the − and + beside it,
      the arrows of the keyboard in it) by one unit of the last digit that was typed: 0.5 moves by 0.1, 0.50 by 0.01. The figure follows at once; the panel is not built again. */
   const fnSteps = {};               // curve:parameter → its step, for this visit
@@ -102,14 +105,18 @@ window.ASY = window.ASY || {};
     drawPick();
     const out = [];
     if (fig.panels.length > 1) out.push(ui.field('Panel', ui.sel(st, 'panel', fig.panels.map((p, i) => [p.id, 'Panel ' + String.fromCharCode(97 + i) + (p.title ? ' · ' + p.title : '')]), { structural: true })));
-    out.push(h('div', { class: 'slist' }, panel.series.length ? panel.series.map((r) => h('button', { class: 'srow', type: 'button', 'aria-pressed': String(sel === r), onclick: () => { st.series = r.id; A().refresh(); } },
-      h('i', { style: 'background:' + r.color + (r.show === false ? ';opacity:.25' : '') }), h('span', {}, seriesName(r)), h('small', {}, r.show === false ? 'hidden' : P.TYPES[r.type] || (r.type === 'band' ? 'Band' : r.type)))) : h('p', { class: 'empty' }, 'Nothing is drawn in this panel yet.')));
+    out.push(h('div', { class: 'slist' }, panel.series.length ? panel.series.map((r) => h('button', { class: 'srow', type: 'button', 'aria-pressed': String(sel === r), title: originSaid(r) || null, onclick: () => { st.series = r.id; A().refresh(); } },
+      h('i', { style: 'background:' + r.color + (r.show === false ? ';opacity:.25' : '') }),
+      // several sheets: under its name, the sheet a curve is made of (every sheet has a column B, and two files may both have an “Intensity”)
+      h('span', {}, seriesName(r), M.doc.sheets.length > 1 && originOf(r) ? h('em', { class: 'from', style: 'display:block;font-style:normal;font-size:11.5px;color:var(--fg-3);overflow:hidden;text-overflow:ellipsis' }, originOf(r).s.name + ' · ' + originOf(r).y.name) : null), h('small', {}, r.show === false ? 'hidden' : P.TYPES[r.type] || (r.type === 'band' ? 'Band' : r.type)))) : h('p', { class: 'empty' }, 'Nothing is drawn in this panel yet.')));
     if (sel) {
       const s = M.sheet(sel.sheet);
       const move = (d) => { const i = panel.series.indexOf(sel), j = i + d; if (j < 0 || j >= panel.series.length) return; panel.series.splice(i, 1); panel.series.splice(j, 0, sel); A().refresh(); };
       out.push(ui.sec(seriesName(sel), sel.kind === 'fn' ? 'a function' : sel.kind === 'fit' || sel.kind === 'member' ? 'a curve of a fit' : sel.follow ? 'the file a series shows' : 'data', true,
         sel.kind === 'fn' ? fnFields(sel, panel) : null,
-        ui.field('Name in the legend', ui.txt(sel, 'label', { placeholder: seriesName(Object.assign({}, sel, { label: '' })), structural: true }), 'Write E_{F}, cm^{-1}, \\alpha for subscripts, superscripts and Greek letters.'),
+        originOf(sel) ? h('div', { class: 'acts', id: 'curve-origin' }, h('span', { class: 'muted' }, originSaid(sel)),
+          ui.btn('Open its sheet', () => { const o = originOf(sel); A().openColumn(o.s, o.y); }, '', { title: 'Show that sheet, with this column selected' })) : null,
+        ui.field('Name in the legend', ui.txt(sel, 'label', { placeholder: ((d) => (d && d.label ? P.plain(d.label) : seriesName(Object.assign({}, sel, { label: '' }))))(M.seriesData(sel, panel)), structural: true }), 'Write E_{F}, cm^{-1}, \\alpha for subscripts, superscripts and Greek letters.'),
         sel.kind === 'data' ? h('div', { class: 'cols2' },
           ui.field('X', ui.sel(sel, 'x', columnOptions(s, { none: 'row number' }), { nullable: true })), ui.field('Y', ui.sel(sel, 'y', columnOptions(s), { structural: true })),
           ui.field('Y error', ui.sel(sel, 'yerr', columnOptions(s, { none: 'none' }), { nullable: true })), ui.field('X error', ui.sel(sel, 'xerr', columnOptions(s, { none: 'none' }), { nullable: true }))) : null,

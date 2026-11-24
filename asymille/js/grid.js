@@ -192,7 +192,8 @@ window.ASY = window.ASY || {};
       draw() { const s = sheet(); if (s) { sel.c = ASY.clamp(sel.c, 0, Math.max(0, s.columns.length - 1)); sel.c2 = ASY.clamp(sel.c2, 0, Math.max(0, s.columns.length - 1)); } redraw(); },
       /* The columns the selection covers, and its rows. */
       selection() { const s = sheet(), b = box(); return { columns: s ? s.columns.slice(b.c0, b.c1 + 1).map((c) => c.id) : [], rows: [b.r0, b.r1], whole: sel.cols }; },
-      select(index) { const s = sheet(); sel = { c: index, r: 0, c2: index, r2: Math.max(0, M.rows(s) - 1), cols: true }; redraw(); },
+      /* A whole column selected and brought in sight, from its first row. */
+      select(index) { const s = sheet(); sel = { c: index, r: 0, c2: index, r2: Math.max(0, M.rows(s) - 1), cols: true }; root.scrollTop = 0; const left = index * COLW; if (left < root.scrollLeft || left + COLW + GUT > root.scrollLeft + root.clientWidth) root.scrollLeft = left; redraw(); },
       paste, copied, focus: () => root.focus({ preventScroll: true }), reset() { sel = { c: 0, r: 0, c2: 0, r2: 0, cols: false }; root.scrollTop = root.scrollLeft = 0; drawnFrom = -1; },
     };
     onScreen = api;
