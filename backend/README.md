@@ -97,6 +97,7 @@ Back up the database and `work/` together: the first holds the studies and the r
 
 - `ONDELETTE_ENV=production` and `ONDELETTE_PUBLIC_URL=https://…` (required; the server refuses to start without). Cookies are then `Secure`, HSTS is sent, `/api/docs` is closed, and only that origin may change anything.
 - Put a reverse proxy in front for HTTPS and leave the server on `127.0.0.1`; `ONDELETTE_FORWARDED_ALLOW_IPS` names the proxy so that addresses in the logs and in the sign-in limit are the visitors'.
+- **Without HTTPS, a browser withholds things from a page.** Opened at `http://some-machine:8766` (anything but `localhost`), a page gets neither the clipboard nor the window that asks where to save a file. Asymille then copies by the browser's older command, pastes from the keyboard only (Ctrl+V), asks the name of a file itself and lets the browser put it in its folder of downloads, and cannot copy a figure as an image; it says so where it matters. Behind HTTPS all of it is there.
 - **One process.** The server follows the waves it started (and finds them again after a restart, by their status files). Several workers would each follow their own; this is not built for that.
 - `ONDELETTE_REGISTRATION=closed` unless the HAPS account is meant for anyone who finds the page. Leave `ONDELETTE_DEMO_EMAIL` empty when seeding.
 - The bridge keeps the HAPS credentials (`./bridge.sh credentials.env`); they are in no setting of this server, and the runner's environment holds neither them nor the address of the database.

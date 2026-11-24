@@ -234,16 +234,16 @@ window.ASY = window.ASY || {};
       book.columns.push(column); entry.book = book; entry.column = column;
     }
 
-    // the functions become a sheet: for each grid of x, a column of x and, after it, a column for each function drawn on it, which keeps its formula
-    const drawnBy = { name: '\u0000functions', sheet: 0, columns: [] }, grids = {};
+    // a function stays a function: its formula, read as this page reads one (as written, or in lower case: Origin does not tell Exp from exp), and the stretch of x it was drawn on.
+    // A name that is not x (a variable of the Origin project, whose value the file does not give here) becomes a parameter of the curve, to set by hand.
     functions.forEach((f) => {
-      const key = f.begin + '|' + f.step + '|' + f.points;
-      if (!grids[key]) grids[key] = { x: { name: 'x', title: 'x', unit: '', role: 'x', values: Array.from({ length: f.points }, (_, k) => Number((f.begin + k * f.step).toPrecision(12))) }, of: [] };
-      const grid = grids[key], column = { name: f.name, title: f.name, unit: '', role: 'y', values: grid.x.values.map(() => null), comment: 'A function of the Origin project: y = ' + f.formula, grid };
+      const fn = { name: f.name, formula: f.formula, expr: f.formula, read: false, free: [], from: Number(f.begin.toPrecision(12)), to: Number((f.begin + (f.points - 1) * f.step).toPrecision(12)), points: f.points };
       for (const text of [f.formula, f.formula.toLowerCase()]) {
-        try { const read = ASY.expr.compile(text); if (read.names.some((n) => n !== 'x')) continue; column.values = grid.x.values.map((x) => { const v = read.run({ x }); return typeof v === 'number' && isFinite(v) ? v : null; }); column.fx = text; break; } catch (e) { /* tried as written, then in lower case */ }
+        let names; try { names = ASY.expr.compile(text).names.filter((n) => n !== 'x'); } catch (e) { continue; }
+        if (!fn.read || !names.length) { fn.expr = text; fn.free = names; fn.read = true; }
+        if (!names.length) break;
       }
-      grid.of.push(column); f.entry.book = drawnBy; f.entry.column = column; f.entry.fn = f;
+      f.entry.fn = fn;
     });
 
     // the windows. A worksheet says there what each of its columns is (X, Y, an error) and how it is called; a graph, its layers: axes, curves, texts.
@@ -273,7 +273,7 @@ window.ASY = window.ASY || {};
             const id = u16(c, 0x04), entry = datasets[id - 1];
             if (layer) {
               const xOf = datasets[u16(c, 0x23) - 1], long = c.length > 0x16d;
-              layer.curves.push({ y: entry && entry.column ? entry : null, x: xOf && xOf.column ? xOf : null, type: c[0x4c], hidden: c[0x26] === 33, connect: c[0x11], style: c[0x12], width: u16(c, 0x15) / 500,
+              layer.curves.push({ y: entry && (entry.column || entry.fn) ? entry : null, x: xOf && xOf.column ? xOf : null, type: c[0x4c], hidden: c[0x26] === 33, connect: c[0x11], style: c[0x12], width: u16(c, 0x15) / 500,
                 shape: c[0x17], interior: c[0x18], size: u16(c, 0x19) / 500, line: long ? c.subarray(0x16a, 0x16e) : null, symbol: long ? c.subarray(0x132, 0x136) : null });
               continue;
             }
@@ -296,20 +296,18 @@ window.ASY = window.ASY || {};
 
     const sheetsOf = {}; books.forEach((b) => { sheetsOf[b.name] = (sheetsOf[b.name] || 0) + 1; });
     const kept = books.filter((b) => b.columns.some((c) => c.values.some((v) => typeof v === 'number')));            // a sheet without one number is a table of Origin's own, or empty
-    // of the functions, those a graph draws: each grid of x, then its functions
-    const used = new Set(graphs.flatMap((g) => g.layers.flatMap((l) => l.curves.map((c) => (c.y && c.y.fn ? c.y.column : null)))).filter(Boolean));
-    Object.values(grids).forEach((grid) => { const mine = grid.of.filter((c) => used.has(c)); if (mine.length) drawnBy.columns.push(grid.x, ...mine); });
-    const unread = drawnBy.columns.filter((c) => c.comment && !c.fx).map((c) => c.name);
-    if (unread.length) said.push('The formula of ' + unread.slice(0, 6).join(', ') + (unread.length > 6 ? '…' : '') + ' is not one this page computes: ' + (unread.length > 1 ? 'those functions are' : 'that function is') + ' left empty.');
-    if (drawnBy.columns.length) kept.push(drawnBy);
-    const keyOf = (b) => (b === drawnBy ? 'functions' : b.name + '@' + b.sheet);
+    // of the functions, those a graph draws: what was not read as a formula, or holds names whose value the file does not give, is said
+    const used = [...new Set(graphs.flatMap((g) => g.layers.flatMap((l) => l.curves.map((c) => (c.y && c.y.fn ? c.y.fn : null)))).filter(Boolean))];
+    const unread = used.filter((f) => !f.read).map((f) => f.name), free = used.filter((f) => f.free.length).map((f) => f.name), few = (list) => list.slice(0, 6).join(', ') + (list.length > 6 ? '…' : '');
+    if (unread.length) said.push('The formula of ' + few(unread) + ' is not one this page computes: ' + (unread.length > 1 ? 'those functions are' : 'that function is') + ' kept as written and not drawn. Rewrite the formula under Curves.');
+    if (free.length) said.push('The formula of ' + few(free) + ' names something else than x, whose value is not in what was read: it became a parameter of the curve, set to 1. Give it its value under Curves.');
+    const keyOf = (b) => b.name + '@' + b.sheet;
     const tables = kept.map((b) => {
       const known = b.columns.some((c) => c.role !== null);
       b.columns.forEach((c, k) => { c.as = known ? c.role || 'y' : k === 0 ? 'x' : 'y'; });
-      return { name: b === drawnBy ? 'functions' : b.name + (sheetsOf[b.name] > 1 ? ' · sheet ' + b.sheet : ''), key: keyOf(b), said,
-        read: { rows: Math.max(...b.columns.map((c) => c.values.length)), skipped: 0, meta: [(b === drawnBy ? 'the functions drawn on the graphs of an Origin project' : 'a worksheet of an Origin project') + (version ? ', version ' + version : '')],
-          // a function keeps its formula, written on the column of x it is drawn on: `fx` is that formula and `on` the place of that column
-          columns: b.columns.map((c) => Object.assign({ title: c.title || c.name, unit: c.unit, role: c.as, values: c.values }, c.fx ? { fx: c.fx, on: b.columns.indexOf(c.grid.x), comment: c.comment } : {})) } };
+      return { name: b.name + (sheetsOf[b.name] > 1 ? ' · sheet ' + b.sheet : ''), key: keyOf(b), said,
+        read: { rows: Math.max(...b.columns.map((c) => c.values.length)), skipped: 0, meta: ['a worksheet of an Origin project' + (version ? ', version ' + version : '')],
+          columns: b.columns.map((c) => ({ title: c.title || c.name, unit: c.unit, role: c.as, values: c.values })) } };
     });
     const all = graphs.map((g) => graphOf(g, kept, keyOf));
     tables.graphs = all.filter((g) => g.panels.length);
@@ -401,6 +399,14 @@ window.ASY = window.ASY || {};
   const DASH = { 1: 'dash', 2: 'dot', 3: 'dashdot', 4: 'dashdot', 5: 'dash', 6: 'dot', 7: 'dashdot' };
   /* One graph window: a panel for each layer that has its own place, the curves with their columns, the axes, the legend, the texts and the arrows.
      A layer laid over another (a second y axis) joins it as its right axis. What cannot be drawn here (3D, contours, pies, boxes) is named in `said`. */
+  /* The values of a function on the stretch it was drawn on: to know how far the curves of a layer go, no more. */
+  function valuesOf(f) {
+    let read; try { read = ASY.expr.compile(f.expr); } catch (e) { return []; }
+    const env = {}; read.names.forEach((n) => { env[n] = 1; });
+    const n = Math.min(f.points, 400), out = [];
+    for (let i = 0; i < n; i++) { env.x = f.from + (f.to - f.from) * (n > 1 ? i / (n - 1) : 0); const v = read.run(env); if (typeof v === 'number' && isFinite(v)) out.push(v); }
+    return out;
+  }
   function graphOf(g, kept, keyOf) {
     const said = [], panels = [];
     const finite = (v) => (typeof v === 'number' && isFinite(v) && Math.abs(v) < 1e300 ? Number(v.toPrecision(12)) : null);
@@ -415,8 +421,8 @@ window.ASY = window.ASY || {};
       // the curves: a column of errors belongs to the curve before it
       const mine = [];
       layer.curves.forEach((c, nth) => {
-        if (!c.y || !kept.includes(c.y.book)) return;
-        const table = keyOf(c.y.book), col = (e) => (e && e.book === c.y.book ? e.book.columns.indexOf(e.column) : null);
+        if (!c.y || !(c.y.fn || kept.includes(c.y.book))) return;
+        const table = c.y.fn ? null : keyOf(c.y.book), col = (e) => (!c.y.fn && e && e.book === c.y.book ? e.book.columns.indexOf(e.column) : null);
         if (c.type === 231 || c.type === 254 || c.type === 233 || c.type === 255) {          // an error column names, as its x, the curve it belongs to; failing that, it is the curve before it
           const owner = (c.x && c.x.column ? mine.filter((k) => k.of === c.x.column).pop() : null) || mine[mine.length - 1];
           if (owner && owner.table === table) owner[c.type === 233 ? 'xerr' : 'yerr'] = col(c.y);
@@ -428,12 +434,12 @@ window.ASY = window.ASY || {};
         const curve = { table, x: col(c.x), y: col(c.y), yerr: null, xerr: null, axis: side, type: type === 'line' && c.connect >= 11 && c.connect <= 14 ? 'steps' : type, color: colour, show: !c.hidden,
           width: c.width >= 0.1 && c.width <= 10 ? Number(c.width.toFixed(2)) : null, dash: DASH[c.style] || 'solid', marker: SHAPES[c.shape] || 'circle', size: c.size >= 1 && c.size <= 30 ? Number(Math.min(12, c.size / 2).toFixed(1)) : null, open: c.interior === 1 || c.interior === 2,
           label: '', title: c.y.fn ? c.y.fn.formula.replace(/[\\_^]/g, '\\$&') : (c.y.column.title || c.y.column.name) };
-        if (c.y.fn) curve.label = curve.title;                        // a function is named by its formula
-        Object.defineProperty(curve, 'of', { value: c.y.column, enumerable: false });          // the column it draws: for what follows here, not for what is given out
+        if (c.y.fn) { const f = c.y.fn; curve.fn = { expr: f.expr, from: f.from, to: f.to, points: f.points }; if (f.read) Object.defineProperty(curve, 'values', { value: valuesOf(f), enumerable: false }); }          // a function: its formula, where it is drawn
+        Object.defineProperty(curve, 'of', { value: c.y.column || null, enumerable: false });          // the column it draws: for what follows here, not for what is given out
         mine.push(curve); panel.curves.push(curve);
       });
       // curves stacked by an offset: the file says the range of the axis, not the offset, so that the curves would lie flat at one end of it. The range is then left to the data.
-      const spanOf = (axisName, pick) => { let lo = Infinity, hi = -Infinity; mine.filter((c) => c.axis === axisName).forEach((c) => { const b = kept.find((k) => keyOf(k) === c.table), col = b.columns[pick(c)]; if (col) col.values.forEach((v) => { if (typeof v === 'number') { if (v < lo) lo = v; if (v > hi) hi = v; } }); }); return hi > lo ? [lo, hi] : null; };
+      const spanOf = (axisName, pick) => { let lo = Infinity, hi = -Infinity; mine.filter((c) => c.axis === axisName).forEach((c) => { const b = c.fn ? null : kept.find((k) => keyOf(k) === c.table), col = c.fn ? (c.values ? { values: c.values } : null) : b.columns[pick(c)]; if (col) col.values.forEach((v) => { if (typeof v === 'number') { if (v < lo) lo = v; if (v > hi) hi = v; } }); }); return hi > lo ? [lo, hi] : null; };
       const ySide = host ? host.y2 : panel.y, data = spanOf(side, (c) => c.y);
       if (data && ySide.min != null && ySide.max != null && ySide.scale === 'linear' && (ySide.max - ySide.min) > 5 * (data[1] - data[0]) && mine.length > 2) {
         ySide.min = ySide.max = ySide.step = null;
@@ -441,7 +447,7 @@ window.ASY = window.ASY || {};
       }
       // what is written on the layer
       const named = (what) => { const m = /^(\d+)/.exec(what); if (m) { const c = mine[Number(m[1]) - 1]; return c ? c.title : ''; }
-        const first = mine[0], col = first ? kept.find((b) => keyOf(b) === first.table).columns[/X/i.test(what) ? first.x : first.y] : null; return col ? (col.title || col.name) + (col.unit ? ' (' + col.unit + ')' : '') : ''; };
+        const first = mine.find((c) => !c.fn), col = first ? kept.find((b) => keyOf(b) === first.table).columns[/X/i.test(what) ? first.x : first.y] : null; return col ? (col.title || col.name) + (col.unit ? ' (' + col.unit + ')' : '') : ''; };
       // the size of a text is kept as so many times that of the titles of the axes, which here is the page's own
       const titled = layer.notes.find((n) => /^(XB|YL)$/.test(cstring(n.head, 0x46, 41)) && n.d1.length > 4 && n.d1[4] > 0), base = titled ? titled.d1[4] * originScale(cstring(titled.d2, 0)) : 22;
       layer.notes.forEach((n) => {

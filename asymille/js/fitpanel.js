@@ -296,7 +296,7 @@ window.ASY = window.ASY || {};
     M.log('The curve and the residuals of “' + f.name + '” were written to the sheets “' + made.name + '” and “' + res.name + '”.');
     A().refresh(); A().say('Written to two new sheets');
   }
-  const copy = async (text, what) => { try { await navigator.clipboard.writeText(text); A().say(what + ' copied'); } catch (e) { A().say('The browser did not allow copying', true); } };
+  const copy = async (text, what) => { const done = await ASY.copyText(text); A().say(done ? what + ' copied' : 'The browser did not allow copying', !done); };
 
   function results() {
     const f = M.fit(M.doc.view.fit), st = A().state;

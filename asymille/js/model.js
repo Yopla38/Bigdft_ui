@@ -170,10 +170,6 @@ window.ASY = window.ASY || {};
   function sheetFrom(name, columns, source) {
     const s = addSheet(name, source);
     columns.forEach((c, i) => addColumn(s, { title: c.title || c.name || '', unit: c.unit, values: c.values, role: c.role || (i === 0 ? 'x' : 'y'), comment: c.comment }));
-    // a column that is a function of another (`fx`, written with x; `on`: the place of the column that x is) keeps its formula, on the name that column has here
-    let live = false;
-    columns.forEach((c, i) => { const of = c.fx && s.columns[c.on]; if (!of || of === s.columns[i]) return; const formula = String(c.fx).replace(/\bx\b/g, of.name); try { ASY.expr.column(formula); s.columns[i].formula = formula; live = true; } catch (e) { /* its values stay as they were read */ } });
-    if (live) recompute(s);
     return s;
   }
   function toText(s, sep) {
@@ -216,6 +212,14 @@ window.ASY = window.ASY || {};
       const p = P.panel(id('p'));
       Object.assign(p.x, axisOf(ps.x)); Object.assign(p.y, axisOf(ps.y)); if (ps.y2) p.y2 = P.axis(axisOf(ps.y2));
       (ps.curves || []).forEach((c) => {
+        if (c.fn) {            // a function drawn there: a curve of its own kind here, with its formula to rewrite and the stretch of x it was drawn on
+          const num = (v) => (typeof v === 'number' && isFinite(v) ? Number(v.toPrecision(12)) : null);
+          const r = P.series({ id: id('r'), kind: 'fn', expr: '', params: {}, from: num(c.fn.from), to: num(c.fn.to), points: ASY.clamp(Math.round(c.fn.points) || 400, 2, 20000), axis: c.axis === 'y2' && p.y2 ? 'y2' : 'y',
+            type: P.TYPES[c.type] ? c.type : 'line', color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#c81d25', width: c.width > 0 ? c.width : null, dash: P.DASHES[c.dash] !== undefined ? c.dash : 'solid',
+            marker: P.MARKERS[c.marker] ? c.marker : 'circle', size: c.size > 0 ? c.size : 3.5, open: !!c.open, label: String(c.label || '').slice(0, 400), show: c.show !== false });
+          setFunction(r, c.fn.expr); p.series.push(r);
+          return;
+        }
         const s = sheetOf(c.table), at = (k) => (s && k != null && s.columns[k] ? s.columns[k] : null), y = at(c.y);
         if (!y) return;
         const x = at(c.x) || xOf(s, y), ye = at(c.yerr), xe = at(c.xerr);
@@ -375,8 +379,74 @@ window.ASY = window.ASY || {};
     });
   }
   const resultOf = (f, col) => (col && f.results[col] ? f.results[col] : f.mode === 'single' || !col ? f.result : null);
-  /* What a series draws: the columns it names, or the curve of the fit it names. */
-  function seriesData(r) {
+  // ------------------------------------------------------------------ a function drawn on a graph
+  /* A curve that is a formula of x (`kind: 'fn'`): `expr` in the grammar of a custom fit function, `params` the value of each other name it holds, given by hand,
+     `from` and `to` (empty: as far as the axis goes) and `points`. Its values are not kept: they are computed each time the figure is laid. */
+  const fnRead = new Map();
+  function fnOf(r) {
+    const text = String(r.expr || '');
+    if (!fnRead.has(text)) {
+      if (fnRead.size > 400) fnRead.clear();
+      try { const read = ASY.expr.compile(text); fnRead.set(text, { read, names: read.names.filter((n) => n !== 'x'), error: null }); } catch (e) { fnRead.set(text, { read: null, names: [], error: e.message }); }
+    }
+    return fnRead.get(text);
+  }
+  const panelOf = (r) => { for (const g of doc.graphs) for (const p of g.figure.panels) if (p.series.some((k) => k === r || k.id === r.id)) return p; return null; };
+  /* Rewrite the formula. The names it holds beside x are its parameters: one that was there keeps its value, a new one starts at 1. Gives what is wrong with it, or null. */
+  function setFunction(r, text) {
+    r.expr = String(text == null ? '' : text).trim().slice(0, 2000);
+    const got = fnOf(r); if (!got.read) return got.error;          // not read: the values are kept for when it is
+    const had = r.params || {}; r.params = {};
+    got.names.forEach((k) => { r.params[k] = typeof had[k] === 'number' && isFinite(had[k]) ? had[k] : 1; });
+    return null;
+  }
+  /* How far a function is drawn: where it says, or else as far as the axis is set, or else as far as the data of its panel go. */
+  function fnSpan(r, p) {
+    let lo = typeof r.from === 'number' ? r.from : null, hi = typeof r.to === 'number' ? r.to : null;
+    if (lo == null || hi == null) {
+      let a = p && typeof p.x.min === 'number' ? p.x.min : null, b = p && typeof p.x.max === 'number' ? p.x.max : null;
+      if (p && (a == null || b == null)) {
+        let dlo = Infinity, dhi = -Infinity;
+        p.series.forEach((k) => { if (k.kind === 'fn' || k.show === false) return; const d = seriesData(k, p); if (!d || !d.x) return; for (let i = 0; i < d.x.length; i++) { const v = d.x[i]; if (typeof v === 'number' && isFinite(v)) { if (v < dlo) dlo = v; if (v > dhi) dhi = v; } } });
+        if (dhi > dlo) { if (a == null) a = dlo; if (b == null) b = dhi; }
+      }
+      if (lo == null) lo = a != null && (hi == null || a < hi) ? a : hi != null ? hi - 10 : 0;
+      if (hi == null) hi = b != null && b > lo ? b : lo + 10;
+    }
+    return lo <= hi ? [lo, hi] : [hi, lo];
+  }
+  function fnData(r, p) {
+    const got = fnOf(r); if (!got.read) return null;
+    p = p || panelOf(r);
+    const [lo, hi] = fnSpan(r, p), n = ASY.clamp(Math.round(r.points) || 400, 2, 20000), log = !!p && p.x.scale === 'log' && lo > 0 && hi > lo;
+    const env = {}; got.names.forEach((k) => { const v = r.params ? r.params[k] : null; env[k] = typeof v === 'number' && isFinite(v) ? v : 1; });
+    const x = new Array(n), y = new Array(n);
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), xi = log ? lo * Math.pow(hi / lo, t) : lo + (hi - lo) * t; env.x = xi; const v = got.read.run(env); x[i] = xi; y[i] = typeof v === 'number' && isFinite(v) ? v : NaN; }
+    return { x, y, label: 'y = ' + shownExpression(r.expr) };
+  }
+  /* A function added to a panel: a straight line to begin with, level through the middle of the data, so that it is seen at once and moves nothing. */
+  function addFunction(g, panel) {
+    let lo = Infinity, hi = -Infinity;
+    panel.series.forEach((k) => { if (k.kind !== 'data' || k.show === false) return; const d = seriesData(k, panel); if (d) d.y.forEach((v) => { if (typeof v === 'number' && isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } }); });
+    const taken = panel.series.map((k) => k.color);
+    const r = P.series({ id: id('r'), kind: 'fn', expr: 'a*x + b', params: { a: 0, b: hi >= lo ? Number(((lo + hi) / 2).toPrecision(3)) : 1 }, from: null, to: null, points: 400, type: 'line', marker: 'none',
+      color: ['#c81d25', '#0072b2', '#009e73', '#cc79a7', '#e69f00'].find((c) => !taken.includes(c)) || '#c81d25' });
+    panel.series.push(r);
+    return r;
+  }
+  /* The fit that starts where a function was put by hand: its formula as a custom component, its values as starting values, on the first data of its panel. */
+  function fitFromFunction(r, p) {
+    const got = fnOf(r), d = p.series.find((k) => k.kind === 'data' && !k.follow), s = d && sheet(d.sheet), y = s && column(s, d.y);
+    if (!got.read || !got.names.length || !y) return null;
+    const f = addFit(s, column(s, d.x) || xOf(s, y), y), c = { id: componentId(f, 'u'), fn: 'expression', expr: r.expr, params: {} };
+    got.names.forEach((k) => { const v = r.params ? r.params[k] : null; c.params[k] = { value: typeof v === 'number' && isFinite(v) ? v : 1, vary: true, min: null, max: null, expr: '' }; });
+    f.model.components.push(c);
+    return f;
+  }
+
+  /* What a series draws: the columns it names, the curve of the fit it names, or the function it is. `p` is its panel, when the caller knows it. */
+  function seriesData(r, p) {
+    if (r.kind === 'fn') return fnData(r, p);
     if (r.kind === 'fit') {
       const f = fit(r.fit); if (!f) return null;
       const s = sheet(f.sheet), ycol = column(s, r.column || f.y), res = resultOf(f, r.column) || (r.column ? null : f.results[f.y]);
@@ -708,7 +778,7 @@ window.ASY = window.ASY || {};
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, namesItself, applyOnce, changed, sortBy, sheetFrom, toText, unique,
-    graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, bringFitNote, refreshFitNotes, seriesData, resultOf,
+    graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, bringFitNote, refreshFitNotes, seriesData, fnOf, setFunction, addFunction, fitFromFunction, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },

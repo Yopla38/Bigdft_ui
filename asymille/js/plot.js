@@ -1,7 +1,7 @@
 /* A figure, laid out: from what a person chose (size in millimetres, axes, series, labels) to a
  * list of things to draw at given places, and that list written as SVG.
  *
- *     const list = ASY.plot.layout(figure, data)      // data(series) → { x, y, yerr, xerr, lower, upper, label }
+ *     const list = ASY.plot.layout(figure, data)      // data(series, panel) → { x, y, yerr, xerr, lower, upper, label }
  *     ASY.plot.svg(list)                              // the figure, as the text of an SVG
  *
  * The list is the figure: lines, shapes, symbols and texts, in points, y downwards, on a page of
@@ -169,7 +169,7 @@ window.ASY = window.ASY || {};
     // each panel: its series with their data, the range of its axes
     const cols = Math.max(1, Math.min(fig.layout.cols || 1, fig.panels.length)), rowsN = Math.ceil(fig.panels.length / cols);
     const prepared = fig.panels.map((p, index) => {
-      const drawn = p.series.filter((s) => s.show !== false).map((s) => ({ s, d: data(s) || { x: [], y: [] } }));
+      const drawn = p.series.filter((s) => s.show !== false).map((s) => ({ s, d: data(s, p) || { x: [], y: [] } }));
       const of = (key) => drawn.filter((e) => (e.s.axis || 'y') === key);
       // the range makes room for the error bars, but not for one that dwarfs the data: a point that is not determined would flatten every other
       const ys = (list) => list.flatMap((e) => { const d = e.d; const arr = [d.y]; if (d.lower) arr.push(d.lower, d.upper);
@@ -197,7 +197,7 @@ window.ASY = window.ASY || {};
       const tx = ticks(e.xr[0], e.xr[1], e.p.x, guessW, ax.size, true);
       const lastHalf = tx.major.length ? textWidth(tx.major[tx.major.length - 1].runs, ax.size) / 2 : 0;
       // a legend set outside takes its room on the right of the panel
-      const listed = e.p.legend && e.p.legend.show !== false && e.p.legend.pos === 'out' ? e.drawn.filter((q) => q.s.legend !== false && q.s.type !== 'band').map((q) => q.s.label || q.d.label || '') : [];
+      const listed = e.p.legend && e.p.legend.show !== false && e.p.legend.pos === 'out' ? e.drawn.filter((q) => q.s.legend !== false && q.s.type !== 'band' && (q.s.label || q.d.label || q.d.x.length)).map((q) => q.s.label || q.d.label || '') : [];
       const beside = listed.length ? 6 + S.legend * 3.75 + Math.max(...listed.map((t) => textWidth(t, S.legend))) : 0;
       // a text placed outside the frame (in fractions of the panel) is given the room it needs on its side of the page
       const out = { l: 0, r: 0, t: 0, b: 0 };
@@ -294,7 +294,7 @@ window.ASY = window.ASY || {};
           items.push(Object.assign({ t: 'marks', pts, size: s.size || 3.5, fill: shape.strokes ? null : s.open ? '#ffffff' : color, stroke: shape.strokes || s.open ? color : null,
             width: shape.strokes || s.open ? Math.max(0.5, (s.size || 3.5) * 0.18) : 0, opacity: s.opacity, clip, k }, shape));
         }
-        if (s.legend !== false && type !== 'band') legend.push({ s, label: s.label || d.label || '', color, lw, dash, type, symbols });
+        if (s.legend !== false && type !== 'band' && (s.label || d.label || d.x.length)) legend.push({ s, label: s.label || d.label || '', color, lw, dash, type, symbols });
       });
 
       // notes over the data

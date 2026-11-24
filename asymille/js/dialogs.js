@@ -21,7 +21,7 @@ window.ASY = window.ASY || {};
   // ------------------------------------------------------------------ bringing data in
   function importData(given) {
     const d = dialog('Import data', true), files = [], drawn = [];          // drawn: the graphs a project of Origin holds, to make again here from its sheets
-    let current = 0, note = '', group = 0;
+    let current = 0, note = '', group = 0, pasting = false;
     const also = { graphs: true };
     const add = (text, name) => {
       try { const how = /^\s*<\?xml|^\s*<RSAPersist/.test(text.slice(0, 400)) ? null : ASY.importer.detect(text); files.push({ name, text, how, read: ASY.importer.read(text, name) }); }
@@ -52,7 +52,10 @@ window.ASY = window.ASY || {};
       const f = files[current];
       const drop = h('div', { class: 'drop', ondragover: (e) => { e.preventDefault(); drop.classList.add('over'); }, ondragleave: () => drop.classList.remove('over'), ondrop: (e) => { e.preventDefault(); drop.classList.remove('over'); take([...e.dataTransfer.files]); } },
         h('p', {}, files.length ? 'Drop more files here' : 'Drop files here: text with columns of numbers (.txt, .dat, .csv…), a spreadsheet (.xlsx, .ods), a project of Origin (.opj), or a Tektronix .Specan spectrum'),
-        h('div', { class: 'acts' }, ui.btn('Choose files', () => input.click(), files.length ? '' : 'cta'), ui.btn('Paste from the clipboard', async () => { try { const text = await navigator.clipboard.readText(); if (!text.trim()) throw new Error('empty'); add(text, 'Pasted data'); current = files.length - 1; draw(); } catch (e) { note = 'The clipboard holds no text, or the browser did not allow reading it: click a cell of a sheet and press Ctrl+V instead.'; draw(); } })),
+        h('div', { class: 'acts' }, ui.btn('Choose files', () => input.click(), files.length ? '' : 'cta'), ui.btn('Paste from the clipboard', async () => { const text = await ASY.pastedText(); if (text && text.trim()) { add(text, 'Pasted data'); current = files.length - 1; pasting = false; } else if (text === null) pasting = true; else note = 'The clipboard holds no text.'; draw(); if (pasting) { const box = d.body.querySelector('#paste-here'); if (box) box.focus(); } })),
+        // the browser keeps its clipboard from the button (plain http, or refused): a field takes what Ctrl+V gives
+        pasting ? h('textarea', { class: 'inp', id: 'paste-here', rows: 3, spellcheck: 'false', placeholder: 'Click here and press Ctrl+V: ' + (ASY.plainHttp() ? 'at a plain http address the browser gives the clipboard to the keyboard, not to a button' : 'the browser did not let the button read the clipboard'),
+          onpaste: (e) => { const text = e.clipboardData.getData('text/plain'); e.preventDefault(); if (!text.trim()) return; add(text, 'Pasted data'); current = files.length - 1; pasting = false; draw(); } }) : null,
         h('p', { class: 'muted' }, 'A file is read here, in the browser. The separator, the decimal mark and the lines of heading are detected; you can correct them before importing.'));
       const parts = [drop, input, note ? h('div', { class: 'notice err' }, note) : null];
       if (f) {
@@ -139,9 +142,10 @@ window.ASY = window.ASY || {};
         note ? h('div', { class: 'notice err' }, note) : null, said.map((s) => h('div', { class: 'notice advice' }, s)),
         h('div', { class: 'acts' },
           ui.btn(busy ? 'Making the file…' : 'Save the file', async () => { const mime = { pdf: 'application/pdf', svg: 'image/svg+xml', eps: 'application/postscript', tiff: 'image/tiff', png: 'image/png' }[opt.format];
-            const to = await ASY.saveAs((opt.name || 'figure') + '.' + opt.format, mime); if (!to) return;          // asked first: the place is chosen while the click still counts, the file is made after
+            const to = await ASY.saveAs((opt.name || 'figure') + '.' + opt.format, mime, true); if (!to) return;          // asked first: the place is chosen while the click still counts, the file is made after
             busy = true; note = ''; draw(); try { const out = await make(); said = out.notes || []; await to.write(out.blob); if (!to.chosen) said = said.concat([to.name + ' is in the folder of downloads of the browser.']); M.log('Figure “' + g.name + '” exported as ' + out.name + ' (' + fig.width + ' × ' + fig.height + ' mm' + (pixels ? ', ' + opt.dpi + ' dpi' : '') + ').'); A().touch(); } catch (e) { note = e.message; } busy = false; draw(); }, 'cta', { disabled: busy }),
-          ui.btn('Copy as an image', async () => { try { const blob = await raster(list(), 300); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); A().say('The figure is in the clipboard (PNG, 300 dpi)'); } catch (e) { note = e.message || 'The browser did not allow copying an image.'; draw(); } }, '', { title: 'A PNG at 300 dpi, to paste in a slide or a notebook' })));
+          ui.btn('Copy as an image', async () => { if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem !== 'function') { note = (ASY.plainHttp() ? 'At a plain http address the browser gives a page no clipboard for images' : 'This browser gives a page no clipboard for images') + ': save the figure as PNG instead.'; draw(); return; }
+            try { const blob = await raster(list(), 300); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); A().say('The figure is in the clipboard (PNG, 300 dpi)'); } catch (e) { note = e.message || 'The browser did not allow copying an image.'; draw(); } }, '', { title: 'A PNG at 300 dpi, to paste in a slide or a notebook' })));
     }
     draw();
   }
@@ -149,7 +153,7 @@ window.ASY = window.ASY || {};
   // ------------------------------------------------------------------ the projects
   function projects() {
     const T = ASY.store, d = dialog('Projects');
-    let note = '', renaming = null, removing = null;
+    let note = '', saved = '', renaming = null, removing = null;
     const act = async (fn) => { note = ''; try { await fn(); } catch (e) { note = e.message || String(e); } draw(); };
     const fileInput = h('input', { type: 'file', hidden: true, accept: '.json,application/json', onchange: async (e) => { const file = e.target.files[0]; if (!file) return; act(async () => { const doc = JSON.parse(await file.text()); if (!doc || doc.version !== 1 || !Array.isArray(doc.sheets)) throw new Error('This file is not an Asymille project.'); if (T.state.on) await T.fresh(() => M.restore(doc)); else M.restore(doc); d.el.close(); A().resetGrid(); A().refresh(); }); } });
     function row(s) {
@@ -174,10 +178,11 @@ window.ASY = window.ASY || {};
         h('div', { class: 'acts' }, s.on ? ui.btn('New project', () => act(async () => { await T.fresh(() => M.blank()); d.el.close(); A().resetGrid(); A().refresh(); }), 'cta') : ui.btn('New project', () => { M.blank(); d.el.close(); A().resetGrid(); A().refresh(); }, 'cta'),
           ui.btn('Save this project to a file', async () => {
             const to = await ASY.saveAs((M.doc.name.replace(/[^\w.-]+/g, '_') || 'project') + '.asymille.json', 'application/json'); if (!to) return;
-            try { await to.write(JSON.stringify(M.doc)); A().say(to.chosen ? 'Saved as ' + to.name : to.name + ' is in the folder of downloads: this browser, or this address, does not let a page ask where. Its setting “Ask where to save each file” does.'); } catch (e) { note = e.message; draw(); }
+            try { await to.write(JSON.stringify(M.doc)); note = ''; saved = to.chosen ? 'Saved as ' + to.name + '.' : to.name + ' is in the folder of downloads of the browser.'; } catch (e) { saved = ''; note = e.message; }
+            draw();          // said here, in the dialog: a message of the page would be behind it
           }, '', { title: 'The whole project (data, graphs, fits) as one file, in the folder and under the name you choose: a backup, or to send to someone' }),
           ui.btn('Open a project file', () => fileInput.click())),
-        note ? h('div', { class: 'notice err' }, note) : null,
+        note ? h('div', { class: 'notice err' }, note) : null, saved ? h('div', { class: 'notice ok', id: 'project-saved' }, saved) : null,
         ASY.seriespanel.room() ? h('p', { class: ASY.seriespanel.room().near ? 'notice' : 'muted' }, ASY.seriespanel.room().text + (ASY.seriespanel.room().near ? ' Larger, it is refused when it is saved.' : '')) : null,
         !s.on ? h('p', { class: 'say' }, 'No server keeps projects here: save the project to a file to find it again.')
           : s.loading && !s.list ? h('p', { class: 'say' }, 'Reading your projects…') : s.error && !s.list ? h('div', { class: 'notice err' }, s.error)

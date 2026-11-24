@@ -57,9 +57,41 @@ window.ASY = window.ASY || {};
   function seriesName(r) {
     const d = M.seriesData(r);
     if (r.label) return P.plain(r.label);
+    if (r.kind === 'fn') return 'y = ' + (r.expr || '…');
     if (r.kind === 'member') return 'Fit of the file shown';
     if (r.kind === 'fit') { const f = M.fit(r.fit); return (r.part === 'total' ? 'Fit' : r.part === 'band' ? 'Confidence band' : r.part === 'residuals' ? 'Residuals' : r.part) + (f ? ' · ' + f.name : ''); }
     return d ? d.label : 'missing data';
+  }
+  /* A function drawn on the graph: its formula, the value of each of its parameters, and how far it is drawn. A parameter is typed, or stepped (the − and + beside it,
+     the arrows of the keyboard in it) by one unit of the last digit that was typed: 0.5 moves by 0.1, 0.50 by 0.01. The figure follows at once; the panel is not built again. */
+  const fnSteps = {};               // curve:parameter → its step, for this visit
+  const lastDigit = (text) => { const m = /^[-+]?(\d*)(?:\.(\d*))?(?:[eE]([-+]?\d+))?$/.exec(String(text).trim().replace(',', '.')); return m && (m[1] || m[2]) ? Math.pow(10, (m[3] ? Number(m[3]) : 0) - (m[2] ? m[2].length : 0)) : null; };
+  function fnFields(r, panel) {
+    const got = M.fnOf(r), st = A().state;
+    const param = (k) => {
+      const key = r.id + ':' + k, stepOf = () => fnSteps[key] || lastDigit(String(r.params[k])) || 1;
+      const input = h('input', { class: 'inp num', type: 'text', inputmode: 'decimal', value: String(r.params[k]), 'data-param': k, 'aria-label': 'Value of ' + k, title: 'Arrow up and arrow down change it by one unit of its last digit',
+        onchange: (e) => { const raw = e.target.value.trim(), v = ASY.parseNum(raw); if (raw === '' || isNaN(v)) { e.target.value = String(r.params[k]); A().say('“' + raw + '” is not a number', true); return; }
+          if (v !== r.params[k]) { r.params[k] = v; fnSteps[key] = lastDigit(raw) || stepOf(); A().touch(); } },
+        onkeydown: (e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); move(e.key === 'ArrowUp' ? 1 : -1); } } });
+      const move = (d) => { const typed = ASY.parseNum(input.value.trim()), from = isNaN(typed) ? r.params[k] : typed, step = input.value.trim() !== String(r.params[k]) && lastDigit(input.value) ? lastDigit(input.value) : stepOf();
+        fnSteps[key] = step; r.params[k] = Number((from + d * step).toPrecision(12)); input.value = String(r.params[k]); A().touch(); };
+      return h('div', { style: 'display:grid;grid-template-columns:minmax(34px,auto) 1fr auto auto;gap:6px;align-items:center' }, h('code', {}, k), input,
+        ui.btn('−', () => move(-1), '', { 'aria-label': 'Lower ' + k, title: 'One unit of its last digit lower' }), ui.btn('+', () => move(1), '', { 'aria-label': 'Raise ' + k, title: 'One unit of its last digit higher' }));
+    };
+    return [
+      ui.field('y =', h('input', { class: 'inp', type: 'text', id: 'fn-expr', value: r.expr || '', maxlength: 2000, spellcheck: 'false', style: 'font-family:var(--mono)', onchange: (e) => { M.setFunction(r, e.target.value); A().refresh(); } }),
+        'A formula of x: + − * / ^, parentheses, exp, ln, log10, sqrt, sin, cos, tan, abs, erf…, pi. Any other name (a, tau, x0) is a parameter: its value is set below.'),
+      got.error ? h('div', { class: 'notice err', id: 'fn-error' }, 'Not drawn: ' + got.error + '.') : null,
+      got.names.length ? h('div', { class: 'fn-params', style: 'display:grid;gap:6px' }, h('span', { class: 'muted' }, 'Parameters'), got.names.map(param)) : null,
+      h('div', { class: 'cols3' },
+        ui.field('From x =', ui.num(r, 'from', { nullable: true, placeholder: 'the axis' })), ui.field('To x =', ui.num(r, 'to', { nullable: true, placeholder: 'the axis' })),
+        ui.field('Points', ui.num(r, 'points', { min: 2, max: 20000, int: true }))),
+      h('small', { class: 'act-note' }, 'Left empty, it is drawn as far as the axis goes. More points for a curve that turns sharply.'),
+      got.read && got.names.length && panel.series.some((k) => k.kind === 'data' && !k.follow) ? h('div', { class: 'acts' }, ui.btn('Fit the data with it', () => {
+        const f = M.fitFromFunction(r, panel); if (!f) return A().say('There is no data in this panel to fit', true);
+        st.tab.graph = 'fit'; st.facts = null; A().refresh(); A().say('A fit that starts from this function, with its values: press Fit');
+      }, '', { id: 'fn-fit', title: 'Make a fit of the data of this panel, with this formula as its model and these values as starting values' })) : null];
   }
   function seriesTab(g) {
     const st = A().state, fig = g.figure, panel = fig.panels.find((p) => p.id === st.panel) || fig.panels[0];
@@ -75,7 +107,8 @@ window.ASY = window.ASY || {};
     if (sel) {
       const s = M.sheet(sel.sheet);
       const move = (d) => { const i = panel.series.indexOf(sel), j = i + d; if (j < 0 || j >= panel.series.length) return; panel.series.splice(i, 1); panel.series.splice(j, 0, sel); A().refresh(); };
-      out.push(ui.sec(seriesName(sel), sel.kind === 'fit' || sel.kind === 'member' ? 'a curve of a fit' : sel.follow ? 'the file a series shows' : 'data', true,
+      out.push(ui.sec(seriesName(sel), sel.kind === 'fn' ? 'a function' : sel.kind === 'fit' || sel.kind === 'member' ? 'a curve of a fit' : sel.follow ? 'the file a series shows' : 'data', true,
+        sel.kind === 'fn' ? fnFields(sel, panel) : null,
         ui.field('Name in the legend', ui.txt(sel, 'label', { placeholder: seriesName(Object.assign({}, sel, { label: '' })), structural: true }), 'Write E_{F}, cm^{-1}, \\alpha for subscripts, superscripts and Greek letters.'),
         sel.kind === 'data' ? h('div', { class: 'cols2' },
           ui.field('X', ui.sel(sel, 'x', columnOptions(s, { none: 'row number' }), { nullable: true })), ui.field('Y', ui.sel(sel, 'y', columnOptions(s), { structural: true })),
@@ -98,6 +131,7 @@ window.ASY = window.ASY || {};
         h('div', { class: 'cols2' }, ui.chk(sel, 'show', 'Drawn', { structural: true }), sel.type === 'band' ? null : ui.chk(sel, 'legend', 'In the legend')),
         h('div', { class: 'acts' }, ui.btn('Draw earlier', () => move(-1)), ui.btn('Draw later', () => move(1)), ui.btn('Remove', () => { panel.series = panel.series.filter((r) => r !== sel); st.series = null; A().refresh(); }, 'danger'))));
     }
+    out.push(h('div', { class: 'acts' }, ui.btn('+ Function', () => { st.series = M.addFunction(g, panel).id; A().refresh(); }, '', { id: 'add-function', title: 'Draw a formula of x on this panel. Its parameters are set by hand: to see where a model lies before fitting it, or to draw a line the data are compared with' })));
     out.push(ui.sec('Add data to this panel', '', !panel.series.length,
       ui.field('Sheet', ui.sel(pick, 'sheet', sheetOptions(), { then: drawPick, structural: false })), ui.field('Y column', yChoice),
       h('div', { class: 'acts' }, ui.btn('Add', () => { const s = M.sheet(pick.sheet), y = M.column(s, pick.y); if (!y) return A().say('Choose a column first', true); st.series = M.addData(g, panel, s, y, { type: M.rows(s) > 60 ? 'line' : 'scatter' }).id; A().refresh(); }, 'cta'))));

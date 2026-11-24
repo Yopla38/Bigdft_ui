@@ -1,6 +1,8 @@
 /* A sheet on screen: a grid that draws only the rows in sight, so that a hundred thousand rows
  * scroll as ten do. Click a cell and type; drag or shift-arrow to select; copy and paste go
  * through the clipboard as tab-separated text, so they work with a spreadsheet in both directions.
+ * The keyboard's copy, cut and paste are heard on the document, not on the grid: the browser sends
+ * them to whatever holds the focus, and that is a button as soon as one was pressed.
  *
  *     const grid = ASY.grid(el, { sheet: () => sheet, changed: (what) => …, picked: () => … })
  *     grid.draw()            after the sheet changed
@@ -12,6 +14,38 @@ window.ASY = window.ASY || {};
   'use strict';
   const h = ASY.h, M = ASY.model;
   const COLW = 116, ROWH = 24, GUT = 58, HEAD = 46, ROLE = { x: 'X', y: 'Y', yerr: 'yEr', xerr: 'xEr', label: 'L', none: '–' };
+
+  /* What was copied, as a table of cells. Tabs when there are any (a spreadsheet); semicolons when every line has one; spaces when the lines are columns of numbers
+     (the same count on each line, one line at least all numbers). Otherwise a line is one cell: “sample A” is a name, not two columns. */
+  function cellsOf(text) {
+    const lines = String(text).replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n'), full = lines.filter((l) => l.trim() !== '');
+    if (lines.some((l) => l.includes('\t'))) return lines.map((l) => l.split('\t'));
+    if (full.length && full.every((l) => l.includes(';'))) return lines.map((l) => l.split(';'));
+    const split = full.map((l) => l.trim().split(/\s+/)), numbers = (t) => t.every((k) => !isNaN(ASY.parseNum(k)));
+    const columns = split.length && split[0].length > 1 && split.every((t) => t.length === split[0].length) && split.some(numbers);
+    return lines.map((l) => (columns ? (l.trim() ? l.trim().split(/\s+/) : []) : [l.trim()]));
+  }
+  /* How many times a block of `h` rows by `w` columns is repeated in a selection of `rows` by `cols`: a whole number of times, as a spreadsheet does (one value fills
+     the selection; a row fills the rows selected). A selection it does not fit takes it once. Whole columns (chosen by their heading) repeat a single row only. */
+  function repeats(h, w, rows, cols, whole) {
+    const down = rows > h && rows % h === 0 && (!whole || h === 1) ? rows / h : 1, across = cols > w && cols % w === 0 ? cols / w : 1;
+    return [down, across];
+  }
+  let onScreen = null;          // the grid that is shown: the one the keyboard's copy, cut and paste are for
+  const typing = (el) => !!(el && el.closest && el.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
+  /* Is this copy, cut or paste for the grid? Not while a field is typed in, a dialog is open, or (for a copy) text is selected somewhere else in the page. */
+  function forGrid(e, copying) {
+    const g = onScreen;
+    if (!g || !g.root.isConnected || g.busy() || typing(e.target) || typing(document.activeElement) || document.querySelector('dialog[open]')) return null;
+    const picked = window.getSelection && window.getSelection();
+    if (copying && picked && !picked.isCollapsed && !g.root.contains(picked.anchorNode)) return null;
+    return g;
+  }
+  if (typeof document !== 'undefined') {
+    document.addEventListener('copy', (e) => { const g = forGrid(e, true); if (!g) return; e.preventDefault(); e.clipboardData.setData('text/plain', g.copied()); });
+    document.addEventListener('cut', (e) => { const g = forGrid(e, true); if (!g) return; e.preventDefault(); e.clipboardData.setData('text/plain', g.copied()); g.clear(); });
+    document.addEventListener('paste', (e) => { const g = forGrid(e, false); if (!g) return; e.preventDefault(); const text = e.clipboardData.getData('text/plain'); if (text) g.paste(text); });
+  }
 
   ASY.grid = function (root, ctx) {
     let sel = { c: 0, r: 0, c2: 0, r2: 0, cols: false }, editing = null, dragging = false, drawnFrom = -1, drawnTo = -1;
@@ -102,25 +136,28 @@ window.ASY = window.ASY || {};
       for (let r = b.r0; r <= Math.min(b.r1, Math.max(0, M.rows(s) - 1)); r++) { const cells = []; for (let c = b.c0; c <= b.c1; c++) { const v = s.columns[c].values[r]; cells.push(v == null ? '' : String(v)); } lines.push(cells.join('\t')); }
       return lines.join('\n');
     }
-    /* Text from the clipboard, written from the selected cell on. Columns are added when it is wider than the sheet. */
+    /* Text from the clipboard, written from the top left cell of the selection. One value, or a block the selection holds a whole number of times, is repeated to
+       fill the selection, as a spreadsheet does. Columns are added when it is wider than the sheet. */
     function paste(text) {
       const s = sheet(); if (!s) return;
-      const lines = text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n');
-      const sep = lines.some((l) => l.includes('\t')) ? '\t' : lines.every((l) => l.includes(';')) ? ';' : null;
-      const table = lines.map((l) => (sep ? l.split(sep) : l.trim().split(/\s+/)));
-      const c0 = Math.min(sel.c, sel.c2), r0 = Math.min(sel.r, sel.r2), width = Math.max(...table.map((t) => t.length));
-      while (s.columns.length < c0 + width) M.addColumn(s, {});
+      const table = cellsOf(text), b = box(), c0 = b.c0, r0 = b.r0, high = table.length, wide = Math.max(1, ...table.map((t) => t.length));
+      const [down, across] = repeats(high, wide, b.r1 - b.r0 + 1, b.c1 - b.c0 + 1, sel.cols);
+      const width = wide * across, height = high * down;
+      let added = 0;
+      while (s.columns.length < c0 + width) { M.addColumn(s, {}); added++; }
       let skipped = 0;
       for (let k = 0; k < width; k++) {
         const col = s.columns[c0 + k];
         if (col.formula) { skipped++; continue; }
         while (col.values.length < r0) col.values.push(null);
-        for (let i = 0; i < table.length; i++) col.values[r0 + i] = M.cell(table[i][k]);
+        for (let i = 0; i < height; i++) col.values[r0 + i] = M.cell(table[i % high][k % wide]);
         while (col.values.length && col.values[col.values.length - 1] == null) col.values.pop();
       }
-      sel = { c: c0, r: r0, c2: c0 + width - 1, r2: r0 + table.length - 1, cols: false };
+      sel = { c: c0, r: r0, c2: c0 + width - 1, r2: r0 + height - 1, cols: false };
       ctx.changed('structure');
-      if (skipped) ctx.say(skipped + ' column' + (skipped > 1 ? 's are' : ' is') + ' computed by a formula and was not written over.');
+      const told = [added ? added + ' column' + (added > 1 ? 's were' : ' was') + ' added: what was pasted is wider than the sheet from that cell on' : '',
+        skipped ? skipped + ' column' + (skipped > 1 ? 's are' : ' is') + ' computed by a formula and was not written over' : ''].filter(Boolean);
+      if (told.length) ctx.say(told.join('. ') + '.');
     }
 
     root.addEventListener('scroll', () => drawRows(false));
@@ -128,6 +165,7 @@ window.ASY = window.ASY || {};
       if (e.target.closest('.grid-head') || e.target === editing?.input) return;
       const p = at(e), s = sheet(); if (!s || p.r < 0) return;
       commitEdit();
+      const picked = window.getSelection && window.getSelection(); if (picked && !picked.isCollapsed) picked.removeAllRanges();          // text selected elsewhere in the page is let go: what is copied now is the cells
       if (p.gutter) sel = { c: 0, r: p.r, c2: s.columns.length - 1, r2: p.r, cols: false };
       else if (p.c >= 0 && p.c < s.columns.length) sel = e.shiftKey ? Object.assign({}, sel, { c2: p.c, r2: p.r, cols: false }) : { c: p.c, r: p.r, c2: p.c, r2: p.r, cols: false };
       else return;
@@ -148,16 +186,17 @@ window.ASY = window.ASY || {};
       else if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); sel = { c: 0, r: 0, c2: s.columns.length - 1, r2: Math.max(0, M.rows(s) - 1), cols: true }; redraw(); ctx.picked(); }
       else if (!mod && !e.altKey && e.key.length === 1) { e.preventDefault(); edit(e.key); }
     });
-    root.addEventListener('copy', (e) => { if (editing) return; e.preventDefault(); e.clipboardData.setData('text/plain', copied()); });
-    root.addEventListener('cut', (e) => { if (editing) return; e.preventDefault(); e.clipboardData.setData('text/plain', copied()); clear(); });
-    root.addEventListener('paste', (e) => { if (editing) return; e.preventDefault(); const text = e.clipboardData.getData('text/plain'); if (text) paste(text); });
 
-    return {
+    const api = {
+      root, busy: () => !!editing, clear,
       draw() { const s = sheet(); if (s) { sel.c = ASY.clamp(sel.c, 0, Math.max(0, s.columns.length - 1)); sel.c2 = ASY.clamp(sel.c2, 0, Math.max(0, s.columns.length - 1)); } redraw(); },
       /* The columns the selection covers, and its rows. */
       selection() { const s = sheet(), b = box(); return { columns: s ? s.columns.slice(b.c0, b.c1 + 1).map((c) => c.id) : [], rows: [b.r0, b.r1], whole: sel.cols }; },
       select(index) { const s = sheet(); sel = { c: index, r: 0, c2: index, r2: Math.max(0, M.rows(s) - 1), cols: true }; redraw(); },
       paste, copied, focus: () => root.focus({ preventScroll: true }), reset() { sel = { c: 0, r: 0, c2: 0, r2: 0, cols: false }; root.scrollTop = root.scrollLeft = 0; drawnFrom = -1; },
     };
+    onScreen = api;
+    return api;
   };
+  ASY.grid.cellsOf = cellsOf; ASY.grid.repeats = repeats;
 })(window.ASY);
