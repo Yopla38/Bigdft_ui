@@ -354,6 +354,14 @@ window.ASY = window.ASY || {};
     n.text = fitText(f, n.of, plainOf);
     return n;
   }
+  /* Bring the text a fit wrote to another graph: to the panel that holds the data of the fit, or to its first. */
+  function bringFitNote(f, g) {
+    const had = fitNote(f);
+    if (!had || !g || had.graph === g) return had ? had.note : null;
+    had.panel.notes = had.panel.notes.filter((n) => n !== had.note);
+    (g.figure.panels.find((p) => p.series.some((r) => r.kind === 'data' && r.sheet === f.sheet && r.y === f.y)) || g.figure.panels[0]).notes.push(had.note);
+    return had.note;
+  }
   function refreshFitNotes(f, plainOf) {
     doc.graphs.forEach((g) => g.figure.panels.forEach((p) => p.notes.forEach((n) => { if (n.type === 'text' && n.fit === f.id && n.of) n.text = fitText(f, n.of, plainOf); })));
   }
@@ -700,7 +708,7 @@ window.ASY = window.ASY || {};
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
     sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, namesItself, applyOnce, changed, sortBy, sheetFrom, toText, unique,
-    graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, refreshFitNotes, seriesData, resultOf,
+    graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, bringFitNote, refreshFitNotes, seriesData, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,
     get size() { return last.length; },

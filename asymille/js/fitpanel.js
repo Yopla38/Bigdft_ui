@@ -183,9 +183,24 @@ window.ASY = window.ASY || {};
           { 'aria-pressed': String(shown), title: shown ? 'Take the curve of this component off the graph' : 'Draw the curve of this component' }); })) : null,
       // what the fit writes on the graph: a text that follows the fit, and is dragged like any text
       h('div', { class: 'acts' }, h('span', { class: 'muted' }, 'Written on the graph'),
-        WRITTEN.map(([key, label, title]) => ui.btn(label, () => { M.writeFit(f, g, Object.assign({}, of, { [key]: !of[key] }), plainOf); A().refresh(); }, '', { 'aria-pressed': String(!!of[key]), title }))),
-      written ? h('small', { class: 'act-note' }, 'A text on the graph, written again at each fit. Drag it; its size, a frame and its colour are under Notes. Rewrite it there and it is yours: the fit no longer changes it.') : null,
+        WRITTEN.map(([key, label, title]) => ui.btn(label, () => { const asked = !of[key], n = M.writeFit(f, g, Object.assign({}, of, { [key]: asked }), plainOf); A().refresh(); if (asked && !n) A().say('There is no graph to write on: plot the data first'); }, '', { 'aria-pressed': String(!!of[key]), title }))),
+      written ? writtenWhere(f, g, written, of, parts.length) : null,
       (on.components || on.band || on.residuals) && !(f.result || Object.keys(f.results).length) ? h('small', { class: 'act-note' }, 'They are drawn once the fit is run: a model that is only previewed has no components, band or residuals yet.') : null);
+  }
+
+  /* Where the text of a fit is, and why it may not be seen: nothing to write yet, or written on another graph than the one shown. */
+  function writtenWhere(f, g, written, of, components) {
+    const fitted = !!(f.result || f.results[f.y]), wants = of.params || of.derived || of.stats, open = (k) => () => { M.doc.view.graph = k.id; M.doc.view.main = 'graph'; A().state.tab.graph = 'fit'; A().refresh(); };
+    const out = [];
+    if (!written.note.text) out.push(h('div', { class: 'notice' }, !components && of.equation ? 'Nothing is written yet: the model has no component. Add one above; its equation is written then.'
+      : 'Nothing is written yet: the parameters, what is derived from them and χ² are what the fit finds. Press Fit; they are written then.'));
+    else if (wants && !fitted) out.push(h('div', { class: 'notice' }, 'The parameters, what is derived from them and χ² are written once the fit is run: press Fit.'));
+    if (g && written.graph !== g) out.push(h('div', { class: 'notice' }, 'This text is on the graph “' + written.graph.name + '”, not on the one shown. ',
+      h('span', { class: 'acts', style: 'display:inline-flex;margin-left:6px' }, ui.btn('Bring it to this graph', () => { M.bringFitNote(f, g); A().refresh(); }, 'cta', { id: 'fit-text-here' }), ui.btn('Open that graph', open(written.graph)))));
+    else if (!g) out.push(h('div', { class: 'notice' }, 'It is written on the graph “' + written.graph.name + '”. ', h('span', { class: 'acts', style: 'display:inline-flex;margin-left:6px' }, ui.btn('Open that graph', open(written.graph), 'cta'))));
+    else if (written.note.text) out.push(h('small', { class: 'act-note' }, 'A text on the graph, written again at each fit. Drag it; its size, a frame and its colour are under Notes. Rewrite it there and it is yours: the fit no longer changes it. ',
+      h('button', { class: 'link', type: 'button', style: 'background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline', onclick: () => { A().state.tab.graph = 'notes'; A().state.note = written.note.id; A().state.panel = written.panel.id; A().refresh(); } }, 'Find it')));
+    return out;
   }
 
   // ------------------------------------------------------------------ asking the server
