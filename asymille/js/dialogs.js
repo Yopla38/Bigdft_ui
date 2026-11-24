@@ -138,7 +138,9 @@ window.ASY = window.ASY || {};
         ui.field('File name', h('input', { class: 'inp', type: 'text', value: opt.name, maxlength: 80, onchange: (e) => { opt.name = e.target.value.replace(/[^\w.-]+/g, '_'); } })),
         note ? h('div', { class: 'notice err' }, note) : null, said.map((s) => h('div', { class: 'notice advice' }, s)),
         h('div', { class: 'acts' },
-          ui.btn(busy ? 'Making the file…' : 'Download', async () => { busy = true; note = ''; draw(); try { const out = await make(); said = out.notes || []; ASY.download(out.blob, out.name); M.log('Figure “' + g.name + '” exported as ' + out.name + ' (' + fig.width + ' × ' + fig.height + ' mm' + (pixels ? ', ' + opt.dpi + ' dpi' : '') + ').'); A().touch(); } catch (e) { note = e.message; } busy = false; draw(); }, 'cta', { disabled: busy }),
+          ui.btn(busy ? 'Making the file…' : 'Save the file', async () => { const mime = { pdf: 'application/pdf', svg: 'image/svg+xml', eps: 'application/postscript', tiff: 'image/tiff', png: 'image/png' }[opt.format];
+            const to = await ASY.saveAs((opt.name || 'figure') + '.' + opt.format, mime); if (!to) return;          // asked first: the place is chosen while the click still counts, the file is made after
+            busy = true; note = ''; draw(); try { const out = await make(); said = out.notes || []; await to.write(out.blob); if (!to.chosen) said = said.concat([to.name + ' is in the folder of downloads of the browser.']); M.log('Figure “' + g.name + '” exported as ' + out.name + ' (' + fig.width + ' × ' + fig.height + ' mm' + (pixels ? ', ' + opt.dpi + ' dpi' : '') + ').'); A().touch(); } catch (e) { note = e.message; } busy = false; draw(); }, 'cta', { disabled: busy }),
           ui.btn('Copy as an image', async () => { try { const blob = await raster(list(), 300); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); A().say('The figure is in the clipboard (PNG, 300 dpi)'); } catch (e) { note = e.message || 'The browser did not allow copying an image.'; draw(); } }, '', { title: 'A PNG at 300 dpi, to paste in a slide or a notebook' })));
     }
     draw();
@@ -170,7 +172,10 @@ window.ASY = window.ASY || {};
       const s = T.state;
       ASY.fill(d.body, fileInput,
         h('div', { class: 'acts' }, s.on ? ui.btn('New project', () => act(async () => { await T.fresh(() => M.blank()); d.el.close(); A().resetGrid(); A().refresh(); }), 'cta') : ui.btn('New project', () => { M.blank(); d.el.close(); A().resetGrid(); A().refresh(); }, 'cta'),
-          ui.btn('Save this project to a file', () => ASY.download(JSON.stringify(M.doc), (M.doc.name.replace(/[^\w.-]+/g, '_') || 'project') + '.asymille.json', 'application/json'), '', { title: 'The whole project (data, graphs, fits) as one file: a backup, or to send to someone' }),
+          ui.btn('Save this project to a file', async () => {
+            const to = await ASY.saveAs((M.doc.name.replace(/[^\w.-]+/g, '_') || 'project') + '.asymille.json', 'application/json'); if (!to) return;
+            try { await to.write(JSON.stringify(M.doc)); A().say(to.chosen ? 'Saved as ' + to.name : to.name + ' is in the folder of downloads: this browser, or this address, does not let a page ask where. Its setting “Ask where to save each file” does.'); } catch (e) { note = e.message; draw(); }
+          }, '', { title: 'The whole project (data, graphs, fits) as one file, in the folder and under the name you choose: a backup, or to send to someone' }),
           ui.btn('Open a project file', () => fileInput.click())),
         note ? h('div', { class: 'notice err' }, note) : null,
         ASY.seriespanel.room() ? h('p', { class: ASY.seriespanel.room().near ? 'notice' : 'muted' }, ASY.seriespanel.room().text + (ASY.seriespanel.room().near ? ' Larger, it is refused when it is saved.' : '')) : null,

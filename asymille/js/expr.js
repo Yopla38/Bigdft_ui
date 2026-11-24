@@ -186,11 +186,17 @@ window.ASY = window.ASY || {};
   }
   /* A custom fit function, a tie: the grammar the server reads. */
   const compile = (text) => parse(text, false);
-  /* The formula of a column. `run({ n, cols })` computes every row: `cols` gives the values of each column it names, `n` how many rows there are. */
+  /* The formula of a column. `run({ n, cols })` computes every row: `cols` gives the values of each column it names, `n` how many rows there are.
+     With `self` (the name of the column being computed, when its formula names it) each row is written into `cols[self]` as soon as it is computed:
+     a row then reads what it held itself (B*2) and what the rows above it have just become (B[i-1] + A is a running sum). */
   function column(text) {
     const parsed = parse(text, true);
     return { text: parsed.text, names: parsed.names,
-      run(table) { const e = { row: 0, n: table.n, cols: table.cols, kept: {} }, out = new Array(table.n); for (let r = 0; r < table.n; r++) { e.row = r; out[r] = parsed.run(e); } return out; } };
+      run(table) {
+        const e = { row: 0, n: table.n, cols: table.cols, kept: {} }, out = new Array(table.n), own = table.self ? table.cols[table.self] : null;
+        for (let r = 0; r < table.n; r++) { e.row = r; out[r] = parsed.run(e); if (own) own[r] = typeof out[r] === 'number' && isFinite(out[r]) ? out[r] : null; }
+        return out;
+      } };
   }
 
   ASY.expr = { compile, column, ExprError, FUNCTIONS, AGGREGATES, CONSTANTS, WORDS };

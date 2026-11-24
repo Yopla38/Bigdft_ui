@@ -132,7 +132,7 @@ window.ASY = window.ASY || {};
           if (name === 'i' || name === 'n') continue;
           const src = s.columns.find((k) => k.name === name);
           if (!src) throw new Error('no column is called ' + name);
-          if (src === c) throw new Error('a column cannot be computed from itself');
+          if (src === c) throw new Error('this formula names its own column: it is applied once, when it is typed, and not kept. Type it again to apply it');
           cols[name] = src.values;
         }
         const lengths = Object.values(cols).map((v) => v.length), count = lengths.length ? Math.max(...lengths) : n;
@@ -140,6 +140,23 @@ window.ASY = window.ASY || {};
         c.values = out; trim(c);
       } catch (e) { errors[c.id] = e.message; }
     });
+  }
+  /* A formula that names its own column (B*2, B/max(B), B[i-1] + A) cannot be kept: it would be applied again at each change of the sheet.
+     It is applied once, to the values the column holds, row after row; the column then holds numbers, and Undo brings the old ones back. */
+  const namesItself = (c, formula) => { try { return !!formula && ASY.expr.column(formula).names.includes(c.name); } catch (e) { return false; } };
+  function applyOnce(s, c, formula) {
+    const compiled = ASY.expr.column(formula), cols = {};
+    for (const name of compiled.names) {
+      if (name === 'i' || name === 'n') continue;
+      const src = s.columns.find((k) => k.name === name);
+      if (!src) throw new Error('no column is called ' + name);
+      cols[name] = src === c ? c.values.slice() : src.values;
+    }
+    const count = Math.max(rows(s), ...Object.values(cols).map((v) => v.length));
+    while (cols[c.name].length < count) cols[c.name].push(null);
+    const out = compiled.run({ n: count, cols, self: c.name }).map((v) => (typeof v === 'number' && isFinite(v) ? v : null));
+    c.values = out; c.formula = ''; trim(c);
+    return out.filter((v) => v != null).length;
   }
   function changed(s) { recompute(s); doc.fits.forEach((f) => { if (f.sheet === s.id && (f.result || Object.keys(f.results).length)) f.stale = true; }); }
   function sortBy(s, c, descending) {
@@ -682,7 +699,7 @@ window.ASY = window.ASY || {};
   ASY.model = {
     get doc() { return doc; }, get version() { return version; }, get canUndo() { return undoStack.length > 0; }, get canRedo() { return redoStack.length > 0; },
     errors, previewOf, on: (fn) => heard.push(fn), id: (p) => id(p), blank, restore, serialize, commit, undo, redo, log,
-    sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, changed, sortBy, sheetFrom, toText, unique,
+    sheet, column, rows, addSheet, freeName, addColumn, removeColumn, removeSheet, setCell, cell, numbers, label, xOf, errOf, xerrOf, recompute, namesItself, applyOnce, changed, sortBy, sheetFrom, toText, unique,
     graph, addGraph, removeGraph, addData, plot, graphFrom, showFit, showResiduals, shownOf, hideFit, hideResiduals, drawTotal, shownExpression, fitText, fitNote, writeFit, refreshFitNotes, seriesData, resultOf,
     fit, addFit, duplicateFit, comparable, hasResponse, removeFit, fitData, drawing, componentId,
     fileSeries, memberCurves, mark, commonName, originals, counterpart, numbersIn, variablesIn, addSeries, fitsIn, seriesOrder, modelFrom, memberData, replay, runSeries, seriesTable, reviewGraph, overlayGraph,

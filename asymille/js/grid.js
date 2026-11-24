@@ -157,7 +157,7 @@ window.ASY = window.ASY || {};
       /* The columns the selection covers, and its rows. */
       selection() { const s = sheet(), b = box(); return { columns: s ? s.columns.slice(b.c0, b.c1 + 1).map((c) => c.id) : [], rows: [b.r0, b.r1], whole: sel.cols }; },
       select(index) { const s = sheet(); sel = { c: index, r: 0, c2: index, r2: Math.max(0, M.rows(s) - 1), cols: true }; redraw(); },
-      paste, focus: () => root.focus({ preventScroll: true }), reset() { sel = { c: 0, r: 0, c2: 0, r2: 0, cols: false }; root.scrollTop = root.scrollLeft = 0; drawnFrom = -1; },
+      paste, copied, focus: () => root.focus({ preventScroll: true }), reset() { sel = { c: 0, r: 0, c2: 0, r2: 0, cols: false }; root.scrollTop = root.scrollLeft = 0; drawnFrom = -1; },
     };
   };
 })(window.ASY);

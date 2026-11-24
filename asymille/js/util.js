@@ -71,7 +71,21 @@ window.ASY = window.ASY || {};
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
+  /* Where a file goes. A browser that lets a page ask (Chromium, on https or on localhost) shows its own window: the person chooses the folder and the name,
+     before the file is made. Elsewhere the browser saves it in its folder of downloads, under the name given.
+         const to = await ASY.saveAs('figure.pdf', 'application/pdf');   // null: the person gave up
+         if (to) await to.write(blob);                                    // to.chosen says whether the place was chosen; to.name is the name it has */
+  async function saveAs(name, mime) {
+    const kind = mime || 'application/octet-stream', last = (/\.[A-Za-z0-9]+$/.exec(name) || [''])[0];
+    if (typeof window.showSaveFilePicker === 'function') {
+      try {
+        const handle = await window.showSaveFilePicker(Object.assign({ suggestedName: name }, last && /^[\w.+-]+\/[\w.+-]+$/.test(kind) ? { types: [{ description: last.slice(1).toUpperCase() + ' file', accept: { [kind]: [last] } }] } : {}));
+        return { name: handle.name, chosen: true, write: async (data) => { const w = await handle.createWritable(); await w.write(data instanceof Blob ? data : new Blob([data], { type: kind })); await w.close(); } };
+      } catch (e) { if (e && e.name === 'AbortError') return null; /* the browser would not ask (no gesture left, not allowed here): the file is downloaded */ }
+    }
+    return { name, chosen: false, write: async (data) => download(data, name, kind) };
+  }
   const letters = (i) => { let s = ''; i += 1; while (i > 0) { s = String.fromCharCode(65 + (i - 1) % 26) + s; i = Math.floor((i - 1) / 26); } return s; };
 
-  Object.assign(ASY, { h, fill, $, clamp, debounce, escapeXml, fmt, pm, parseNum, when, download, letters });
+  Object.assign(ASY, { h, fill, $, clamp, debounce, escapeXml, fmt, pm, parseNum, when, download, saveAs, letters });
 })(window.ASY);

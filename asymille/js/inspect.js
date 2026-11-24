@@ -275,6 +275,21 @@ window.ASY = window.ASY || {};
   }
 
   // ------------------------------------------------------------------ a sheet: its columns
+  /* Compute a column from what was typed. A formula of other columns is kept; one that names the column itself is applied once (model.applyOnce). */
+  function compute(s, c, text) {
+    const formula = String(text || '').trim();
+    if (formula && M.namesItself(c, formula)) {
+      try {
+        const count = M.applyOnce(s, c, formula);
+        M.log('Column ' + c.name + ' of “' + s.name + '” computed once as ' + c.name + ' = ' + formula + ' (' + count + ' numbers). The formula is not kept.');
+        A().changedSheet(s); A().say(c.name + ' = ' + formula + ': applied once. The column holds the result; Undo brings back what it held.');
+      } catch (e) { c.formula = formula; A().changedSheet(s); }          // the formula stays in the field with what is wrong with it
+      return;
+    }
+    c.formula = formula;
+    A().changedSheet(s);
+    if (formula && !M.errors[c.id]) A().say(c.name + ' computed: ' + c.values.filter((v) => v != null).length + ' numbers');
+  }
   function columnTab(s) {
     const picked = A().picked(), cols = picked.columns.map((id) => M.column(s, id)).filter(Boolean), c = cols[0];
     if (!c) return [h('p', { class: 'empty' }, 'Select a column: click its header.')];
@@ -293,14 +308,22 @@ window.ASY = window.ASY || {};
         h('div', { class: 'cols2' }, ui.field('Short name', ui.txt(c, 'name', { max: 24, then: () => { const clean = c.name.replace(/[^A-Za-z0-9_]/g, '').replace(/^[^A-Za-z]+/, '').slice(0, 24); c.name = clean && !s.columns.some((k) => k !== c && k.name === clean) && clean !== 'i' && clean !== 'n' && clean !== 'x' && !ASY.expr.WORDS.includes(clean) && !ASY.expr.FUNCTIONS[clean] && !ASY.expr.AGGREGATES[clean] && !(clean in ASY.expr.CONSTANTS) ? clean : M.freeName({ columns: s.columns.filter((k) => k !== c) }); M.recompute(s); }, structural: true }), 'What formulas call it.'),
           ui.field('Used as', ui.sel(c, 'role', [['x', 'X'], ['y', 'Y'], ['yerr', 'error on Y'], ['xerr', 'error on X'], ['label', 'labels'], ['none', 'not plotted']], { structural: true }))),
         h('div', { class: 'cols2' }, ui.field('Title', ui.txt(c, 'title', { max: 120, placeholder: 'Energy', structural: true })), ui.field('Unit', ui.txt(c, 'unit', { max: 40, placeholder: 'eV', structural: true }))),
-        ui.field('Computed from other columns', ui.txt(c, 'formula', { area: true, max: 2000, placeholder: 'e.g. ' + (s.columns[0] && s.columns[0] !== c ? s.columns[0].name : 'A') + '*1000   or   sqrt(B)   or   i - 1', then: () => A().changedSheet(s), structural: true }),
-          M.errors[c.id] ? null : h('span', {}, 'Columns by their short name; ', h('code', {}, 'i'), ' is the row, ', h('code', {}, 'n'), ' the number of rows. Of a whole column: ', h('code', {}, 'B/max(B)'), ', ', h('code', {}, 'B - mean(B)'),
-            ' (also sum, sd, median, min, count). Another row: ', h('code', {}, 'B - B[i-1]'), ', ', h('code', {}, 'B/B[1]'), '. A condition: ', h('code', {}, 'if(A > 5 and B < 2, B, 0)'), '. Functions: ' + Object.keys(ASY.expr.FUNCTIONS).slice(0, 12).join(', ') + '…')),
-        M.errors[c.id] ? h('small', { class: 'act-note err' }, 'Not computed: ' + M.errors[c.id]) : null,
         ui.field('Comment', ui.txt(c, 'comment', { area: true, max: 2000 })),
         h('div', { class: 'acts' }, ui.btn('Insert before', () => insert(index)), ui.btn('Insert after', () => insert(index + 1)),
           ui.btn('Delete', () => { cols.forEach((k) => M.removeColumn(s, k.id)); A().changedSheet(s, true); }, 'danger', { disabled: s.columns.length <= cols.length }))),
-      ui.sec('Its values', nums.length + ' numbers', false,
+      ui.sec('Compute this column', c.formula ? '= ' + c.formula.slice(0, 28) : 'a formula', !!c.formula || !nums.length,
+        ui.field('Formula', (() => {
+          const field = h('textarea', { class: 'inp', id: 'column-formula', rows: 2, maxlength: 2000, spellcheck: 'false', value: c.formula || '', placeholder: 'e.g. ' + (s.columns[0] && s.columns[0] !== c ? s.columns[0].name : 'A') + '*1000   or   sqrt(B)   or   i - 1',
+            onkeydown: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); compute(s, c, field.value); } } });
+          return [field, h('div', { class: 'acts', style: 'margin-top:6px' }, ui.btn('Compute', () => compute(s, c, field.value), 'cta', { id: 'column-compute', title: 'Compute the column from this formula (Enter in the field does the same)' }),
+            c.formula ? ui.btn('Keep the numbers, drop the formula', () => { c.formula = ''; M.log('Column ' + c.name + ' of “' + s.name + '” keeps its numbers; its formula was dropped.'); A().changedSheet(s); }, '', { title: 'The column stops following the columns it was computed from' }) : null)];
+        })(),
+          M.errors[c.id] ? null : h('span', {}, 'Columns by their short name; ', h('code', {}, 'i'), ' is the row, ', h('code', {}, 'n'), ' the number of rows. Of a whole column: ', h('code', {}, 'B/max(B)'), ', ', h('code', {}, 'B - mean(B)'),
+            ' (also sum, sd, median, min, count). Another row: ', h('code', {}, 'B - B[i-1]'), ', ', h('code', {}, 'B/B[1]'), '. A condition: ', h('code', {}, 'if(A > 5 and B < 2, B, 0)'), '. Functions: ' + Object.keys(ASY.expr.FUNCTIONS).slice(0, 12).join(', ') + '…')),
+        M.errors[c.id] ? h('small', { class: 'act-note err' }, 'Not computed: ' + M.errors[c.id]) : null,
+        h('p', { class: 'muted' }, c.formula ? 'This column follows its formula: it is computed again when a column it reads changes.'
+          : 'A formula of other columns is kept, and followed. One that names this column itself (' + c.name + '*2, ' + c.name + '/max(' + c.name + '), ' + c.name + '[i-1] + …) is applied once to the numbers it holds, and not kept: Undo brings them back.')),
+      ui.sec('Statistics and sorting', nums.length + ' numbers', false,
         h('dl', { class: 'facts2' }, [['Numbers', nums.length], ['Mean', mean], ['Standard deviation', sd], ['Minimum', nums.length ? Math.min(...nums.slice(0, 1e5)) : NaN], ['Maximum', nums.length ? Math.max(...nums.slice(0, 1e5)) : NaN], ['Sum', nums.reduce((a, b) => a + b, 0)]]
           .flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, nums.length ? ASY.fmt(v, 7) : '–')])),
         h('div', { class: 'acts', style: 'margin-top:10px' }, ui.btn('Sort the sheet ↑', () => { M.sortBy(s, c, false); M.log('Sheet “' + s.name + '” sorted by ' + M.label(c) + ', ascending.'); A().changedSheet(s); }), ui.btn('Sort the sheet ↓', () => { M.sortBy(s, c, true); M.log('Sheet “' + s.name + '” sorted by ' + M.label(c) + ', descending.'); A().changedSheet(s); }))),
