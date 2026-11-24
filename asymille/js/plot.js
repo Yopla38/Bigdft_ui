@@ -199,12 +199,26 @@ window.ASY = window.ASY || {};
       // a legend set outside takes its room on the right of the panel
       const listed = e.p.legend && e.p.legend.show !== false && e.p.legend.pos === 'out' ? e.drawn.filter((q) => q.s.legend !== false && q.s.type !== 'band').map((q) => q.s.label || q.d.label || '') : [];
       const beside = listed.length ? 6 + S.legend * 3.75 + Math.max(...listed.map((t) => textWidth(t, S.legend))) : 0;
+      // a text placed outside the frame (in fractions of the panel) is given the room it needs on its side of the page
+      const out = { l: 0, r: 0, t: 0, b: 0 };
+      (e.p.notes || []).forEach((nt) => {
+        if (nt.type !== 'text' || nt.coords !== 'axes' || !isFinite(nt.x) || !isFinite(nt.y)) return;
+        const size = nt.size || S.label, lines = String(nt.text == null ? '' : nt.text).split('\n'), long = Math.max(...lines.map((l) => textWidth(l, size))), tall = lines.length * size * 1.32;
+        if (nt.rotate) return;
+        const wideW = cellW * 0.85, wideH = rowH[e.row] * 0.85;                                 // a little more than the panel will be: too much room is better than a text cut off
+        const left = nt.anchor === 'middle' ? nt.x - long / 2 / wideW : nt.anchor === 'end' ? nt.x - long / wideW : nt.x;
+        const top = nt.valign === 'top' ? nt.y : nt.valign === 'middle' ? nt.y + tall / 2 / wideH : nt.y + size / wideH;          // in fractions of the panel, from its foot
+        if (left + long / wideW > 1 && left > 0.5) out.r = Math.max(out.r, (Math.min(left, 1.6) - 1) * wideW + long + 2);
+        if (left < 0) out.l = Math.max(out.l, -Math.max(left, -0.6) * wideW + 1);
+        if (top > 1) out.t = Math.max(out.t, (Math.min(top, 1.6) - 1) * wideH + 1);
+        if (top - tall / wideH < 0 && top < 0.5) out.b = Math.max(out.b, -Math.max(top - tall / wideH, -0.6) * wideH + 1);
+      });
       return {
-        l: 2 + (e.p.y.label ? ay.title * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out,
-        r: (ty2 ? 2 + (e.p.y2.label ? ay2.title * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5)) + beside,
+        l: Math.max(2 + (e.p.y.label ? ay.title * 1.3 + 2 : 0) + wide(ty, ay.size) + 3 + ay.out, out.l),
+        r: Math.max(ty2 ? 2 + (e.p.y2.label ? ay2.title * 1.3 + 2 : 0) + wide(ty2, ay2.size) + 3 + ay2.out : Math.max(4, lastHalf + 1.5), out.r) + beside,
         beside,
-        t: 3 + (e.p.title ? (e.p.titleSize || S.title) * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? ay.size * 1.25 : 0) + S.tick * 0.4,
-        b: e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? ax.title * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out,
+        t: Math.max(3 + (e.p.title ? (e.p.titleSize || S.title) * 1.45 : 0) + ((ty.factor || (ty2 && ty2.factor)) && !e.p.title ? ay.size * 1.25 : 0) + S.tick * 0.4, out.t),
+        b: Math.max(e.shared ? Math.max(2, ax.out) : 2 + (e.p.x.label ? ax.title * 1.3 + 1 : 0) + ax.size * 1.15 + 3 + ax.out, out.b),
         wy: wide(ty, ay.size), wy2: ty2 ? wide(ty2, ay2.size) : 0,
       };
     });
@@ -304,11 +318,14 @@ window.ASY = window.ASY || {};
           if (isFinite(X) && isFinite(Y)) {
             // a text of several lines: one under the other from the first, whose baseline is the place of the note; in a frame, on white
             const size = nt.size || S.label, lines = String(nt.text == null ? '' : nt.text).split('\n'), lead = size * 1.32, anchor = nt.anchor || 'start';
-            if (nt.frame) {
-              const wide = Math.max(...lines.map((l) => textWidth(l, size))), pad = size * 0.5, left = (anchor === 'end' ? X - wide : anchor === 'middle' ? X - wide / 2 : X) - pad, top = Y - size * 0.92 - pad, bottom = Y + (lines.length - 1) * lead + size * 0.28 + pad;
+            const turn = +nt.rotate || 0, rad = turn * Math.PI / 180;                      // turned anticlockwise by so many degrees: 90 reads upwards
+            // the place of a text is the baseline of its first line; or, when it says so, the top of its block or its middle. From there, down by `first` to that baseline.
+            const first = nt.valign === 'top' ? size * 0.8 : nt.valign === 'middle' ? size * 0.35 - (lines.length - 1) * lead / 2 : 0;
+            if (nt.frame && !turn) {
+              const wide = Math.max(...lines.map((l) => textWidth(l, size))), pad = size * 0.5, left = (anchor === 'end' ? X - wide : anchor === 'middle' ? X - wide / 2 : X) - pad, top = Y + first - size * 0.92 - pad, bottom = Y + first + (lines.length - 1) * lead + size * 0.28 + pad;
               items.push({ t: 'poly', pts: [left, top, left + wide + 2 * pad, top, left + wide + 2 * pad, bottom, left, bottom].map(R), fill: '#ffffff', stroke: c, width: fig.stroke.axis * 0.8, k });
             }
-            lines.forEach((l, i) => text(X, Y + i * lead, l, size, { anchor, color: c, k, weight: nt.bold ? 'bold' : undefined }));
+            lines.forEach((l, i) => text(X + (first + i * lead) * Math.sin(rad), Y + (first + i * lead) * Math.cos(rad), l, size, { anchor, color: c, k, weight: nt.bold ? 'bold' : undefined, rotate: turn ? -turn : undefined }));
           }
         }
       });

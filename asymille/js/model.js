@@ -153,6 +153,10 @@ window.ASY = window.ASY || {};
   function sheetFrom(name, columns, source) {
     const s = addSheet(name, source);
     columns.forEach((c, i) => addColumn(s, { title: c.title || c.name || '', unit: c.unit, values: c.values, role: c.role || (i === 0 ? 'x' : 'y'), comment: c.comment }));
+    // a column that is a function of another (`fx`, written with x; `on`: the place of the column that x is) keeps its formula, on the name that column has here
+    let live = false;
+    columns.forEach((c, i) => { const of = c.fx && s.columns[c.on]; if (!of || of === s.columns[i]) return; const formula = String(c.fx).replace(/\bx\b/g, of.name); try { ASY.expr.column(formula); s.columns[i].formula = formula; live = true; } catch (e) { /* its values stay as they were read */ } });
+    if (live) recompute(s);
     return s;
   }
   function toText(s, sep) {
@@ -210,7 +214,9 @@ window.ASY = window.ASY || {};
       if (p.legend.show !== false && p.series.filter((r) => r.legend !== false).length > 8) { p.legend.pos = 'out'; wide = true; }          // many curves: the legend beside them, on a wider page
       (ps.notes || []).forEach((n) => {
         const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null), colour = /^#[0-9a-f]{6}$/i.test(n.color || '') ? n.color : '#000000';
-        if (n.type === 'text' && n.text && num(n.x) != null && num(n.y) != null) p.notes.push({ id: id('n'), type: 'text', coords: n.coords === 'data' ? 'data' : 'axes', x: n.x, y: n.y, text: String(n.text).slice(0, 4000), size: fig.size.label, color: colour });
+        if (n.type === 'text' && n.text && num(n.x) != null && num(n.y) != null) p.notes.push({ id: id('n'), type: 'text', coords: n.coords === 'data' ? 'data' : 'axes', x: n.x, y: n.y, text: String(n.text).slice(0, 4000),
+          size: Number((fig.size.label * ASY.clamp(num(n.scale) || 1, 0.4, 3)).toFixed(1)), rotate: num(n.rotate) || 0, color: colour,
+          anchor: n.anchor === 'middle' || n.anchor === 'end' ? n.anchor : 'start', valign: n.valign === 'middle' || n.valign === 'top' ? n.valign : null });
         else if ((n.type === 'arrow' || n.type === 'line') && [n.x, n.y, n.x2, n.y2].every((v) => num(v) != null)) p.notes.push({ id: id('n'), type: n.type, coords: n.coords === 'data' ? 'data' : 'axes', x: n.x, y: n.y, x2: n.x2, y2: n.y2, both: !!n.both, width: n.width > 0 ? n.width : 0.8, color: colour });
       });
       p.aspect = ps.aspect;

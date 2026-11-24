@@ -195,7 +195,7 @@ window.ASY = window.ASY || {};
     if (size() !== 0) throw new Error('the file is not laid out as a project of Origin is');
 
     // the datasets: a column of a worksheet is called Book_Column, or Book_Column@2 on the second sheet of a workbook
-    const datasets = [], books = [];
+    const datasets = [], books = [], functions = [];
     for (;;) {
       const hlen = size(); if (!hlen) break;
       const h = block(hlen), data = block(size()), mask = size(); if (mask) block(mask);
@@ -204,7 +204,12 @@ window.ASY = window.ASY || {};
       let width = h[old ? 0x36 : 0x3D] || 8;
       const full = cstring(h, old ? 0x57 : 0x58, 25), cut = full.lastIndexOf('_');
       const entry = { book: null, plain: cut < 0 && !(type & 0x80) ? full : null }; datasets.push(entry);
-      if (cut < 0 || (type & 0x80)) continue;                        // a matrix, or a function (Origin marks those with this bit): not a column
+      if (type & 0x80) {                                             // a function (“Add Function Graph”): a formula of x, drawn on so many points from a first x by a step
+        const formula = cstring(data, 0).trim(), points = h.length > 0x34 ? hv.getInt32(0x21, true) : 0, begin = h.length > 0x34 ? hv.getFloat64(0x25, true) : NaN, step = h.length > 0x34 ? hv.getFloat64(0x2d, true) : NaN;
+        if (formula && points >= 2 && points <= 100000 && isFinite(begin) && isFinite(step) && step !== 0) functions.push({ entry, name: full, formula, points, begin, step });
+        continue;
+      }
+      if (cut < 0) continue;                                         // a matrix: not a column
       let name = full.slice(cut + 1), sheet = 1; const amp = name.lastIndexOf('@');
       if (amp > 0) { sheet = parseInt(name.slice(amp + 1), 10) || 1; name = name.slice(0, amp); }
       const count = Math.floor(data.length / width), rows = Math.max(0, Math.min(count, last > 0 ? last : count)), values = new Array(rows);
@@ -229,6 +234,18 @@ window.ASY = window.ASY || {};
       book.columns.push(column); entry.book = book; entry.column = column;
     }
 
+    // the functions become a sheet: for each grid of x, a column of x and, after it, a column for each function drawn on it, which keeps its formula
+    const drawnBy = { name: '\u0000functions', sheet: 0, columns: [] }, grids = {};
+    functions.forEach((f) => {
+      const key = f.begin + '|' + f.step + '|' + f.points;
+      if (!grids[key]) grids[key] = { x: { name: 'x', title: 'x', unit: '', role: 'x', values: Array.from({ length: f.points }, (_, k) => Number((f.begin + k * f.step).toPrecision(12))) }, of: [] };
+      const grid = grids[key], column = { name: f.name, title: f.name, unit: '', role: 'y', values: grid.x.values.map(() => null), comment: 'A function of the Origin project: y = ' + f.formula, grid };
+      for (const text of [f.formula, f.formula.toLowerCase()]) {
+        try { const read = ASY.expr.compile(text); if (read.names.some((n) => n !== 'x')) continue; column.values = grid.x.values.map((x) => { const v = read.run({ x }); return typeof v === 'number' && isFinite(v) ? v : null; }); column.fx = text; break; } catch (e) { /* tried as written, then in lower case */ }
+      }
+      grid.of.push(column); f.entry.book = drawnBy; f.entry.column = column; f.entry.fn = f;
+    });
+
     // the windows. A worksheet says there what each of its columns is (X, Y, an error) and how it is called; a graph, its layers: axes, curves, texts.
     // Not being able to read them loses the names and the graphs, not the values.
     const said = [], graphs = [], matrices = new Set(datasets.map((d, k) => (d.book ? null : d.plain)).filter(Boolean));
@@ -242,7 +259,7 @@ window.ASY = window.ASY || {};
       for (;;) {
         const wlen = size(); if (!wlen) break;
         const w = block(wlen), window = cstring(w, 0x02, 25), isBook = books.some((b) => b.name === window);
-        const graph = !isBook && !matrices.has(window) && cstring(w, 0x45, 20) !== 'LAYOUT' ? { name: window, layers: [] } : null;
+        const graph = !isBook && !matrices.has(window) && cstring(w, 0x45, 20) !== 'LAYOUT' ? { name: window, layers: [], page: [u16(w, 0x23), u16(w, 0x25)] } : null;
         for (;;) {
           const llen = size(); if (!llen) break;
           const l = block(llen), notes = graph ? [] : null;
@@ -279,13 +296,20 @@ window.ASY = window.ASY || {};
 
     const sheetsOf = {}; books.forEach((b) => { sheetsOf[b.name] = (sheetsOf[b.name] || 0) + 1; });
     const kept = books.filter((b) => b.columns.some((c) => c.values.some((v) => typeof v === 'number')));            // a sheet without one number is a table of Origin's own, or empty
-    const keyOf = (b) => b.name + '@' + b.sheet;
+    // of the functions, those a graph draws: each grid of x, then its functions
+    const used = new Set(graphs.flatMap((g) => g.layers.flatMap((l) => l.curves.map((c) => (c.y && c.y.fn ? c.y.column : null)))).filter(Boolean));
+    Object.values(grids).forEach((grid) => { const mine = grid.of.filter((c) => used.has(c)); if (mine.length) drawnBy.columns.push(grid.x, ...mine); });
+    const unread = drawnBy.columns.filter((c) => c.comment && !c.fx).map((c) => c.name);
+    if (unread.length) said.push('The formula of ' + unread.slice(0, 6).join(', ') + (unread.length > 6 ? '…' : '') + ' is not one this page computes: ' + (unread.length > 1 ? 'those functions are' : 'that function is') + ' left empty.');
+    if (drawnBy.columns.length) kept.push(drawnBy);
+    const keyOf = (b) => (b === drawnBy ? 'functions' : b.name + '@' + b.sheet);
     const tables = kept.map((b) => {
       const known = b.columns.some((c) => c.role !== null);
       b.columns.forEach((c, k) => { c.as = known ? c.role || 'y' : k === 0 ? 'x' : 'y'; });
-      return { name: b.name + (sheetsOf[b.name] > 1 ? ' · sheet ' + b.sheet : ''), key: keyOf(b), said,
-        read: { rows: Math.max(...b.columns.map((c) => c.values.length)), skipped: 0, meta: ['a worksheet of an Origin project' + (version ? ', version ' + version : '')],
-          columns: b.columns.map((c) => ({ title: c.title || c.name, unit: c.unit, role: c.as, values: c.values })) } };
+      return { name: b === drawnBy ? 'functions' : b.name + (sheetsOf[b.name] > 1 ? ' · sheet ' + b.sheet : ''), key: keyOf(b), said,
+        read: { rows: Math.max(...b.columns.map((c) => c.values.length)), skipped: 0, meta: [(b === drawnBy ? 'the functions drawn on the graphs of an Origin project' : 'a worksheet of an Origin project') + (version ? ', version ' + version : '')],
+          // a function keeps its formula, written on the column of x it is drawn on: `fx` is that formula and `on` the place of that column
+          columns: b.columns.map((c) => Object.assign({ title: c.title || c.name, unit: c.unit, role: c.as, values: c.values }, c.fx ? { fx: c.fx, on: b.columns.indexOf(c.grid.x), comment: c.comment } : {})) } };
     });
     const all = graphs.map((g) => graphOf(g, kept, keyOf));
     tables.graphs = all.filter((g) => g.panels.length);
@@ -314,6 +338,16 @@ window.ASY = window.ASY || {};
     const s = String(text || '').replace(/\r\n?/g, '\n');
     const group = (from) => { let depth = 0; for (let e = from; e < s.length; e++) { if (s[e] === '(') depth++; else if (s[e] === ')' && --depth === 0) return e; } return -1; };
     const literal = (t) => t.replace(/[\\_^]/g, '\\$&');
+    /* Inside \g(…) a letter is the Greek letter of the Symbol font; the marks inside it (a size, a colour) are still marks. */
+    const greek = (from, to) => {
+      let o = '';
+      for (let p = from; p < to; p++) {
+        const m = s[p] === '\\' ? /^\\(b|i|u|f:[^()]*|c\d+|p\d+|s:\d+)\(/.exec(s.slice(p, Math.min(to, p + 60))) : null, open = m ? p + m[0].length - 1 : -1, close = m ? group(open) : -1;
+        if (m && close > 0 && close < to) { o += greek(open + 1, close); p = close; continue; }
+        o += SYMBOL_GREEK[s[p]] ? '\\' + SYMBOL_GREEK[s[p]] + '{}' : literal(s[p]);
+      }
+      return o;
+    };
     const walk = (from, to) => {
       let o = '';
       for (let p = from; p < to; p++) {
@@ -323,7 +357,7 @@ window.ASY = window.ASY || {};
             const kind = m[1], inner = walk(open + 1, close);
             if (kind === '+') o += '^{' + inner.replace(/[{}^_]/g, '') + '}';
             else if (kind === '-') o += '_{' + inner.replace(/[{}^_]/g, '') + '}';
-            else if (kind === 'g') o += [...s.slice(open + 1, close)].map((ch) => (SYMBOL_GREEK[ch] ? '\\' + SYMBOL_GREEK[ch] + '{}' : literal(ch))).join('');
+            else if (kind === 'g') o += greek(open + 1, close);
             else if (kind === 'l' || kind === 'L') o += '';                                      // the sample of a curve in a legend
             else o += inner;
             p = close; continue;
@@ -340,6 +374,26 @@ window.ASY = window.ASY || {};
     };
     out = walk(0, s.length); void k;
     return out.split('\n').map((line) => line.trim()).join('\n').replace(/\n+$/, '').slice(0, 2000);
+  }
+  /* The colour a text of Origin gives itself (\c2(…): the second of Origin's list; a large number: red, green and blue), or null; and by how much it scales its own size (\p69(…): 69 %). */
+  function originColour(text) {
+    const m = /\\c(\d+)\(/.exec(String(text || ''));
+    if (!m) return null;
+    const v = Number(m[1]);
+    if (v >= 1 && v <= 24) return ORIGIN_COLOURS[v - 1];
+    return v >= 0x1000000 ? '#' + hex(v & 0xff) + hex((v >> 8) & 0xff) + hex((v >> 16) & 0xff) : null;
+  }
+  function originScale(text) {
+    // only a mark that wraps the whole of the first line counts: \g(\p144(t =)) 7.5 min is not a text at 144 %
+    let scale = 1, t = String(text || '').split(/\r\n|\n/)[0].trim();
+    for (;;) {
+      const m = /^\\(p(\d+)|g|b|i|u|c\d+|f:[^()]*)\(/.exec(t); if (!m) break;
+      let depth = 0, close = -1; for (let e = m[0].length - 1; e < t.length; e++) { if (t[e] === '(') depth++; else if (t[e] === ')' && --depth === 0) { close = e; break; } }
+      if (close !== t.length - 1) break;
+      if (m[2]) scale *= Number(m[2]) / 100;
+      t = t.slice(m[0].length, close).trim();
+    }
+    return scale > 0.2 && scale < 6 ? scale : 1;
   }
   const PLOT_TYPES = { 200: 'line', 201: 'scatter', 202: 'both', 203: 'bars', 204: 'area', 213: 'bars', 214: 'area', 215: 'bars', 216: 'bars', 246: 'line' };
   const NOT_DRAWN = { 219: 'a histogram, which Origin counts from the column: count it here with Analyse, Histogram', 206: 'a box chart', 225: 'a pie chart', 226: 'a contour plot', 220: 'an image of a matrix', 208: 'a plot of vectors', 232: 'a plot of texts' };
@@ -363,14 +417,19 @@ window.ASY = window.ASY || {};
       layer.curves.forEach((c, nth) => {
         if (!c.y || !kept.includes(c.y.book)) return;
         const table = keyOf(c.y.book), col = (e) => (e && e.book === c.y.book ? e.book.columns.indexOf(e.column) : null);
-        if (c.type === 231 || c.type === 254 || c.type === 233) { const last = mine[mine.length - 1]; if (last && last.table === table) last[c.type === 233 ? 'xerr' : 'yerr'] = col(c.y); return; }
-        if (c.type === 255) { const last = mine[mine.length - 1]; if (last && last.table === table) last.yerr = col(c.y); return; }
+        if (c.type === 231 || c.type === 254 || c.type === 233 || c.type === 255) {          // an error column names, as its x, the curve it belongs to; failing that, it is the curve before it
+          const owner = (c.x && c.x.column ? mine.filter((k) => k.of === c.x.column).pop() : null) || mine[mine.length - 1];
+          if (owner && owner.table === table) owner[c.type === 233 ? 'xerr' : 'yerr'] = col(c.y);
+          return;
+        }
         const type = PLOT_TYPES[c.type];
         if (!type) { const what = NOT_DRAWN[c.type] || (c.type < 200 || c.type >= 236 ? 'a plot in three dimensions or of a special kind' : 'of a kind (' + c.type + ') that is not drawn here'); if (!said.some((t) => t.includes(what))) said.push('“' + g.name + '” holds ' + what + ': it was left'); return; }
         const colour = (type === 'scatter' ? colourOf(c.symbol, nth) : null) || colourOf(c.line, nth);
         const curve = { table, x: col(c.x), y: col(c.y), yerr: null, xerr: null, axis: side, type: type === 'line' && c.connect >= 11 && c.connect <= 14 ? 'steps' : type, color: colour, show: !c.hidden,
           width: c.width >= 0.1 && c.width <= 10 ? Number(c.width.toFixed(2)) : null, dash: DASH[c.style] || 'solid', marker: SHAPES[c.shape] || 'circle', size: c.size >= 1 && c.size <= 30 ? Number(Math.min(12, c.size / 2).toFixed(1)) : null, open: c.interior === 1 || c.interior === 2,
-          label: '', title: (c.y.column.title || c.y.column.name) };
+          label: '', title: c.y.fn ? c.y.fn.formula.replace(/[\\_^]/g, '\\$&') : (c.y.column.title || c.y.column.name) };
+        if (c.y.fn) curve.label = curve.title;                        // a function is named by its formula
+        Object.defineProperty(curve, 'of', { value: c.y.column, enumerable: false });          // the column it draws: for what follows here, not for what is given out
         mine.push(curve); panel.curves.push(curve);
       });
       // curves stacked by an offset: the file says the range of the axis, not the offset, so that the curves would lie flat at one end of it. The range is then left to the data.
@@ -383,10 +442,12 @@ window.ASY = window.ASY || {};
       // what is written on the layer
       const named = (what) => { const m = /^(\d+)/.exec(what); if (m) { const c = mine[Number(m[1]) - 1]; return c ? c.title : ''; }
         const first = mine[0], col = first ? kept.find((b) => keyOf(b) === first.table).columns[/X/i.test(what) ? first.x : first.y] : null; return col ? (col.title || col.name) + (col.unit ? ' (' + col.unit + ')' : '') : ''; };
+      // the size of a text is kept as so many times that of the titles of the axes, which here is the page's own
+      const titled = layer.notes.find((n) => /^(XB|YL)$/.test(cstring(n.head, 0x46, 41)) && n.d1.length > 4 && n.d1[4] > 0), base = titled ? titled.d1[4] * originScale(cstring(titled.d2, 0)) : 22;
       layer.notes.forEach((n) => {
         const name = cstring(n.head, 0x46, 41), kind = n.head[0x02], attach = n.head[0x28], box = { left: i16s(n.head, 0x03), top: i16s(n.head, 0x05), right: i16s(n.head, 0x07), bottom: i16s(n.head, 0x09) };
-        const text = originText(cstring(n.d2, 0), named), where = (px, py) => [Number(((px - R.left) / W).toFixed(4)), Number((1 - (py - R.top) / H).toFixed(4))];
-        const colour = colourOf(n.head.subarray(0x33, 0x37)) || '#000000';
+        const raw = cstring(n.d2, 0), text = originText(raw, named), where = (px, py) => [Number(((px - R.left) / W).toFixed(4)), Number((1 - (py - R.top) / H).toFixed(4))];
+        const colour = originColour(raw) || colourOf(n.head.subarray(0x33, 0x37)) || '#000000';
         if (name === 'XB') { if (attach !== 0x32 && text) panel.x.label = text.replace(/\n/g, ' '); }
         else if (name === 'YL' || name === 'YR') { if (attach !== 0x32 && text) panel[name === 'YR' && !host ? (panel.y2 ? 'y2' : 'y') : side].label = text.replace(/\n/g, ' '); }
         else if (/^legend$/i.test(name)) {
@@ -403,8 +464,18 @@ window.ASY = window.ASY || {};
           const arrows = d.length > 0x77 ? (d[0x60] ? 1 : 0) + (d[0x6c] ? 2 : 0) : d.length > 0x11 ? d[0x11] : 0;
           if (a && b && [a[0], a[1], b[0], b[1]].every((v) => isFinite(v))) { const from = arrows === 1 ? b : a, to = arrows === 1 ? a : b; panel.notes.push({ type: arrows ? 'arrow' : 'line', coords, x: from[0], y: from[1], x2: to[0], y2: to[1], both: arrows === 3, color: colour, width: 0.8 }); }
         } else if (kind === 0 && text && !/^(P[LRBT]|S[LRBT]|O[LRBT]|[XYZ]1T|XT|ZF|ZB|3D|__BCO2|_206|ZCOLORS|SPECTRUM1|&0|DelData|PIE.*)$/.test(name)) {
-          const [x, y] = where(box.left, box.top + (box.bottom - box.top) * 0.75 / Math.max(1, text.split('\n').length));
-          if (x > -0.5 && x < 1.5 && y > -0.5 && y < 1.5) panel.notes.push({ type: 'text', coords: 'axes', x, y, text, color: colour });
+          // Origin keeps the place of a text as two numbers: fractions of the frame (from its top) for a text tied to the frame, values of the axes for one tied to the scales.
+          // They are the top left corner of the block, about which it is turned; or, for a text that is centred (as the titles of the axes are), its centre.
+          const turned = n.d1.length > 4 ? Math.round(i16s(n.d1, 0x02) / 10) : 0, centred = n.d1.length > 8 && n.d1[8] !== 0, px = f64s(n.head, 0x13), py = f64s(n.head, 0x1b);
+          const scale = n.d1.length > 4 && n.d1[4] > 0 ? Number((n.d1[4] * originScale(raw) / base).toFixed(2)) : 1;
+          const note = { type: 'text', coords: 'axes', text, color: colour, scale, rotate: Math.abs(turned) < 1 ? 0 : turned, anchor: centred ? 'middle' : 'start', valign: centred ? 'middle' : 'top' };
+          if (attach === 2 && isFinite(px) && isFinite(py)) Object.assign(note, { coords: 'data', x: Number(px.toPrecision(8)), y: Number(py.toPrecision(8)) });
+          else if (attach === 0 && isFinite(px) && isFinite(py)) Object.assign(note, { x: Number(px.toFixed(4)), y: Number((1 - py).toFixed(4)) });
+          else { const [x, y] = where(box.left, box.top); Object.assign(note, { x, y, anchor: 'start', valign: 'top' }); }
+          // a text left outside the page (an older copy, put aside) is not on the graph
+          const fx = note.coords === 'axes' ? note.x : (box.left - R.left) / W, fy = note.coords === 'axes' ? 1 - note.y : (box.top - R.top) / H;
+          const on = !g.page[0] || (fx > -R.left / W - 0.02 && fx < (g.page[0] - R.left) / W + 0.02 && fy > -R.top / H - 0.02 && fy < (g.page[1] - R.top) / H + 0.02);
+          if (on) panel.notes.push(note);
         }
       });
     });
@@ -438,5 +509,5 @@ window.ASY = window.ASY || {};
     return tables.map((t) => ({ name: tables.length > 1 ? stem + ' · ' + t.name : stem, text: t.text }));
   }
 
-  ASY.files = { kind, read, unzip, xlsx, ods, origin, originText, walk, tsv };
+  ASY.files = { kind, read, unzip, xlsx, ods, origin, originText, originColour, originScale, walk, tsv };
 })(window.ASY);
